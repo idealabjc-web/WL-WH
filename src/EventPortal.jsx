@@ -871,6 +871,9 @@ export default function EventPortal() {
                         {tab === "feedback" && <FeedbackTab feedback={feedback} onAdd={addFeedback} toast={toast} />}
                     </>
                 )}
+                <footer className="mt-12 text-center text-xs text-slate-400">
+                    WLWH Operations Portal · Real-time On-site Check-in System
+                </footer>
             </div>
             <Toast message={toastMsg} />
         </div>
