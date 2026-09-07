@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./supabaseClient";
 import jsQR from "jsqr";
+import QRCode from "qrcode";
 
 function uid() {
     return (
@@ -42,6 +43,7 @@ function speakerToRow(s) {
         concerns: s.concerns || null,
         checked_in: !!s.checkedIn,
         checked_in_at: s.checkedInAt ? new Date(s.checkedInAt).toISOString() : null,
+        qr_url: s.qrUrl || null,
     };
 }
 function rowToSpeaker(r) {
@@ -64,6 +66,7 @@ function rowToSpeaker(r) {
         checkedIn: r.checked_in,
         checkedInAt: r.checked_in_at ? new Date(r.checked_in_at).getTime() : null,
         createdAt: r.created_at ? new Date(r.created_at).getTime() : null,
+        qrUrl: r.qr_url || null,
     };
 }
 function feedbackToRow(f) {
@@ -83,6 +86,28 @@ async function fetchFeedback() {
     const { data, error } = await supabase.from("feedback").select("*").order("ts", { ascending: true });
     if (error) throw error;
     return (data || []).map(rowToFeedback);
+}
+
+// Generates the QR badge locally (no external API call — works offline, and
+// isn't dependent on a third-party service being reachable) then uploads it
+// to Supabase Storage so it's a real persisted file, not something recreated
+// from scratch on every page load. Returns the public URL, or null if the
+// upload fails (the badge still displays locally either way).
+async function generateAndStoreQrBadge(id) {
+    const dataUrl = await QRCode.toDataURL(id, { width: 280, margin: 1 });
+    try {
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        const { error: uploadError } = await supabase.storage
+            .from("qr-badges")
+            .upload(`${id}.png`, blob, { contentType: "image/png", upsert: true });
+        if (uploadError) throw uploadError;
+        const { data } = supabase.storage.from("qr-badges").getPublicUrl(`${id}.png`);
+        return { dataUrl, publicUrl: data?.publicUrl || null };
+    } catch (e) {
+        console.error("QR badge upload failed:", e);
+        return { dataUrl, publicUrl: null };
+    }
 }
 
 // ---------- Small UI atoms ----------
@@ -137,7 +162,9 @@ function RegisterTab({ onAdd, toast }) {
     const [form, setForm] = useState(emptyForm);
     const [saving, setSaving] = useState(false);
     const [lastAdded, setLastAdded] = useState(null);
+    const [qrDataUrl, setQrDataUrl] = useState(null);
     const [syncFailed, setSyncFailed] = useState(false);
+    const [badgeStored, setBadgeStored] = useState(false);
 
     const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -150,16 +177,20 @@ function RegisterTab({ onAdd, toast }) {
         const id = uid();
         const rec = { id, ...form, name: form.name.trim(), checkedIn: false, checkedInAt: null, createdAt: Date.now() };
 
-        // Show the badge immediately, independent of sync — QR is derived from
-        // the ID alone, so it's valid the moment it's generated client-side.
+        // Generate the QR locally first so the badge shows immediately,
+        // independent of network conditions.
+        const { dataUrl, publicUrl } = await generateAndStoreQrBadge(id);
+        rec.qrUrl = publicUrl;
         setLastAdded(rec);
+        setQrDataUrl(dataUrl);
+        setBadgeStored(!!publicUrl);
         setSyncFailed(false);
 
         const ok = await onAdd(rec);
         setSyncFailed(!ok);
         setSaving(false);
         setForm(emptyForm);
-        toast(ok ? "Speaker added — QR badge ready." : "QR badge ready — sync pending.");
+        toast(ok ? "Speaker added — QR badge saved." : "QR badge ready — sync pending.");
     };
 
     const retrySync = async () => {
@@ -167,9 +198,6 @@ function RegisterTab({ onAdd, toast }) {
         setSyncFailed(!ok);
         toast(ok ? "Synced." : "Still failing to sync — check your connection.");
     };
-
-    const qrUrl = (id) =>
-        `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(id)}`;
 
     return (
         <div className="bg-white border border-slate-200 rounded-xl p-5">
@@ -253,7 +281,7 @@ function RegisterTab({ onAdd, toast }) {
 
             {lastAdded && (
                 <div className="flex gap-5 items-center flex-wrap mt-4 pt-4 border-t border-dashed border-slate-200">
-                    <img src={qrUrl(lastAdded.id)} alt="QR badge" className="border border-slate-200 rounded-lg p-2 bg-white" width={140} height={140} />
+                    <img src={qrDataUrl} alt="QR badge" className="border border-slate-200 rounded-lg p-2 bg-white" width={140} height={140} />
                     <div className="flex-1 min-w-[200px]">
                         <div className="font-bold text-base">{lastAdded.name}</div>
                         <div className="text-xs text-slate-500 font-mono">Badge ID: {lastAdded.id}</div>
@@ -261,13 +289,20 @@ function RegisterTab({ onAdd, toast }) {
                             Send this QR to the speaker ahead of arrival, or print it for their badge/lanyard.
                         </p>
                         <a
-                            href={qrUrl(lastAdded.id)}
+                            href={lastAdded.qrUrl || qrDataUrl}
                             target="_blank"
                             rel="noreferrer"
                             className="inline-block border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-sm font-semibold px-4 py-2 rounded-lg"
                         >
                             Open QR full size
                         </a>
+                        <div className="text-xs mt-2 flex items-center gap-1.5">
+                            {badgeStored ? (
+                                <span className="text-teal-700 flex items-center gap-1"><CheckCircle2 size={13} /> Badge image saved to storage</span>
+                            ) : (
+                                <span className="text-amber-600 flex items-center gap-1"><AlertTriangle size={13} /> Badge shown locally, not yet saved to storage</span>
+                            )}
+                        </div>
                         {syncFailed && (
                             <div className="text-rose-600 text-xs mt-2 flex items-center gap-2">
                                 <AlertTriangle size={13} /> Saved locally but not yet synced to the dashboard.
@@ -336,6 +371,16 @@ function ProfileCard({ speaker, onConfirm, onSaveNotes }) {
                 >
                     Save notes
                 </button>
+                {speaker.qrUrl && (
+                    <a
+                        href={speaker.qrUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-sm font-semibold px-4 py-2.5 rounded-lg"
+                    >
+                        View QR badge
+                    </a>
+                )}
             </div>
         </div>
     );
