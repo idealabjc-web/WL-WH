@@ -741,15 +741,26 @@ export default function EventPortal() {
     };
 
     const refresh = useCallback(async () => {
-        try {
-            const [s, f] = await Promise.all([fetchSpeakers(), fetchFeedback()]);
-            setSpeakers(s);
-            setFeedback(f);
-            setConnectionError(null);
-        } catch (e) {
-            console.error(e);
-            setConnectionError(e?.message || String(e));
+        const [speakersResult, feedbackResult] = await Promise.allSettled([fetchSpeakers(), fetchFeedback()]);
+
+        if (speakersResult.status === "fulfilled") {
+            setSpeakers(speakersResult.value);
+        } else {
+            console.error(speakersResult.reason);
         }
+
+        if (feedbackResult.status === "fulfilled") {
+            setFeedback(feedbackResult.value);
+        } else {
+            console.error(feedbackResult.reason);
+        }
+
+        const firstError = speakersResult.status === "rejected"
+            ? speakersResult.reason
+            : feedbackResult.status === "rejected"
+                ? feedbackResult.reason
+                : null;
+        setConnectionError(firstError ? (firstError.message || String(firstError)) : null);
         setLoading(false);
     }, []);
 
@@ -835,9 +846,9 @@ export default function EventPortal() {
                         <div className="flex items-start gap-2 bg-rose-50 text-rose-700 text-xs font-medium px-3 py-2 rounded-lg mb-2">
                             <AlertTriangle size={14} className="mt-0.5 shrink-0" />
                             <span>
-                                Can't reach Supabase: <span className="font-mono">{connectionError}</span>. Common causes: the
-                                tables from schema.sql haven't been created yet, .env has the wrong URL/key, or the dev server
-                                needs a restart after editing .env. Data won't sync to other devices until this resolves.
+                                Supabase error: <span className="font-mono">{connectionError}</span>. This usually means a table's
+                                columns don't match schema.sql (re-run it, or check the Table Editor) — data for the affected
+                                table won't sync until this resolves, but the rest of the app still works.
                             </span>
                         </div>
                     )}
