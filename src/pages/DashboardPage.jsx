@@ -179,18 +179,18 @@ export default function DashboardPage({ speakers, onRefresh }) {
                 {/* Filters and Controls */}
                 <div className="flex flex-col md:flex-row gap-2 sm:gap-3 mb-4 items-stretch md:items-center">
                     <div className="relative flex-1">
-                        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                         <input
-                            className={`${inputCls} pl-9 mb-0`}
+                            className={`${inputCls} !pl-10 sm:!pl-10 mb-0`}
                             placeholder="Search name, session, room..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
                     <div className="relative md:w-48">
-                        <Filter size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <Filter size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                         <select
-                            className={`${inputCls} pl-9 mb-0`}
+                            className={`${inputCls} !pl-10 sm:!pl-10 mb-0`}
                             value={filter}
                             onChange={(e) => setFilter(e.target.value)}
                         >

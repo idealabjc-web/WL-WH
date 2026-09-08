@@ -312,9 +312,9 @@ export default function IdCardsPage({
 
                     {/* Search filter */}
                     <div className="relative sm:w-72">
-                        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                         <input
-                            className={`${inputCls} pl-9 mb-0 text-xs sm:text-sm`}
+                            className={`${inputCls} !pl-10 sm:!pl-10 mb-0 text-xs sm:text-sm`}
                             placeholder="Filter by name, badge ID..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}

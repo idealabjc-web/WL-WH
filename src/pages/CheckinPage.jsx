@@ -207,7 +207,7 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast })
                         <Search size={16} />
                     </div>
                     <input
-                        className={`${inputCls} pl-10 pr-16 min-h-[44px] mb-0`}
+                        className={`${inputCls} !pl-10 sm:!pl-10 !pr-16 sm:!pr-16 min-h-[44px] mb-0`}
                         placeholder="Search speaker name or badge ID..."
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}

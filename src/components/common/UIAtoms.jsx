@@ -2,7 +2,7 @@ import React from "react";
 import { CheckCircle2, Clock } from "lucide-react";
 
 export const inputCls =
-    "w-full px-3.5 py-2.5 sm:px-3 sm:py-2 border border-slate-200 rounded-lg text-base sm:text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition-shadow";
+    "w-full px-3.5 py-2.5 sm:py-2 border border-slate-200 rounded-lg text-base sm:text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition-shadow";
 
 export function TabButton({ active, onClick, icon: Icon, label }) {
     return (
