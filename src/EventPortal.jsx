@@ -126,6 +126,23 @@ export default function EventPortal() {
         return true;
     };
 
+    const updateSpeaker = async (id, updatedData) => {
+        setSpeakers((prev) => prev.map((s) => (s.id === id ? { ...s, ...updatedData } : s)));
+        
+        const existing = speakers.find(s => s.id === id);
+        if (!existing) return false;
+        const merged = { ...existing, ...updatedData };
+        
+        const { error } = await supabase.from("speakers").update(speakerToRow(merged)).eq("id", id);
+        if (error) {
+            console.error(error);
+            toast("Failed to update speaker.");
+            return false;
+        }
+        toast("Speaker updated successfully.");
+        return true;
+    };
+
     const confirmCheckin = async (id, notes) => {
         const checkedInAt = Date.now();
         setSpeakers((prev) =>
@@ -255,7 +272,7 @@ export default function EventPortal() {
                                     toast={toast}
                                 />
                             )}
-                            {tab === "dashboard" && <DashboardPage speakers={speakers} onRefresh={refresh} />}
+                            {tab === "dashboard" && <DashboardPage speakers={speakers} onRefresh={refresh} onUpdate={updateSpeaker} />}
                             {tab === "idcards" && (
                                 <IdCardsPage
                                     speakers={speakers}

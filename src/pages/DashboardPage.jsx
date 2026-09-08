@@ -1,15 +1,123 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Download, RefreshCw, Search, Filter, AlertTriangle, LayoutList, Table as TableIcon, X, ChevronDown } from "lucide-react";
 import { StatCard, StatusBadge, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
+import { TIME_SLOTS } from "../api/speakersApi";
+import PhoneField from "../components/common/PhoneField";
 
-function SpeakerDetail({ speaker, onClose }) {
+function SpeakerDetail({ speaker, onClose, onUpdate, allSpeakers }) {
+    const [isEditing, setIsEditing] = useState(false);
+    const [form, setForm] = useState(speaker);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        setForm(speaker);
+    }, [speaker]);
+
+    const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+    useEffect(() => {
+        if (isEditing && form.checkinDate && form.checkoutDate) {
+            const inDate = new Date(form.checkinDate);
+            const outDate = new Date(form.checkoutDate);
+            if (!isNaN(inDate) && !isNaN(outDate) && outDate >= inDate) {
+                const diffTime = Math.abs(outDate - inDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                setForm(prev => ({ ...prev, nights: String(diffDays) }));
+            }
+        }
+    }, [isEditing, form.checkinDate, form.checkoutDate]);
+
+    const save = async () => {
+        if (!form.name.trim()) return;
+
+        if (form.day && form.timeSlot) {
+            const isBlocked = allSpeakers.some(s => s.id !== form.id && s.day === form.day && s.timeSlot === form.timeSlot);
+            if (isBlocked) {
+                alert(`Time slot ${form.timeSlot} on ${form.day} is already booked by another speaker.`);
+                return;
+            }
+        }
+
+        setSaving(true);
+        const success = await onUpdate(speaker.id, form);
+        setSaving(false);
+        if (success) setIsEditing(false);
+    };
+
     const row = (label, value) => (
         <div className="flex justify-between gap-4 py-2 border-b border-slate-100 last:border-0 text-sm">
             <div className="text-slate-500 shrink-0">{label}</div>
             <div className="font-semibold text-right">{value || "—"}</div>
         </div>
     );
+
+    if (isEditing) {
+        return (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-4 animate-in">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="font-bold text-lg text-slate-900">Edit Details</div>
+                    <button onClick={() => setIsEditing(false)} className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-400 hover:text-slate-700">
+                        <X size={18} />
+                    </button>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-3 mb-4">
+                    <div><label className="text-xs font-semibold text-slate-700">Name</label><input className={inputCls} value={form.name} onChange={set("name")} /></div>
+                    <div><label className="text-xs font-semibold text-slate-700">Session</label><input className={inputCls} value={form.sessionTitle} onChange={set("sessionTitle")} /></div>
+                    <div>
+                        <label className="text-xs font-semibold text-slate-700">Phone</label>
+                        <PhoneField
+                            value={form.phone}
+                            onChange={(val) => setForm((f) => ({ ...f, phone: val }))}
+                        />
+                    </div>
+                    <div><label className="text-xs font-semibold text-slate-700">Email</label><input className={inputCls} value={form.email} onChange={set("email")} /></div>
+                    
+                    <div>
+                        <label className="text-xs font-semibold text-slate-700">Day</label>
+                        <select className={inputCls} value={form.day} onChange={set("day")}>
+                            <option value="">Select...</option>
+                            <option value="Day 1">Day 1</option><option value="Day 2">Day 2</option><option value="Day 3">Day 3</option>
+                            <option value="Day 4">Day 4</option><option value="Day 5">Day 5</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="text-xs font-semibold text-slate-700">Time Slot</label>
+                        <select className={inputCls} value={form.timeSlot} onChange={set("timeSlot")}>
+                            <option value="">Select...</option>
+                            {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                    </div>
+                    
+                    <div><label className="text-xs font-semibold text-slate-700">Room</label><input className={inputCls} value={form.room} onChange={set("room")} /></div>
+                    <div>
+                        <label className="text-xs font-semibold text-slate-700">Check-in</label>
+                        <input type="date" className={inputCls} value={form.checkinDate} onChange={set("checkinDate")} />
+                    </div>
+                    <div>
+                        <label className="text-xs font-semibold text-slate-700">Check-out</label>
+                        <input type="date" className={inputCls} value={form.checkoutDate} onChange={set("checkoutDate")} />
+                    </div>
+                    <div><label className="text-xs font-semibold text-slate-700">Nights</label><input className={inputCls} value={form.nights} onChange={set("nights")} /></div>
+                    
+                    <div>
+                        <label className="text-xs font-semibold text-slate-700">Dietary</label>
+                        <select className={inputCls} value={form.diet} onChange={set("diet")}>
+                            <option value="No preference">No preference</option><option value="Vegetarian">Vegetarian</option>
+                            <option value="Vegan">Vegan</option><option value="Halal">Halal</option><option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div><label className="text-xs font-semibold text-slate-700">Allergies</label><input className={inputCls} value={form.allergy} onChange={set("allergy")} /></div>
+                </div>
+                <div className="flex gap-2 justify-end pt-2 border-t border-slate-200">
+                    <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-sm font-semibold rounded-lg hover:bg-slate-200 text-slate-700">Cancel</button>
+                    <button onClick={save} disabled={saving} className="px-4 py-2 text-sm font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm disabled:opacity-50">
+                        {saving ? "Saving..." : "Save Changes"}
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-4 animate-in">
@@ -21,12 +129,20 @@ function SpeakerDetail({ speaker, onClose }) {
                         <div className="text-xs text-slate-500 font-mono">ID: {speaker.id}</div>
                     </div>
                 </div>
-                <button
-                    onClick={onClose}
-                    className="p-1.5 rounded-lg hover:bg-slate-200 transition-colors text-slate-400 hover:text-slate-700"
-                >
-                    <X size={18} />
-                </button>
+                <div className="flex gap-2 items-center">
+                    <button
+                        onClick={() => setIsEditing(true)}
+                        className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
+                    >
+                        Edit Details
+                    </button>
+                    <button
+                        onClick={onClose}
+                        className="p-1.5 rounded-lg hover:bg-slate-200 transition-colors text-slate-400 hover:text-slate-700"
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
             </div>
             <div className="grid sm:grid-cols-2 gap-x-6">
                 <div>
@@ -75,7 +191,7 @@ function SpeakerDetail({ speaker, onClose }) {
     );
 }
 
-export default function DashboardPage({ speakers, onRefresh }) {
+export default function DashboardPage({ speakers, onRefresh, onUpdate }) {
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState("all");
     const [mobileView, setMobileView] = useState("cards"); // 'cards' | 'table'
@@ -145,7 +261,7 @@ export default function DashboardPage({ speakers, onRefresh }) {
             </div>
 
             {selectedSpeaker && (
-                <SpeakerDetail speaker={selectedSpeaker} onClose={() => setSelectedId(null)} />
+                <SpeakerDetail speaker={selectedSpeaker} onClose={() => setSelectedId(null)} onUpdate={onUpdate} allSpeakers={speakers} />
             )}
 
             {/* Main Table / List Container */}

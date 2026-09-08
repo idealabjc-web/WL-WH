@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { CheckCircle2, AlertTriangle, ExternalLink, ImagePlus, Camera } from "lucide-react";
 import { Field, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
-import { uid, emptyForm, generateAndStoreQrBadge, uploadSpeakerPhoto } from "../api/speakersApi";
+import { uid, emptyForm, generateAndStoreQrBadge, uploadSpeakerPhoto, TIME_SLOTS } from "../api/speakersApi";
+import PhoneField from "../components/common/PhoneField";
 
 export default function RegisterPage({ speakers = [], onAdd, toast }) {
     const [form, setForm] = useState(emptyForm);
@@ -148,7 +149,10 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3">
                 <Field label="Phone">
-                    <input type="tel" className={inputCls} value={form.phone} onChange={set("phone")} placeholder="+971 5..." />
+                    <PhoneField
+                        value={form.phone}
+                        onChange={(val) => setForm((f) => ({ ...f, phone: val }))}
+                    />
                 </Field>
                 <Field label="Session / talk title">
                     <input className={inputCls} value={form.sessionTitle} onChange={set("sessionTitle")} placeholder="e.g. The Future of Renewable Energy" />
@@ -165,27 +169,37 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                         <option value="Day 5">Day 5</option>
                     </select>
                 </Field>
-                <Field label="Time slot">
-                    <select className={inputCls} value={form.timeSlot} onChange={set("timeSlot")}>
-                        <option value="">Select a time slot...</option>
-                        <option value="09:00 - 09:30">09:00 - 09:30</option>
-                        <option value="09:30 - 10:00">09:30 - 10:00</option>
-                        <option value="10:00 - 10:30">10:00 - 10:30</option>
-                        <option value="10:30 - 11:00">10:30 - 11:00</option>
-                        <option value="11:00 - 11:30">11:00 - 11:30</option>
-                        <option value="11:30 - 12:00">11:30 - 12:00</option>
-                        <option value="12:00 - 12:30">12:00 - 12:30</option>
-                        <option value="12:30 - 13:00">12:30 - 13:00</option>
-                        <option value="13:00 - 13:30">13:00 - 13:30</option>
-                        <option value="13:30 - 14:00">13:30 - 14:00</option>
-                        <option value="14:00 - 14:30">14:00 - 14:30</option>
-                        <option value="14:30 - 15:00">14:30 - 15:00</option>
-                        <option value="15:00 - 15:30">15:00 - 15:30</option>
-                        <option value="15:30 - 16:00">15:30 - 16:00</option>
-                        <option value="16:00 - 16:30">16:00 - 16:30</option>
-                        <option value="16:30 - 17:00">16:30 - 17:00</option>
-                    </select>
+            </div>
+            <div className="mb-4">
+                <Field label="Time slot (requires Day selection first)">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
+                        {TIME_SLOTS.map(slot => {
+                            const isBooked = form.day ? speakers.some(s => s.day === form.day && s.timeSlot === slot) : false;
+                            const isSelected = form.timeSlot === slot;
+                            return (
+                                <button
+                                    key={slot}
+                                    type="button"
+                                    disabled={isBooked}
+                                    onClick={() => setForm(f => ({ ...f, timeSlot: slot }))}
+                                    className={`py-2 px-1 text-xs font-semibold rounded-lg border transition-all flex items-center justify-center gap-1.5 min-h-[36px]
+                                        ${isBooked 
+                                            ? "bg-rose-50 border-rose-200 text-rose-500 cursor-not-allowed opacity-75" 
+                                            : isSelected 
+                                                ? "bg-emerald-500 border-emerald-600 text-white shadow-sm ring-1 ring-emerald-500 ring-offset-1" 
+                                                : "bg-white border-slate-200 text-slate-600 hover:border-emerald-400 hover:bg-emerald-50"
+                                        }`}
+                                >
+                                    {isBooked ? <AlertTriangle size={12} className="shrink-0" /> : null}
+                                    {isSelected ? <CheckCircle2 size={12} className="shrink-0" /> : null}
+                                    {slot}
+                                </button>
+                            );
+                        })}
+                    </div>
                 </Field>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-3">
                 <Field label="Hotel room no.">
                     <input className={inputCls} value={form.room} onChange={set("room")} placeholder="e.g. 1204" />
                 </Field>
