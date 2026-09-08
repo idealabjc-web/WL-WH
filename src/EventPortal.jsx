@@ -7,6 +7,7 @@ import { fetchFeedback, feedbackToRow } from "./api/feedbackApi";
 import Toast from "./components/common/Toast";
 import { TabButton } from "./components/common/UIAtoms";
 import SetupNeeded from "./components/SetupNeeded";
+import BottomNavBar from "./components/navigation/BottomNavBar";
 
 import RegisterPage from "./pages/RegisterPage";
 import CheckinPage from "./pages/CheckinPage";
@@ -148,9 +149,17 @@ export default function EventPortal() {
 
     return (
         <div className="min-h-screen bg-stone-100 text-slate-900 antialiased" style={{ fontFamily: "Inter, sans-serif" }}>
-            <div className="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-6 pb-20">
+            <div className="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-6 pb-28 lg:pb-16">
                 <header className="border-b border-slate-200 pb-3 sm:pb-4 mb-4">
-                    <div className="text-[11px] sm:text-xs font-semibold text-amber-600 tracking-wide">DUBAI · ON-SITE OPERATIONS</div>
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="text-[11px] sm:text-xs font-semibold text-amber-600 tracking-wide">
+                            DUBAI · ON-SITE OPERATIONS
+                        </div>
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full">
+                            <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"></span>
+                            Live Ops
+                        </span>
+                    </div>
                     <h1 className="text-xl sm:text-2xl font-bold mt-0.5 mb-1 text-slate-900">Speaker Check-In Portal</h1>
                     {connectionError && (
                         <div className="flex items-start gap-2 bg-rose-50 text-rose-700 text-xs font-medium px-3 py-2 rounded-lg mb-2">
@@ -165,7 +174,8 @@ export default function EventPortal() {
                     <p className="text-xs sm:text-sm text-slate-500">Register speakers, scan them in at the front desk, and keep the India ops team synced live.</p>
                 </header>
 
-                <nav className="sticky top-2 z-30 flex gap-1 sm:gap-1.5 bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-xl p-1 sm:p-1.5 mb-5 shadow-sm">
+                {/* Desktop Top Navigation Bar (hidden on mobile and tablets) */}
+                <nav className="hidden lg:flex gap-1.5 bg-white border border-slate-200 rounded-xl p-1.5 mb-6 shadow-sm">
                     {tabs.map((t) => (
                         <TabButton
                             key={t.id}
@@ -198,6 +208,10 @@ export default function EventPortal() {
                     WLWH Operations Portal · Real-time On-site Check-in System
                 </footer>
             </div>
+
+            {/* Mobile & iPad Native Bottom Navigation Bar */}
+            <BottomNavBar tabs={tabs} activeTab={tab} onTabChange={handleTabChange} />
+
             <Toast message={toastMsg} />
         </div>
     );
