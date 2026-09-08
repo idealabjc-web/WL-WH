@@ -1,12 +1,85 @@
 import React, { useState } from "react";
-import { Download, RefreshCw, Search, Filter, AlertTriangle, LayoutList, Table as TableIcon } from "lucide-react";
+import { Download, RefreshCw, Search, Filter, AlertTriangle, LayoutList, Table as TableIcon, X, ChevronDown } from "lucide-react";
 import { StatCard, StatusBadge, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
+
+function SpeakerDetail({ speaker, onClose }) {
+    const row = (label, value) => (
+        <div className="flex justify-between gap-4 py-2 border-b border-slate-100 last:border-0 text-sm">
+            <div className="text-slate-500 shrink-0">{label}</div>
+            <div className="font-semibold text-right">{value || "—"}</div>
+        </div>
+    );
+
+    return (
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-4 animate-in">
+            <div className="flex items-start justify-between gap-4 mb-4">
+                <div className="flex items-center gap-3">
+                    <SpeakerAvatar src={speaker.photoUrl} size={52} />
+                    <div>
+                        <div className="font-bold text-lg">{speaker.name}</div>
+                        <div className="text-xs text-slate-500 font-mono">ID: {speaker.id}</div>
+                    </div>
+                </div>
+                <button
+                    onClick={onClose}
+                    className="p-1.5 rounded-lg hover:bg-slate-200 transition-colors text-slate-400 hover:text-slate-700"
+                >
+                    <X size={18} />
+                </button>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-x-6">
+                <div>
+                    <div className="text-xs font-semibold text-amber-600 tracking-wide mb-1.5">SESSION INFO</div>
+                    {row("Session / Talk", speaker.sessionTitle)}
+                    {row("Day", speaker.day)}
+                    {row("Time Slot", speaker.timeSlot)}
+                    {row("Status", speaker.checkedIn ? "✅ Checked in" : "⏳ Pending")}
+                    {speaker.checkedIn && row("Checked in at", new Date(speaker.checkedInAt).toLocaleString())}
+                </div>
+                <div>
+                    <div className="text-xs font-semibold text-amber-600 tracking-wide mb-1.5">CONTACT</div>
+                    {row("Email", speaker.email)}
+                    {row("Phone", speaker.phone)}
+                </div>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-x-6 mt-3">
+                <div>
+                    <div className="text-xs font-semibold text-amber-600 tracking-wide mb-1.5">ACCOMMODATION</div>
+                    {row("Hotel Room", speaker.room)}
+                    {row("Check-in Date", speaker.checkinDate)}
+                    {row("Check-out Date", speaker.checkoutDate)}
+                    {row("No. of Nights", speaker.nights)}
+                    {row("Room Concerns", speaker.concerns || "None")}
+                </div>
+                <div>
+                    <div className="text-xs font-semibold text-amber-600 tracking-wide mb-1.5">PREFERENCES</div>
+                    {row("Dietary Preference", speaker.diet)}
+                    {row("Allergies", speaker.allergy || "None reported")}
+                    {row("Speaker Tour", speaker.tour)}
+                </div>
+            </div>
+            {speaker.qrUrl && (
+                <div className="mt-4 pt-3 border-t border-slate-200">
+                    <a
+                        href={speaker.qrUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-block border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-sm font-semibold px-4 py-2 rounded-lg"
+                    >
+                        View QR Badge
+                    </a>
+                </div>
+            )}
+        </div>
+    );
+}
 
 export default function DashboardPage({ speakers, onRefresh }) {
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState("all");
     const [mobileView, setMobileView] = useState("cards"); // 'cards' | 'table'
+    const [selectedId, setSelectedId] = useState(null);
 
     const total = speakers.length;
     const checked = speakers.filter((s) => s.checkedIn).length;
@@ -30,6 +103,8 @@ export default function DashboardPage({ speakers, onRefresh }) {
         if (filter === "tour" && s.tour !== "yes") return false;
         return true;
     });
+
+    const selectedSpeaker = selectedId ? speakers.find((s) => s.id === selectedId) : null;
 
     const exportCsv = () => {
         const cols = [
@@ -68,6 +143,10 @@ export default function DashboardPage({ speakers, onRefresh }) {
                 <StatCard num={dietary} label="Dietary needs" />
                 <StatCard num={tour} label="Tour interest" className="col-span-2 sm:col-span-1" />
             </div>
+
+            {selectedSpeaker && (
+                <SpeakerDetail speaker={selectedSpeaker} onClose={() => setSelectedId(null)} />
+            )}
 
             {/* Main Table / List Container */}
             <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-sm">
@@ -144,33 +223,42 @@ export default function DashboardPage({ speakers, onRefresh }) {
                         <div className="text-center text-slate-500 py-8 text-sm">No speakers match.</div>
                     ) : (
                         rows.map((s) => (
-                            <div key={s.id} className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/60">
+                            <div
+                                key={s.id}
+                                onClick={() => setSelectedId(selectedId === s.id ? null : s.id)}
+                                className={`border rounded-xl p-3.5 cursor-pointer transition-colors ${
+                                    selectedId === s.id ? "bg-amber-50/80 border-amber-300" : "bg-slate-50/60 border-slate-200 hover:bg-slate-100/70"
+                                }`}
+                            >
                                 <div className="flex justify-between items-start gap-2 mb-2">
                                     <div className="flex items-center gap-2.5">
                                         <SpeakerAvatar src={s.photoUrl} size={36} />
                                         <div>
-                                            <div className="font-bold text-slate-900 text-sm">{s.name}</div>
+                                            <div className="font-bold text-slate-900 text-sm text-amber-700 flex items-center gap-1">
+                                                {s.name}
+                                                <ChevronDown size={14} className={`text-slate-400 transition-transform ${selectedId === s.id ? "rotate-180" : ""}`} />
+                                            </div>
                                             <div className="text-xs text-slate-500">{s.sessionTitle || "No session title"}</div>
                                         </div>
                                     </div>
                                     <StatusBadge checkedIn={s.checkedIn} />
                                 </div>
-                                <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 border-t border-slate-200/70 pt-2 mt-2">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-slate-600 border-t border-slate-200/70 pt-2 mt-2">
+                                    <div>
+                                        <span className="text-slate-400 block">Day</span>
+                                        <span className="font-semibold text-slate-800">{s.day || "—"}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-slate-400 block">Slot</span>
+                                        <span className="font-semibold text-slate-800">{s.timeSlot || "—"}</span>
+                                    </div>
                                     <div>
                                         <span className="text-slate-400 block">Room</span>
                                         <span className="font-semibold text-slate-800">{s.room || "—"}</span>
                                     </div>
                                     <div>
-                                        <span className="text-slate-400 block">Day / Slot</span>
-                                        <span className="font-semibold text-slate-800">{s.day || "—"} {s.timeSlot ? `· ${s.timeSlot}` : ""}</span>
-                                    </div>
-                                    <div>
                                         <span className="text-slate-400 block">Dietary</span>
                                         <span className="font-medium text-slate-800">{s.diet}{s.allergy ? ` ⚠ ${s.allergy}` : ""}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-slate-400 block">Tour</span>
-                                        <span className="capitalize font-medium text-slate-800">{s.tour}</span>
                                     </div>
                                 </div>
                                 {s.concerns && (
@@ -186,12 +274,13 @@ export default function DashboardPage({ speakers, onRefresh }) {
 
                 {/* Table View (for iPad, Desktop, and toggleable on mobile) */}
                 <div className={`overflow-x-auto ${mobileView === "table" ? "block" : "hidden sm:block"}`}>
-                    <table className="w-full text-sm border-collapse min-w-[700px]">
+                    <table className="w-full text-sm border-collapse min-w-[750px]">
                         <thead>
                             <tr className="text-left text-xs text-slate-500 border-b-2 border-slate-200">
                                 <th className="py-2.5 px-3 sticky left-0 bg-white shadow-xs">Name</th>
                                 <th className="py-2.5 px-3">Session</th>
-                                <th className="py-2.5 px-3">Day / Slot</th>
+                                <th className="py-2.5 px-3">Day</th>
+                                <th className="py-2.5 px-3">Slot</th>
                                 <th className="py-2.5 px-3">Room</th>
                                 <th className="py-2.5 px-3">Nights</th>
                                 <th className="py-2.5 px-3">Dietary</th>
@@ -203,23 +292,34 @@ export default function DashboardPage({ speakers, onRefresh }) {
                         <tbody>
                             {rows.length === 0 ? (
                                 <tr>
-                                    <td colSpan={9} className="text-center text-slate-500 py-8">
+                                    <td colSpan={10} className="text-center text-slate-500 py-8">
                                         No speakers match.
                                     </td>
                                 </tr>
                             ) : (
                                 rows.map((s) => (
-                                    <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                    <tr
+                                        key={s.id}
+                                        className={`border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors ${
+                                            selectedId === s.id ? "bg-amber-50" : ""
+                                        }`}
+                                        onClick={() => setSelectedId(selectedId === s.id ? null : s.id)}
+                                    >
                                         <td className="py-2.5 px-3 font-semibold whitespace-nowrap sticky left-0 bg-white/95">
                                             <div className="flex items-center gap-2">
                                                 <SpeakerAvatar src={s.photoUrl} size={28} />
-                                                {s.name}
+                                                <span className="text-amber-700 hover:underline">{s.name}</span>
+                                                <ChevronDown
+                                                    size={14}
+                                                    className={`text-slate-400 transition-transform ${
+                                                        selectedId === s.id ? "rotate-180" : ""
+                                                    }`}
+                                                />
                                             </div>
                                         </td>
                                         <td className="py-2.5 px-3 whitespace-nowrap">{s.sessionTitle || "—"}</td>
-                                        <td className="py-2.5 px-3 whitespace-nowrap">
-                                            {s.day || "—"} {s.timeSlot ? `· ${s.timeSlot}` : ""}
-                                        </td>
+                                        <td className="py-2.5 px-3 whitespace-nowrap">{s.day || "—"}</td>
+                                        <td className="py-2.5 px-3 whitespace-nowrap">{s.timeSlot || "—"}</td>
                                         <td className="py-2.5 px-3 whitespace-nowrap font-mono text-xs">{s.room || "—"}</td>
                                         <td className="py-2.5 px-3 whitespace-nowrap">{s.nights || "—"}</td>
                                         <td className="py-2.5 px-3 whitespace-nowrap">
