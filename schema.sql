@@ -20,11 +20,13 @@ create table if not exists speakers (
   checked_in_at timestamptz,
   qr_url text,                         -- public URL of the stored QR badge image
   id_card_url text,                    -- public URL of the full official ID Card JPEG image
+  password_hash text,
   created_at timestamptz default now()
 );
 
 -- In case the table already exists, add the column if missing:
 alter table speakers add column if not exists id_card_url text;
+alter table speakers add column if not exists password_hash text;
 
 create table if not exists feedback (
   id text primary key,
@@ -91,6 +93,7 @@ create table if not exists support_team (
   name text not null,
   email text not null unique,
   role text default 'support',  -- e.g. 'admin', 'support', 'ops'
+  password_hash text,
   created_at timestamptz default now()
 );
 
@@ -98,6 +101,8 @@ alter table support_team enable row level security;
 
 create policy "public read support team" on support_team
   for select using (true);
+create policy "public update support team" on support_team
+  for update using (true);
 
 -- ─────────────────────────────────────────────────────────────
 -- HOW TO ADD SUPPORT TEAM MEMBERS:

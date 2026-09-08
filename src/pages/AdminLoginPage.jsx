@@ -1,6 +1,8 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { supabase } from "../supabaseClient";
 import { Mail, Lock, LogIn, AlertCircle, Loader2, Eye, EyeOff } from "lucide-react";
+
+import bcrypt from "bcryptjs";
 
 const STAFF_PASSWORD = import.meta.env.VITE_STAFF_PASSWORD || "staff2026";
 const SPEAKER_PASSWORD = import.meta.env.VITE_SPEAKER_PASSWORD || "speaker2026";
@@ -11,6 +13,13 @@ export default function AdminLoginPage({ onLogin }) {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+
+    const verifyPassword = (inputPass, storedHash, defaultPass) => {
+        if (storedHash) {
+            return bcrypt.compareSync(inputPass, storedHash);
+        }
+        return inputPass === defaultPass;
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -23,12 +32,12 @@ export default function AdminLoginPage({ onLogin }) {
         // Check 1: Is this a support team member?
         const { data: supportData } = await supabase
             .from("support_team")
-            .select("id, name, email")
+            .select("*")
             .ilike("email", trimmedEmail)
             .maybeSingle();
 
         if (supportData) {
-            if (password !== STAFF_PASSWORD) {
+            if (!verifyPassword(password, supportData.password_hash, STAFF_PASSWORD)) {
                 setError("Incorrect password for staff access.");
                 setLoading(false);
                 return;
@@ -47,7 +56,7 @@ export default function AdminLoginPage({ onLogin }) {
             .maybeSingle();
 
         if (speakerData) {
-            if (password !== SPEAKER_PASSWORD) {
+            if (!verifyPassword(password, speakerData.password_hash, SPEAKER_PASSWORD)) {
                 setError("Incorrect password for speaker access.");
                 setLoading(false);
                 return;

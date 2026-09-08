@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Users, ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, Menu, PanelLeft, BadgeCheck, LogOut } from "lucide-react";
+import { Users, ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, Menu, BadgeCheck, LogOut, Settings } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./supabaseClient";
 import { fetchSpeakers, speakerToRow } from "./api/speakersApi";
 import { fetchFeedback, feedbackToRow } from "./api/feedbackApi";
@@ -8,22 +8,25 @@ import Toast from "./components/common/Toast";
 import SetupNeeded from "./components/SetupNeeded";
 import Sidebar from "./components/navigation/Sidebar";
 import PullToRefresh from "./components/common/PullToRefresh";
+import ChangePasswordModal from "./components/common/ChangePasswordModal";
 
 import RegisterPage from "./pages/RegisterPage";
 import CheckinPage from "./pages/CheckinPage";
 import DashboardPage from "./pages/DashboardPage";
 import IdCardsPage from "./pages/IdCardsPage";
 import FeedbackPage from "./pages/FeedbackPage";
+import SettingsPage from "./pages/SettingsPage";
 
-const VALID_TABS = ["register", "checkin", "dashboard", "idcards", "feedback"];
+const VALID_TABS = ["register", "checkin", "dashboard", "idcards", "feedback", "settings"];
 
 function getInitialTab() {
     const hash = window.location.hash.replace("#", "").toLowerCase();
     return VALID_TABS.includes(hash) ? hash : "register";
 }
 
-export default function EventPortal({ displayName = "", onLogout }) {
+export default function EventPortal({ displayName = "", userEmail = "", onLogout }) {
     const [tab, setTab] = useState(getInitialTab);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
     const [speakers, setSpeakers] = useState([]);
     const [feedback, setFeedback] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -187,6 +190,7 @@ export default function EventPortal({ displayName = "", onLogout }) {
         { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
         { id: "idcards", label: "ID Cards", icon: BadgeCheck },
         { id: "feedback", label: "Feedback", icon: MessageSquare },
+        { id: "settings", label: "Settings", icon: Settings },
     ];
 
     if (!isSupabaseConfigured) return <SetupNeeded />;
@@ -252,10 +256,10 @@ export default function EventPortal({ displayName = "", onLogout }) {
                         {onLogout && (
                             <button
                                 onClick={onLogout}
-                                className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-rose-500 hover:bg-rose-50 px-3 py-2 rounded-lg transition-colors"
+                                className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-rose-500 hover:bg-rose-50 px-2 py-2 rounded-lg transition-colors"
                                 title="Sign out"
                             >
-                                <LogOut size={14} />
+                                <LogOut size={16} />
                                 <span className="hidden sm:inline">Sign out</span>
                             </button>
                         )}
@@ -299,6 +303,7 @@ export default function EventPortal({ displayName = "", onLogout }) {
                                 />
                             )}
                             {tab === "feedback" && <FeedbackPage feedback={feedback} onAdd={addFeedback} toast={toast} />}
+                            {tab === "settings" && <SettingsPage userEmail={userEmail} onOpenPasswordModal={() => setShowPasswordModal(true)} />}
                         </>
                     )}
                 </main>

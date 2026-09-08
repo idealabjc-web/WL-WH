@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import EventPortal from "./EventPortal";
 import SpeakerPortalPage from "./pages/speaker/SpeakerPortalPage";
@@ -34,6 +34,7 @@ export default function AdminApp() {
     return (
         <EventPortal
             displayName={session.user?.name || session.user?.email}
+            userEmail={session.user?.email}
             onLogout={handleLogout}
         />
     );
