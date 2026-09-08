@@ -81,3 +81,32 @@ create policy "public overwrite id cards" on storage.objects
   for update using (bucket_id = 'id-cards');
 
 
+-- ─────────────────────────────────────────────────────────────
+-- SUPPORT TEAM TABLE
+-- Stores emails of all staff who should have full admin portal access.
+-- Login checks this table first, then the speakers table.
+-- ─────────────────────────────────────────────────────────────
+create table if not exists support_team (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  email text not null unique,
+  role text default 'support',  -- e.g. 'admin', 'support', 'ops'
+  created_at timestamptz default now()
+);
+
+alter table support_team enable row level security;
+
+create policy "public read support team" on support_team
+  for select using (true);
+
+-- ─────────────────────────────────────────────────────────────
+-- HOW TO ADD SUPPORT TEAM MEMBERS:
+-- Simply insert their name and email:
+-- ─────────────────────────────────────────────────────────────
+-- insert into support_team (name, email, role) values
+--   ('Admin Name',   'admin@wlwh.com',   'admin'),
+--   ('Support Name', 'support@wlwh.com', 'support');
+
+
+
+

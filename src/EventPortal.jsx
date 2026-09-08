@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Users, ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, Menu, PanelLeft, BadgeCheck } from "lucide-react";
+import { Users, ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, Menu, PanelLeft, BadgeCheck, LogOut } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./supabaseClient";
 import { fetchSpeakers, speakerToRow } from "./api/speakersApi";
 import { fetchFeedback, feedbackToRow } from "./api/feedbackApi";
@@ -22,7 +22,7 @@ function getInitialTab() {
     return VALID_TABS.includes(hash) ? hash : "register";
 }
 
-export default function EventPortal() {
+export default function EventPortal({ displayName = "", onLogout }) {
     const [tab, setTab] = useState(getInitialTab);
     const [speakers, setSpeakers] = useState([]);
     const [feedback, setFeedback] = useState([]);
@@ -240,8 +240,25 @@ export default function EventPortal() {
                         </div>
                     </div>
 
-                    <div className="text-xs text-slate-500 font-medium hidden sm:block">
-                        WL-WH Conference Operations
+                    <div className="flex items-center gap-3">
+                        <div className="text-right hidden sm:block">
+                            <div className="text-xs text-slate-500 font-medium">WL-WH Conference Operations</div>
+                            {displayName && (
+                                <div className="text-xs font-semibold text-slate-700">
+                                    {displayName}
+                                </div>
+                            )}
+                        </div>
+                        {onLogout && (
+                            <button
+                                onClick={onLogout}
+                                className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-rose-500 hover:bg-rose-50 px-3 py-2 rounded-lg transition-colors"
+                                title="Sign out"
+                            >
+                                <LogOut size={14} />
+                                <span className="hidden sm:inline">Sign out</span>
+                            </button>
+                        )}
                     </div>
                 </header>
 
