@@ -1,4 +1,5 @@
 // Generates high-resolution JPEG ID Card badges matching the WL-WH 2025 conference template
+import QRCode from "qrcode";
 
 const LOGO_CANDIDATES = [
     ["/COMPANY_LOGOS/WYN.jpg", "/WYN.jpg"],
@@ -117,16 +118,16 @@ export async function generateIdCardJpeg(speaker) {
     ctx.lineWidth = 1.5;
     for (let i = 0; i < 6; i++) {
         ctx.beginPath();
-        ctx.moveTo(0, 420 + i * 14);
-        ctx.bezierCurveTo(width * 0.25, 360 + i * 20, width * 0.75, 590 + i * 15, width, 520 + i * 14);
+        ctx.moveTo(0, 360 + i * 14);
+        ctx.bezierCurveTo(width * 0.25, 300 + i * 20, width * 0.75, 540 + i * 15, width, 470 + i * 14);
         ctx.stroke();
     }
     ctx.restore();
 
     // 6. Center Circular Photo
     const avatarCenterX = width / 2;
-    const avatarCenterY = 475;
-    const avatarRadius = 140;
+    const avatarCenterY = 425;
+    const avatarRadius = 120;
 
     let speakerPhoto = null;
     if (speaker.photoUrl) {
@@ -158,7 +159,7 @@ export async function generateIdCardJpeg(speaker) {
         ctx.fill();
 
         ctx.fillStyle = "#f8fafc";
-        ctx.font = "bold 56px Inter, sans-serif";
+        ctx.font = "bold 52px Inter, sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         const initials = (speaker.name || "WL")
@@ -176,32 +177,86 @@ export async function generateIdCardJpeg(speaker) {
     ctx.beginPath();
     ctx.arc(avatarCenterX, avatarCenterY, avatarRadius + 3, 0, Math.PI * 2);
     ctx.strokeStyle = "#0284c7";
-    ctx.lineWidth = 6;
+    ctx.lineWidth = 5;
     ctx.stroke();
     ctx.restore();
 
     // 7. Speaker Name (Bold Uppercase)
     ctx.fillStyle = "#0f172a";
-    ctx.font = "bold 26px Inter, -apple-system, sans-serif";
+    ctx.font = "bold 25px Inter, -apple-system, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
     const speakerName = (speaker.name || "SPEAKER").toUpperCase();
-    ctx.fillText(speakerName, width / 2, 680);
+    ctx.fillText(speakerName, width / 2, 595);
 
     // 8. Speaker Role (Bold Blue)
     ctx.fillStyle = "#0056b3";
-    ctx.font = "bold 20px Inter, -apple-system, sans-serif";
+    ctx.font = "bold 19px Inter, -apple-system, sans-serif";
     const roleText = (speaker.role || "SPEAKER").toUpperCase();
-    ctx.fillText(roleText, width / 2, 730);
+    ctx.fillText(roleText, width / 2, 628);
 
     // 9. Black Horizontal Divider Line
     ctx.fillStyle = "#0f172a";
-    ctx.fillRect(width / 2 - 120, 755, 240, 3.5);
+    ctx.fillRect(width / 2 - 110, 646, 220, 3);
 
     // 10. ID Number
     ctx.fillStyle = "#0f172a";
-    ctx.font = "bold 23px Inter, -apple-system, monospace";
-    ctx.fillText(`ID NO: ${speaker.id}`, width / 2, 800);
+    ctx.font = "bold 21px Inter, -apple-system, monospace";
+    ctx.fillText(`ID NO: ${speaker.id}`, width / 2, 680);
+
+    // 11. QR Code for On-site Verification & Check-In
+    try {
+        const qrDataUrl = await QRCode.toDataURL(speaker.id || "SPEAKER", {
+            width: 250,
+            margin: 1,
+            color: {
+                dark: "#0a2540",
+                light: "#ffffff",
+            },
+        });
+        const qrImg = await loadImage(qrDataUrl);
+        if (qrImg) {
+            const qrSize = 108;
+            const qrX = (width - qrSize) / 2;
+            const qrY = 702;
+            const pad = 6;
+            const boxX = qrX - pad;
+            const boxY = qrY - pad;
+            const boxSize = qrSize + pad * 2;
+            const r = 8;
+
+            // Rounded badge container with crisp subtle border
+            ctx.save();
+            ctx.fillStyle = "#ffffff";
+            ctx.strokeStyle = "#cbd5e1";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(boxX + r, boxY);
+            ctx.lineTo(boxX + boxSize - r, boxY);
+            ctx.quadraticCurveTo(boxX + boxSize, boxY, boxX + boxSize, boxY + r);
+            ctx.lineTo(boxX + boxSize, boxY + boxSize - r);
+            ctx.quadraticCurveTo(boxX + boxSize, boxY + boxSize, boxX + boxSize - r, boxY + boxSize);
+            ctx.lineTo(boxX + r, boxY + boxSize);
+            ctx.quadraticCurveTo(boxX, boxY + boxSize, boxX, boxY + boxSize - r);
+            ctx.lineTo(boxX, boxY + r);
+            ctx.quadraticCurveTo(boxX, boxY, boxX + r, boxY);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.restore();
+
+            // Draw crisp QR code
+            ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+
+            // Scan label
+            ctx.fillStyle = "#475569";
+            ctx.font = "bold 10px Inter, -apple-system, sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText("SCAN FOR CHECK-IN", width / 2, qrY + qrSize + pad + 14);
+        }
+    } catch (qrErr) {
+        console.warn("Could not generate QR code for card", speaker.id, qrErr);
+    }
 
     // 11. Bottom Decorative Waves
     // Layer 1: Dark Navy Blue Base

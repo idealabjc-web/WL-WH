@@ -26,27 +26,27 @@ export default function IdCardsPage({
     const totalSpeakers = speakers.length;
     const generatedCount = Object.keys(cards).length;
 
-    // Generate ID Cards for all speakers (skips already generated ones to avoid duplicates)
-    const handleGenerateCards = async () => {
+    // Generate ID Cards for all speakers (skips already generated ones unless force = true)
+    const handleGenerateCards = async (force = false) => {
         if (totalSpeakers === 0) {
             toast("No registered speakers found to generate cards.");
             return;
         }
 
-        // Find speakers that haven't been generated yet
-        const pendingSpeakers = speakers.filter((s) => !cards[s.id]);
+        // Find speakers that haven't been generated yet (or all if force)
+        const targetSpeakers = force ? speakers : speakers.filter((s) => !cards[s.id]);
 
-        if (pendingSpeakers.length === 0) {
-            toast("All speaker ID cards have already been generated (no duplicates created).");
+        if (targetSpeakers.length === 0) {
+            toast("All speaker ID cards have already been generated. Click 'Regenerate All' to refresh with QR codes.");
             return;
         }
 
         setGenerating(true);
-        const updated = { ...cards };
+        const updated = force ? {} : { ...cards };
         let done = 0;
 
-        for (const s of pendingSpeakers) {
-            setProgress(`Generating ${done + 1} of ${pendingSpeakers.length}: ${s.name}...`);
+        for (const s of targetSpeakers) {
+            setProgress(`Generating ${done + 1} of ${targetSpeakers.length}: ${s.name}...`);
             try {
                 const card = await generateIdCardJpeg(s);
                 updated[s.id] = card;
@@ -59,7 +59,7 @@ export default function IdCardsPage({
         setCards(updated);
         setGenerating(false);
         setProgress(null);
-        toast(`Successfully generated ${pendingSpeakers.length} new ID card(s).`);
+        toast(`Successfully generated ${targetSpeakers.length} ID card(s) with QR codes.`);
     };
 
     // Bundle all generated JPEG cards into a single ZIP file and trigger automatic download
@@ -153,11 +153,11 @@ export default function IdCardsPage({
                         <div className="flex items-center gap-2">
                             <h2 className="text-lg sm:text-xl font-bold text-slate-900">Speaker ID Cards</h2>
                             <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
-                                Official Template
+                                Official Template + QR Code
                             </span>
                         </div>
                         <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                            Generate official printable JPEG badges with conference branding, partner logos, and speaker photos.
+                            Generate official printable JPEG badges with scannable on-site check-in QR codes, partner logos, and speaker photos.
                         </p>
                         <div className="flex items-center gap-4 mt-2 text-xs font-medium text-slate-600">
                             <span>Registered Speakers: <strong className="text-slate-900">{totalSpeakers}</strong></span>
@@ -169,13 +169,25 @@ export default function IdCardsPage({
                     {/* Action Buttons */}
                     <div className="flex flex-wrap items-center gap-2.5">
                         <button
-                            onClick={handleGenerateCards}
+                            onClick={() => handleGenerateCards(false)}
                             disabled={generating || zipping || totalSpeakers === 0}
                             className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white font-semibold text-sm px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-95 min-h-[44px]"
                         >
                             <Sparkles size={16} className={generating ? "animate-spin" : ""} />
                             {generating ? "Generating Badges..." : "Generate ID Cards"}
                         </button>
+
+                        {generatedCount > 0 && (
+                            <button
+                                onClick={() => handleGenerateCards(true)}
+                                disabled={generating || zipping}
+                                title="Regenerate all ID cards with QR codes"
+                                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 text-slate-700 font-semibold text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 transition-all active:scale-95 min-h-[44px]"
+                            >
+                                <RefreshCw size={15} className={generating ? "animate-spin" : ""} />
+                                Regenerate All
+                            </button>
+                        )}
 
                         <button
                             onClick={handleDownloadZip}
