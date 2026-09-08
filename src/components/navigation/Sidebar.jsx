@@ -41,47 +41,56 @@ export default function Sidebar({
                 {/* Brand Header */}
                 <div className="h-16 px-4 flex items-center justify-between border-b border-slate-800">
                     {showExpanded ? (
-                        <div className="flex items-center gap-3 overflow-hidden">
-                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-bold text-slate-950 text-sm shadow-md shrink-0">
-                                WL
-                            </div>
-                            <div className="min-w-0">
-                                <div className="font-bold text-sm text-white tracking-tight truncate">
-                                    Speaker Portal
+                        <>
+                            <div className="flex items-center gap-3 overflow-hidden">
+                                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-bold text-slate-950 text-sm shadow-md shrink-0">
+                                    WL
                                 </div>
-                                <div className="text-[10px] text-amber-400 font-semibold tracking-wide uppercase truncate">
-                                    Dubai Operations
+                                <div className="min-w-0">
+                                    <div className="font-bold text-sm text-white tracking-tight truncate">
+                                        Speaker Portal
+                                    </div>
+                                    <div className="text-[10px] text-amber-400 font-semibold tracking-wide uppercase truncate">
+                                        Dubai Operations
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+
+                            {/* Collapse button on desktop / tablet: three lines hamburger */}
+                            <button
+                                onClick={onToggleCollapse}
+                                type="button"
+                                className="hidden md:flex p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 active:bg-slate-700 transition-colors touch-manipulation"
+                                title="Collapse sidebar"
+                                aria-label="Collapse sidebar"
+                            >
+                                <Menu size={20} />
+                            </button>
+
+                            {/* Close button on mobile drawer */}
+                            <button
+                                onClick={onCloseMobile}
+                                type="button"
+                                className="md:hidden p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 active:bg-slate-700 transition-colors touch-manipulation"
+                                aria-label="Close menu"
+                            >
+                                <X size={20} />
+                            </button>
+                        </>
                     ) : (
+                        /* When collapsed on desktop: logo is removed, displays ONLY single centered three-line hamburger */
                         <div className="w-full flex items-center justify-center">
-                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-bold text-slate-950 text-sm shadow-md">
-                                WL
-                            </div>
+                            <button
+                                onClick={onToggleCollapse}
+                                type="button"
+                                className="p-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 active:bg-slate-700 transition-colors touch-manipulation"
+                                title="Expand sidebar"
+                                aria-label="Expand sidebar"
+                            >
+                                <Menu size={22} />
+                            </button>
                         </div>
                     )}
-
-                    {/* Toggle button on desktop / tablet */}
-                    <button
-                        onClick={onToggleCollapse}
-                        type="button"
-                        className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-                        aria-label="Toggle sidebar"
-                    >
-                        {collapsed ? <PanelLeft size={18} /> : <Menu size={20} />}
-                    </button>
-
-                    {/* Close button on mobile drawer */}
-                    <button
-                        onClick={onCloseMobile}
-                        type="button"
-                        className="md:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                        aria-label="Close menu"
-                    >
-                        <X size={20} />
-                    </button>
                 </div>
 
                 {/* Navigation Items */}

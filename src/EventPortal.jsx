@@ -195,24 +195,16 @@ export default function EventPortal() {
                 {/* Top App Bar Header with Hamburger Menu Button */}
                 <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-3.5 sm:px-6 py-3 flex items-center justify-between shadow-xs">
                     <div className="flex items-center gap-3">
-                        {/* Sidebar / Menu Button: on desktop only visible when sidebar is collapsed, hidden when sidebar is expanded */}
+                        {/* Mobile Only: opens drawer on phone viewports (completely hidden on tablet/desktop) */}
                         <button
                             id="hamburger-btn"
-                            onClick={() => {
-                                if (window.innerWidth >= 768) {
-                                    toggleSidebar();
-                                } else {
-                                    setMobileMenuOpen(true);
-                                }
-                            }}
+                            onClick={() => setMobileMenuOpen(true)}
                             type="button"
-                            className={`p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors touch-manipulation ${
-                                !sidebarCollapsed ? "md:hidden" : ""
-                            }`}
-                            title={sidebarCollapsed ? "Expand sidebar" : "Toggle menu"}
-                            aria-label="Toggle navigation menu"
+                            className="md:hidden p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors touch-manipulation"
+                            title="Open navigation menu"
+                            aria-label="Open navigation menu"
                         >
-                            <PanelLeft size={22} />
+                            <Menu size={22} />
                         </button>
 
                         <div>
