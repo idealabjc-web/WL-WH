@@ -168,14 +168,22 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                 <Field label="Time slot">
                     <select className={inputCls} value={form.timeSlot} onChange={set("timeSlot")}>
                         <option value="">Select a time slot...</option>
-                        <option value="09:00 - 10:00">09:00 - 10:00</option>
-                        <option value="10:00 - 11:00">10:00 - 11:00</option>
-                        <option value="11:00 - 12:00">11:00 - 12:00</option>
-                        <option value="12:00 - 13:00">12:00 - 13:00</option>
-                        <option value="13:00 - 14:00">13:00 - 14:00</option>
-                        <option value="14:00 - 15:00">14:00 - 15:00</option>
-                        <option value="15:00 - 16:00">15:00 - 16:00</option>
-                        <option value="16:00 - 17:00">16:00 - 17:00</option>
+                        <option value="09:00 - 09:30">09:00 - 09:30</option>
+                        <option value="09:30 - 10:00">09:30 - 10:00</option>
+                        <option value="10:00 - 10:30">10:00 - 10:30</option>
+                        <option value="10:30 - 11:00">10:30 - 11:00</option>
+                        <option value="11:00 - 11:30">11:00 - 11:30</option>
+                        <option value="11:30 - 12:00">11:30 - 12:00</option>
+                        <option value="12:00 - 12:30">12:00 - 12:30</option>
+                        <option value="12:30 - 13:00">12:30 - 13:00</option>
+                        <option value="13:00 - 13:30">13:00 - 13:30</option>
+                        <option value="13:30 - 14:00">13:30 - 14:00</option>
+                        <option value="14:00 - 14:30">14:00 - 14:30</option>
+                        <option value="14:30 - 15:00">14:30 - 15:00</option>
+                        <option value="15:00 - 15:30">15:00 - 15:30</option>
+                        <option value="15:30 - 16:00">15:30 - 16:00</option>
+                        <option value="16:00 - 16:30">16:00 - 16:30</option>
+                        <option value="16:30 - 17:00">16:30 - 17:00</option>
                     </select>
                 </Field>
                 <Field label="Hotel room no.">
