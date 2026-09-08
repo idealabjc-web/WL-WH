@@ -19,8 +19,12 @@ create table if not exists speakers (
   checked_in boolean default false,
   checked_in_at timestamptz,
   qr_url text,                         -- public URL of the stored QR badge image
+  id_card_url text,                    -- public URL of the full official ID Card JPEG image
   created_at timestamptz default now()
 );
+
+-- In case the table already exists, add the column if missing:
+alter table speakers add column if not exists id_card_url text;
 
 create table if not exists feedback (
   id text primary key,
