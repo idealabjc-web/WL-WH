@@ -62,3 +62,18 @@ create policy "public upload qr badges" on storage.objects
 create policy "public overwrite qr badges" on storage.objects
   for update using (bucket_id = 'qr-badges');
 
+-- Dedicated storage bucket for full official ID Card JPEG images
+insert into storage.buckets (id, name, public)
+values ('id-cards', 'id-cards', true)
+on conflict (id) do nothing;
+
+create policy "public read id cards" on storage.objects
+  for select using (bucket_id = 'id-cards');
+
+create policy "public upload id cards" on storage.objects
+  for insert with check (bucket_id = 'id-cards');
+
+create policy "public overwrite id cards" on storage.objects
+  for update using (bucket_id = 'id-cards');
+
+

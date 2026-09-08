@@ -1,10 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import JSZip from "jszip";
 import {
     Download, RefreshCw, FileArchive, Search, Sparkles, CheckCircle2,
-    Eye, X, AlertTriangle, ExternalLink
+    Eye, X, AlertTriangle, ExternalLink, Cloud
 } from "lucide-react";
 import { generateIdCardJpeg } from "../utils/idCardGenerator";
+import {
+    uploadIdCardToStorage,
+    fetchStoredIdCards,
+    getLocalCachedCards,
+    saveLocalCachedCards,
+} from "../api/idCardsStorage";
 import { inputCls } from "../components/common/UIAtoms";
 
 export default function IdCardsPage({
@@ -13,7 +19,7 @@ export default function IdCardsPage({
     setCards: externalSetCards,
     toast,
 }) {
-    // Cache map: { [speakerId]: { id, speaker, dataUrl, blob, filename } }
+    // Cache map: { [speakerId]: { id, speaker, dataUrl, publicUrl, blob, filename, isStored } }
     const [internalCards, setInternalCards] = useState({});
     const cards = externalCards !== undefined ? externalCards : internalCards;
     const setCards = externalSetCards || setInternalCards;
@@ -26,7 +32,51 @@ export default function IdCardsPage({
     const totalSpeakers = speakers.length;
     const generatedCount = Object.keys(cards).length;
 
-    // Generate ID Cards for all speakers (skips already generated ones unless force = true)
+    // 1. On Mount & Speakers Change: Load from localStorage instantly + sync with Supabase Storage Bucket
+    useEffect(() => {
+        // A. Immediate instant restoration from local cache (persists through refresh)
+        const cached = getLocalCachedCards();
+        if (cached && Object.keys(cached).length > 0) {
+            setCards((prev) => ({ ...cached, ...prev }));
+        }
+
+        // B. Sync with Supabase cloud storage bucket
+        if (speakers.length > 0) {
+            fetchStoredIdCards(speakers).then((stored) => {
+                if (stored && Object.keys(stored).length > 0) {
+                    setCards((prev) => {
+                        const merged = { ...prev, ...stored };
+                        saveLocalCachedCards(merged);
+                        return merged;
+                    });
+                }
+            });
+        }
+    }, [speakers]);
+
+    // 2. Generate and store single card to Supabase bucket
+    const generateAndStoreSingleCard = async (speaker) => {
+        toast(`Generating badge for ${speaker.name}...`);
+        try {
+            const card = await generateIdCardJpeg(speaker);
+            const uploadRes = await uploadIdCardToStorage(speaker, card.blob, card.filename);
+            if (uploadRes.publicUrl) {
+                card.publicUrl = uploadRes.publicUrl;
+                card.isStored = true;
+            }
+            setCards((prev) => {
+                const updated = { ...prev, [speaker.id]: card };
+                saveLocalCachedCards(updated);
+                return updated;
+            });
+            toast(`Generated & stored ID badge for ${speaker.name}.`);
+        } catch (err) {
+            console.error("Single card generation failed:", err);
+            toast("Failed to generate ID badge.");
+        }
+    };
+
+    // 3. Batch generate ID Cards for all speakers and save to Supabase Storage Bucket
     const handleGenerateCards = async (force = false) => {
         if (totalSpeakers === 0) {
             toast("No registered speakers found to generate cards.");
@@ -37,7 +87,7 @@ export default function IdCardsPage({
         const targetSpeakers = force ? speakers : speakers.filter((s) => !cards[s.id]);
 
         if (targetSpeakers.length === 0) {
-            toast("All speaker ID cards have already been generated. Click 'Regenerate All' to refresh with QR codes.");
+            toast("All speaker ID cards have already been generated. Click 'Regenerate All' to refresh.");
             return;
         }
 
@@ -46,9 +96,15 @@ export default function IdCardsPage({
         let done = 0;
 
         for (const s of targetSpeakers) {
-            setProgress(`Generating ${done + 1} of ${targetSpeakers.length}: ${s.name}...`);
+            setProgress(`Generating & uploading ${done + 1} of ${targetSpeakers.length}: ${s.name}...`);
             try {
                 const card = await generateIdCardJpeg(s);
+                // Upload directly to Supabase storage bucket
+                const uploadRes = await uploadIdCardToStorage(s, card.blob, card.filename);
+                if (uploadRes.publicUrl) {
+                    card.publicUrl = uploadRes.publicUrl;
+                    card.isStored = true;
+                }
                 updated[s.id] = card;
             } catch (err) {
                 console.error("Failed to generate card for", s.name, err);
@@ -57,32 +113,38 @@ export default function IdCardsPage({
         }
 
         setCards(updated);
+        saveLocalCachedCards(updated);
         setGenerating(false);
         setProgress(null);
-        toast(`Successfully generated ${targetSpeakers.length} ID card(s) with QR codes.`);
+        toast(`Successfully generated and stored ${targetSpeakers.length} ID card(s) in cloud bucket.`);
     };
 
-    // Bundle all generated JPEG cards into a single ZIP file and trigger automatic download
+    // 4. Bundle all generated JPEG cards into a single ZIP file and trigger automatic download
     const handleDownloadZip = async () => {
         let currentCards = { ...cards };
 
-        // If no cards generated yet, prompt user or auto-generate first
+        // If no cards generated yet, auto-generate first
         if (Object.keys(currentCards).length === 0) {
             if (totalSpeakers === 0) {
                 toast("No speakers available to generate ID cards.");
                 return;
             }
-            // Auto generate first
-            toast("Generating ID cards first...");
+            toast("Generating and storing ID cards first...");
             setGenerating(true);
             let done = 0;
             for (const s of speakers) {
-                setProgress(`Generating ${done + 1} of ${speakers.length}: ${s.name}...`);
+                setProgress(`Generating & saving ${done + 1} of ${speakers.length}: ${s.name}...`);
                 const card = await generateIdCardJpeg(s);
+                const uploadRes = await uploadIdCardToStorage(s, card.blob, card.filename);
+                if (uploadRes.publicUrl) {
+                    card.publicUrl = uploadRes.publicUrl;
+                    card.isStored = true;
+                }
                 currentCards[s.id] = card;
                 done++;
             }
             setCards(currentCards);
+            saveLocalCachedCards(currentCards);
             setGenerating(false);
             setProgress(null);
         }
@@ -92,10 +154,21 @@ export default function IdCardsPage({
             const zip = new JSZip();
             const cardList = Object.values(currentCards);
 
-            // Add every JPEG image to the zip
-            cardList.forEach((c) => {
-                zip.file(c.filename, c.blob);
-            });
+            // Add every JPEG image to the zip (fetching remote blob if not in memory)
+            for (const c of cardList) {
+                let blob = c.blob;
+                if (!blob && (c.publicUrl || c.dataUrl)) {
+                    try {
+                        const res = await fetch(c.publicUrl || c.dataUrl);
+                        blob = await res.blob();
+                    } catch (e) {
+                        console.warn("Could not fetch blob for", c.filename, e);
+                    }
+                }
+                if (blob) {
+                    zip.file(c.filename, blob);
+                }
+            }
 
             // Generate ZIP file
             const zipBlob = await zip.generateAsync({
@@ -122,15 +195,35 @@ export default function IdCardsPage({
         }
     };
 
-    // Download a single card as a JPEG
-    const downloadSingleCard = (card) => {
-        const link = document.createElement("a");
-        link.href = card.dataUrl;
-        link.download = card.filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        toast(`Downloaded ${card.filename}`);
+    // 5. Download a single card as a JPEG
+    const downloadSingleCard = async (card) => {
+        try {
+            const downloadUrl = card.dataUrl || card.publicUrl;
+            if (!downloadUrl) return;
+
+            if (downloadUrl.startsWith("http")) {
+                const res = await fetch(downloadUrl);
+                const blob = await res.blob();
+                const link = document.createElement("a");
+                link.href = URL.createObjectURL(blob);
+                link.download = card.filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+            } else {
+                const link = document.createElement("a");
+                link.href = downloadUrl;
+                link.download = card.filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+            toast(`Downloaded ${card.filename}`);
+        } catch (err) {
+            console.error("Download failed:", err);
+            toast("Download failed. Please try again.");
+        }
     };
 
     // Filter speakers for gallery display
@@ -247,11 +340,16 @@ export default function IdCardsPage({
                                         {card ? (
                                             <>
                                                 <img
-                                                    src={card.dataUrl}
+                                                    src={card.dataUrl || card.publicUrl}
                                                     alt={`ID Badge - ${s.name}`}
                                                     className="w-full h-full object-contain cursor-pointer transition-transform duration-200 group-hover:scale-[1.02]"
                                                     onClick={() => setPreviewCard(card)}
                                                 />
+                                                {card.isStored && (
+                                                    <span className="absolute top-2 left-2 bg-teal-700/90 backdrop-blur-xs text-white text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs">
+                                                        <CheckCircle2 size={11} /> Cloud Saved
+                                                    </span>
+                                                )}
                                                 <button
                                                     onClick={() => setPreviewCard(card)}
                                                     className="absolute bottom-2 right-2 bg-slate-900/80 hover:bg-slate-900 text-white p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
@@ -268,14 +366,10 @@ export default function IdCardsPage({
                                                 <div className="text-xs font-semibold text-slate-600 mb-1">{s.name}</div>
                                                 <div className="text-[11px] text-slate-400 font-mono mb-3">{s.id}</div>
                                                 <button
-                                                    onClick={async () => {
-                                                        const generated = await generateIdCardJpeg(s);
-                                                        setCards((prev) => ({ ...prev, [s.id]: generated }));
-                                                        toast(`Generated badge for ${s.name}`);
-                                                    }}
-                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white shadow-xs transition-all"
+                                                    onClick={() => generateAndStoreSingleCard(s)}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white shadow-xs transition-all active:scale-95"
                                                 >
-                                                    <Sparkles size={12} /> Generate
+                                                    <Sparkles size={12} /> Generate & Save
                                                 </button>
                                             </div>
                                         )}
@@ -341,7 +435,11 @@ export default function IdCardsPage({
                         </p>
 
                         <div className="w-full max-w-[340px] rounded-xl overflow-hidden border border-slate-200 shadow-lg">
-                            <img src={previewCard.dataUrl} alt={previewCard.filename} className="w-full h-auto" />
+                            <img
+                                src={previewCard.dataUrl || previewCard.publicUrl}
+                                alt={previewCard.filename}
+                                className="w-full h-auto"
+                            />
                         </div>
 
                         <div className="flex gap-2.5 mt-5 w-full max-w-[340px]">
