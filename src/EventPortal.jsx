@@ -7,7 +7,6 @@ import { fetchFeedback, feedbackToRow } from "./api/feedbackApi";
 import Toast from "./components/common/Toast";
 import SetupNeeded from "./components/SetupNeeded";
 import Sidebar from "./components/navigation/Sidebar";
-import BottomNavBar from "./components/navigation/BottomNavBar";
 
 import RegisterPage from "./pages/RegisterPage";
 import CheckinPage from "./pages/CheckinPage";
@@ -230,7 +229,7 @@ export default function EventPortal() {
                 </header>
 
                 {/* Main Content View (Fluid width, not restricted to narrow max-w-5xl) */}
-                <main className="flex-1 p-3.5 sm:p-6 lg:p-8 pb-28 md:pb-12 w-full max-w-[1600px] mx-auto">
+                <main className="flex-1 p-3.5 sm:p-6 lg:p-8 pb-12 w-full max-w-[1600px] mx-auto">
                     {connectionError && (
                         <div className="flex items-start gap-2 bg-rose-50 text-rose-700 text-xs font-medium px-4 py-3 rounded-xl mb-4 border border-rose-200 shadow-xs">
                             <AlertTriangle size={15} className="mt-0.5 shrink-0" />
@@ -262,13 +261,10 @@ export default function EventPortal() {
                     )}
                 </main>
 
-                <footer className="py-4 text-center text-xs text-slate-400 border-t border-slate-200/60 hidden md:block">
+                <footer className="py-4 text-center text-xs text-slate-400 border-t border-slate-200/60">
                     WLWH Operations Portal · Real-time On-site Check-in System
                 </footer>
             </div>
-
-            {/* Mobile & iPad Native Bottom Navigation Bar */}
-            <BottomNavBar tabs={tabs} activeTab={tab} onTabChange={handleTabChange} />
 
             <Toast message={toastMsg} />
         </div>
