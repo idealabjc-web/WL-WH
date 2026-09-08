@@ -23,7 +23,15 @@ export async function uploadIdCardToStorage(speaker, blob, filename) {
 
         if (!error) {
             const { data: urlData } = supabase.storage.from("id-cards").getPublicUrl(name);
-            return { publicUrl: urlData?.publicUrl || null, bucket: "id-cards", filename: name };
+            const publicUrl = urlData?.publicUrl || null;
+            if (publicUrl) {
+                try {
+                    await supabase.from("speakers").update({ id_card_url: publicUrl }).eq("id", speaker.id);
+                } catch (colErr) {
+                    console.warn("Could not write id_card_url column (may need SQL migration):", colErr);
+                }
+            }
+            return { publicUrl, bucket: "id-cards", filename: name };
         }
 
         // If bucket doesn't exist, proceed to fallback
@@ -37,7 +45,15 @@ export async function uploadIdCardToStorage(speaker, blob, filename) {
             if (fbError) throw fbError;
 
             const { data: urlData } = supabase.storage.from("qr-badges").getPublicUrl(fallbackPath);
-            return { publicUrl: urlData?.publicUrl || null, bucket: "qr-badges", filename: name, path: fallbackPath };
+            const publicUrl = urlData?.publicUrl || null;
+            if (publicUrl) {
+                try {
+                    await supabase.from("speakers").update({ id_card_url: publicUrl }).eq("id", speaker.id);
+                } catch (colErr) {
+                    console.warn("Could not write id_card_url column (may need SQL migration):", colErr);
+                }
+            }
+            return { publicUrl, bucket: "qr-badges", filename: name, path: fallbackPath };
         }
 
         throw error;
@@ -62,6 +78,21 @@ export async function fetchStoredIdCards(speakers = []) {
     });
 
     const discovered = {};
+
+    // 0. Instant match from speakers table column if already populated
+    for (const s of speakers) {
+        if (s.idCardUrl) {
+            const safeName = (s.name || "speaker").replace(/[^a-zA-Z0-9_-]/g, "_");
+            discovered[s.id] = {
+                id: s.id,
+                speaker: s,
+                filename: `ID_Card_${safeName}_${s.id}.jpg`,
+                publicUrl: s.idCardUrl,
+                dataUrl: s.idCardUrl,
+                isStored: true,
+            };
+        }
+    }
 
     // Helper to match filenames like 'ID_Card_Name_WL-101.jpg' or 'WL-101.jpg'
     const findSpeakerForFilename = (filename) => {

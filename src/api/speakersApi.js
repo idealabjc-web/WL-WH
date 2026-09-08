@@ -36,6 +36,7 @@ export function speakerToRow(s) {
         checked_in_at: s.checkedInAt ? new Date(s.checkedInAt).toISOString() : null,
         qr_url: s.qrUrl || null,
         photo_url: s.photoUrl || null,
+        id_card_url: s.idCardUrl || null,
     };
 }
 
@@ -61,6 +62,7 @@ export function rowToSpeaker(r) {
         createdAt: r.created_at ? new Date(r.created_at).getTime() : null,
         qrUrl: r.qr_url || null,
         photoUrl: r.photo_url || null,
+        idCardUrl: r.id_card_url || null,
     };
 }
 
