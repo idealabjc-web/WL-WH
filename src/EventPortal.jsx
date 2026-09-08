@@ -7,6 +7,7 @@ import { fetchFeedback, feedbackToRow } from "./api/feedbackApi";
 import Toast from "./components/common/Toast";
 import SetupNeeded from "./components/SetupNeeded";
 import Sidebar from "./components/navigation/Sidebar";
+import PullToRefresh from "./components/common/PullToRefresh";
 
 import RegisterPage from "./pages/RegisterPage";
 import CheckinPage from "./pages/CheckinPage";
@@ -176,7 +177,8 @@ export default function EventPortal() {
     const currentTabObj = tabs.find((t) => t.id === tab) || tabs[0];
 
     return (
-        <div className="min-h-screen bg-stone-100 text-slate-900 antialiased flex" style={{ fontFamily: "Inter, sans-serif" }}>
+        <PullToRefresh onRefresh={refresh}>
+            <div className="min-h-screen bg-stone-100 text-slate-900 antialiased flex" style={{ fontFamily: "Inter, sans-serif" }}>
             {/* Sidebar Navigation for iPad and Desktop (collapsible) + Mobile Off-Canvas Drawer */}
             <Sidebar
                 tabs={tabs}
@@ -280,5 +282,6 @@ export default function EventPortal() {
 
             <Toast message={toastMsg} />
         </div>
+    </PullToRefresh>
     );
 }
