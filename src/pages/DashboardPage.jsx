@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Download, RefreshCw, Search, Filter, AlertTriangle, LayoutList, Table as TableIcon } from "lucide-react";
 import { StatCard, StatusBadge, inputCls } from "../components/common/UIAtoms";
+import SpeakerAvatar from "../components/common/SpeakerAvatar";
 
 export default function DashboardPage({ speakers, onRefresh }) {
     const [search, setSearch] = useState("");
@@ -145,9 +146,12 @@ export default function DashboardPage({ speakers, onRefresh }) {
                         rows.map((s) => (
                             <div key={s.id} className="border border-slate-200 rounded-xl p-3.5 bg-slate-50/60">
                                 <div className="flex justify-between items-start gap-2 mb-2">
-                                    <div>
-                                        <div className="font-bold text-slate-900 text-sm">{s.name}</div>
-                                        <div className="text-xs text-slate-500">{s.sessionTitle || "No session title"}</div>
+                                    <div className="flex items-center gap-2.5">
+                                        <SpeakerAvatar src={s.photoUrl} size={36} />
+                                        <div>
+                                            <div className="font-bold text-slate-900 text-sm">{s.name}</div>
+                                            <div className="text-xs text-slate-500">{s.sessionTitle || "No session title"}</div>
+                                        </div>
                                     </div>
                                     <StatusBadge checkedIn={s.checkedIn} />
                                 </div>
@@ -207,7 +211,10 @@ export default function DashboardPage({ speakers, onRefresh }) {
                                 rows.map((s) => (
                                     <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                                         <td className="py-2.5 px-3 font-semibold whitespace-nowrap sticky left-0 bg-white/95">
-                                            {s.name}
+                                            <div className="flex items-center gap-2">
+                                                <SpeakerAvatar src={s.photoUrl} size={28} />
+                                                {s.name}
+                                            </div>
                                         </td>
                                         <td className="py-2.5 px-3 whitespace-nowrap">{s.sessionTitle || "—"}</td>
                                         <td className="py-2.5 px-3 whitespace-nowrap">

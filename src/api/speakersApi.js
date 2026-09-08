@@ -11,7 +11,7 @@ export function uid() {
 export const emptyForm = {
     name: "", email: "", phone: "", sessionTitle: "", day: "", timeSlot: "",
     room: "", checkinDate: "", checkoutDate: "", nights: "", diet: "No preference",
-    allergy: "", tour: "yes", concerns: ""
+    allergy: "", tour: "yes", concerns: "", photoUrl: ""
 };
 
 // Supabase <-> app-state mapping
@@ -35,6 +35,7 @@ export function speakerToRow(s) {
         checked_in: !!s.checkedIn,
         checked_in_at: s.checkedInAt ? new Date(s.checkedInAt).toISOString() : null,
         qr_url: s.qrUrl || null,
+        photo_url: s.photoUrl || null,
     };
 }
 
@@ -59,6 +60,7 @@ export function rowToSpeaker(r) {
         checkedInAt: r.checked_in_at ? new Date(r.checked_in_at).getTime() : null,
         createdAt: r.created_at ? new Date(r.created_at).getTime() : null,
         qrUrl: r.qr_url || null,
+        photoUrl: r.photo_url || null,
     };
 }
 
@@ -85,5 +87,21 @@ export async function generateAndStoreQrBadge(id) {
     } catch (e) {
         console.error("QR badge upload failed:", e);
         return { dataUrl, publicUrl: null };
+    }
+}
+
+export async function uploadSpeakerPhoto(id, file) {
+    try {
+        const ext = file.name.split(".").pop() || "jpg";
+        const path = `${id}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+            .from("speaker-photos")
+            .upload(path, file, { contentType: file.type, upsert: true });
+        if (uploadError) throw uploadError;
+        const { data } = supabase.storage.from("speaker-photos").getPublicUrl(path);
+        return data?.publicUrl || null;
+    } catch (e) {
+        console.error("Speaker photo upload failed:", e);
+        return null;
     }
 }
