@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Users, ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, Menu, BadgeCheck } from "lucide-react";
+import { Users, ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, Menu, PanelLeft, BadgeCheck } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./supabaseClient";
 import { fetchSpeakers, speakerToRow } from "./api/speakersApi";
 import { fetchFeedback, feedbackToRow } from "./api/feedbackApi";
@@ -195,7 +195,7 @@ export default function EventPortal() {
                 {/* Top App Bar Header with Hamburger Menu Button */}
                 <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-3.5 sm:px-6 py-3 flex items-center justify-between shadow-xs">
                     <div className="flex items-center gap-3">
-                        {/* Hamburger Button: toggles sidebar on iPad/desktop, opens drawer on mobile */}
+                        {/* Sidebar / Menu Button: on desktop only visible when sidebar is collapsed, hidden when sidebar is expanded */}
                         <button
                             id="hamburger-btn"
                             onClick={() => {
@@ -206,11 +206,13 @@ export default function EventPortal() {
                                 }
                             }}
                             type="button"
-                            className="p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors touch-manipulation"
-                            title="Toggle menu"
+                            className={`p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors touch-manipulation ${
+                                !sidebarCollapsed ? "md:hidden" : ""
+                            }`}
+                            title={sidebarCollapsed ? "Expand sidebar" : "Toggle menu"}
                             aria-label="Toggle navigation menu"
                         >
-                            <Menu size={22} />
+                            <PanelLeft size={22} />
                         </button>
 
                         <div>

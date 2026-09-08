@@ -70,7 +70,7 @@ export default function Sidebar({
                         title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                         aria-label="Toggle sidebar"
                     >
-                        {collapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
+                        {collapsed ? <PanelLeft size={18} /> : <Menu size={20} />}
                     </button>
 
                     {/* Close button on mobile drawer */}
