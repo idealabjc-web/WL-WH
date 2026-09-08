@@ -147,11 +147,11 @@ export default function EventPortal() {
     if (!isSupabaseConfigured) return <SetupNeeded />;
 
     return (
-        <div className="min-h-screen bg-stone-100 text-slate-900" style={{ fontFamily: "Inter, sans-serif" }}>
-            <div className="max-w-5xl mx-auto px-4 py-6 pb-16">
-                <header className="border-b border-slate-200 pb-4 mb-4">
-                    <div className="text-xs font-semibold text-amber-600 tracking-wide">DUBAI · ON-SITE OPERATIONS</div>
-                    <h1 className="text-2xl font-bold mt-0.5 mb-1">Speaker Check-In Portal</h1>
+        <div className="min-h-screen bg-stone-100 text-slate-900 antialiased" style={{ fontFamily: "Inter, sans-serif" }}>
+            <div className="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-6 pb-20">
+                <header className="border-b border-slate-200 pb-3 sm:pb-4 mb-4">
+                    <div className="text-[11px] sm:text-xs font-semibold text-amber-600 tracking-wide">DUBAI · ON-SITE OPERATIONS</div>
+                    <h1 className="text-xl sm:text-2xl font-bold mt-0.5 mb-1 text-slate-900">Speaker Check-In Portal</h1>
                     {connectionError && (
                         <div className="flex items-start gap-2 bg-rose-50 text-rose-700 text-xs font-medium px-3 py-2 rounded-lg mb-2">
                             <AlertTriangle size={14} className="mt-0.5 shrink-0" />
@@ -162,10 +162,10 @@ export default function EventPortal() {
                             </span>
                         </div>
                     )}
-                    <p className="text-sm text-slate-500">Register speakers, scan them in at the front desk, and keep the India ops team synced live.</p>
+                    <p className="text-xs sm:text-sm text-slate-500">Register speakers, scan them in at the front desk, and keep the India ops team synced live.</p>
                 </header>
 
-                <nav className="flex gap-1.5 bg-white border border-slate-200 rounded-xl p-1 mb-5">
+                <nav className="sticky top-2 z-30 flex gap-1 sm:gap-1.5 bg-white/95 backdrop-blur-md border border-slate-200/80 rounded-xl p-1 sm:p-1.5 mb-5 shadow-sm">
                     {tabs.map((t) => (
                         <TabButton
                             key={t.id}

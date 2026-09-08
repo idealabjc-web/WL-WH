@@ -34,9 +34,9 @@ export default function FeedbackPage({ feedback, onAdd, toast }) {
 
     return (
         <div>
-            <div className="bg-white border border-slate-200 rounded-xl p-5 mb-4">
-                <h2 className="text-base font-semibold mb-4">Log feedback</h2>
-                <div className="grid sm:grid-cols-2 gap-x-3">
+            <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-sm mb-4">
+                <h2 className="text-base sm:text-lg font-semibold mb-4 text-slate-900">Log feedback</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3">
                     <Field label="Speaker / attendee name">
                         <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Optional" />
                     </Field>
@@ -53,8 +53,14 @@ export default function FeedbackPage({ feedback, onAdd, toast }) {
                 <Field label="Rating">
                     <div className="flex gap-1 mb-1">
                         {[1, 2, 3, 4, 5].map((v) => (
-                            <button key={v} onClick={() => setRating(v)} className="p-0">
-                                <Star size={26} className={v <= rating ? "fill-amber-400 text-amber-400" : "text-slate-200"} />
+                            <button
+                                key={v}
+                                onClick={() => setRating(v)}
+                                type="button"
+                                className="min-w-[44px] min-h-[44px] flex items-center justify-center p-2 rounded-lg hover:bg-amber-50 active:scale-95 transition-all touch-manipulation"
+                                aria-label={`Rate ${v} stars`}
+                            >
+                                <Star size={28} className={v <= rating ? "fill-amber-400 text-amber-400" : "text-slate-200"} />
                             </button>
                         ))}
                     </div>
@@ -70,15 +76,15 @@ export default function FeedbackPage({ feedback, onAdd, toast }) {
                 </Field>
                 <button
                     onClick={submit}
-                    className="bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm px-5 py-3 rounded-lg"
+                    className="w-full sm:w-auto min-h-[44px] inline-flex items-center justify-center bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white font-semibold text-sm px-6 py-3 rounded-lg shadow-sm transition-all"
                 >
                     Save feedback
                 </button>
             </div>
 
-            <div className="bg-white border border-slate-200 rounded-xl p-5">
-                <h2 className="text-base font-semibold mb-4">
-                    Feedback log {avg && <span className="font-normal text-slate-500 text-sm">— average {avg} / 5 across {feedback.length} entries</span>}
+            <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-sm">
+                <h2 className="text-base sm:text-lg font-semibold mb-4 text-slate-900">
+                    Feedback log {avg && <span className="font-normal text-slate-500 text-xs sm:text-sm block sm:inline mt-0.5 sm:mt-0">— average {avg} / 5 across {feedback.length} entries</span>}
                 </h2>
                 {feedback.length === 0 ? (
                     <div className="text-center text-slate-500 py-8 text-sm">No feedback logged yet.</div>
@@ -87,13 +93,13 @@ export default function FeedbackPage({ feedback, onAdd, toast }) {
                         .slice()
                         .reverse()
                         .map((f) => (
-                            <div key={f.id} className="border-b border-slate-100 py-2.5 text-sm last:border-0">
-                                <div className="flex justify-between font-semibold">
-                                    <span>{f.name} · {f.category}</span>
-                                    <span className="text-amber-500">{"★".repeat(f.rating)}{"☆".repeat(5 - f.rating)}</span>
+                            <div key={f.id} className="border-b border-slate-100 py-3 text-sm last:border-0">
+                                <div className="flex justify-between items-center font-semibold">
+                                    <span className="text-slate-800">{f.name} · <span className="text-slate-500 font-normal">{f.category}</span></span>
+                                    <span className="text-amber-500 text-base">{"★".repeat(f.rating)}{"☆".repeat(5 - f.rating)}</span>
                                 </div>
-                                {f.comment && <div className="text-slate-500 mt-0.5">{f.comment}</div>}
-                                <div className="text-slate-400 text-xs mt-0.5">{new Date(f.ts).toLocaleString()}</div>
+                                {f.comment && <div className="text-slate-600 mt-1 text-xs sm:text-sm">{f.comment}</div>}
+                                <div className="text-slate-400 text-[11px] sm:text-xs mt-1">{new Date(f.ts).toLocaleString()}</div>
                             </div>
                         ))
                 )}

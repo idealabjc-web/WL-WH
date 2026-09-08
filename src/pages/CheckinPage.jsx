@@ -1,12 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Camera, CameraOff } from "lucide-react";
+import { Camera, CameraOff, Search } from "lucide-react";
 import jsQR from "jsqr";
 import { inputCls } from "../components/common/UIAtoms";
 import ProfileCard from "../components/ProfileCard";
 
-// jsQR is bundled via npm rather than loaded from a CDN at runtime —
-// this avoids failures from ad-blockers, corporate networks, or
-// browser privacy shields blocking the CDN request, and works offline too.
 export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast }) {
     const [query, setQuery] = useState("");
     const [matches, setMatches] = useState([]);
@@ -35,8 +32,7 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast })
         }
     };
 
-    const runSearch = (e) => {
-        if (e.key !== "Enter") return;
+    const handleSearchSubmit = () => {
         const q = query.trim().toLowerCase();
         if (!q) return;
         const exact = speakers.find((s) => s.id.toLowerCase() === q);
@@ -59,6 +55,12 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast })
         }
     };
 
+    const handleKeyDown = (e) => {
+        if (e.key === "Enter") {
+            handleSearchSubmit();
+        }
+    };
+
     const stopScan = useCallback(() => {
         setScanning(false);
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -71,7 +73,9 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast })
 
     const startScan = async () => {
         try {
-            streamRef.current = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            streamRef.current = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+            });
         } catch (e) {
             toast("Camera unavailable — use search instead.");
             return;
@@ -106,35 +110,60 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast })
     useEffect(() => () => stopScan(), [stopScan]);
 
     return (
-        <div className="bg-white border border-slate-200 rounded-xl p-5">
-            <h2 className="text-base font-semibold mb-4">Front desk check-in</h2>
-            <div className="flex gap-2 flex-wrap mb-3">
+        <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-sm">
+            <h2 className="text-base sm:text-lg font-semibold mb-4 text-slate-900">Front desk check-in</h2>
+            
+            <div className="flex flex-col sm:flex-row gap-2.5 mb-4">
                 {!scanning ? (
                     <button
                         onClick={startScan}
-                        className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm px-4 py-2.5 rounded-lg"
+                        className="w-full sm:w-auto min-h-[44px] flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm px-4 py-2.5 rounded-lg shadow-sm transition-all"
                     >
-                        <Camera size={15} /> Scan QR with camera
+                        <Camera size={16} /> Scan QR with camera
                     </button>
                 ) : (
-                    <button onClick={stopScan} className="flex items-center gap-2 border border-slate-200 text-sm font-semibold px-4 py-2.5 rounded-lg">
-                        <CameraOff size={15} /> Stop camera
+                    <button
+                        onClick={stopScan}
+                        className="w-full sm:w-auto min-h-[44px] flex items-center justify-center gap-2 border border-rose-200 bg-rose-50 text-rose-700 text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors"
+                    >
+                        <CameraOff size={16} /> Stop camera
                     </button>
                 )}
-                <input
-                    className={`${inputCls} flex-1 min-w-[220px] mb-0`}
-                    placeholder="Or type speaker name / badge ID and press Enter"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onKeyDown={runSearch}
-                />
+                
+                <div className="relative flex-1 flex">
+                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                        <Search size={16} />
+                    </div>
+                    <input
+                        className={`${inputCls} pl-10 pr-16 min-h-[44px] mb-0`}
+                        placeholder="Search speaker name or badge ID..."
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                    />
+                    <button
+                        onClick={handleSearchSubmit}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1.5 text-xs font-semibold bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-md transition-colors"
+                    >
+                        Find
+                    </button>
+                </div>
             </div>
-            <video ref={videoRef} playsInline autoPlay muted className={`w-full max-w-xs rounded-lg bg-black ${scanning ? "block" : "hidden"}`} />
+
+            {scanning && (
+                <div className="my-4 flex flex-col items-center justify-center p-3 bg-slate-900 rounded-xl overflow-hidden max-w-sm mx-auto shadow-inner">
+                    <div className="relative w-full aspect-square max-h-[300px] overflow-hidden rounded-lg">
+                        <video ref={videoRef} playsInline autoPlay muted className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 border-2 border-amber-400/70 rounded-lg pointer-events-none animate-pulse"></div>
+                    </div>
+                    <span className="text-xs text-slate-300 mt-2 font-medium">Point camera at the speaker's badge QR</span>
+                </div>
+            )}
             <canvas ref={canvasRef} style={{ display: "none" }} />
 
             {matches.length > 0 && (
-                <div className="mt-3">
-                    <div className="text-sm text-slate-500 mb-2">{matches.length} matches — tap one:</div>
+                <div className="mt-4 p-3 bg-amber-50/70 border border-amber-200 rounded-xl">
+                    <div className="text-xs font-semibold text-amber-900 mb-2">Multiple matches found — tap to select:</div>
                     <div className="flex flex-wrap gap-2">
                         {matches.map((m) => (
                             <button
@@ -143,7 +172,7 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast })
                                     setSelected(m);
                                     setMatches([]);
                                 }}
-                                className="border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-sm font-medium px-3 py-1.5 rounded-lg"
+                                className="min-h-[40px] border border-amber-300 bg-white hover:bg-amber-100 text-slate-800 text-xs sm:text-sm font-semibold px-3 py-2 rounded-lg shadow-xs transition-colors"
                             >
                                 {m.name}
                             </button>
