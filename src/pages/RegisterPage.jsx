@@ -1,7 +1,8 @@
-import React, { useState } from "react";
-import { CheckCircle2, AlertTriangle } from "lucide-react";
+import React, { useState, useRef } from "react";
+import { CheckCircle2, AlertTriangle, ImagePlus, Camera } from "lucide-react";
 import { Field, inputCls } from "../components/common/UIAtoms";
-import { uid, emptyForm, generateAndStoreQrBadge } from "../api/speakersApi";
+import SpeakerAvatar from "../components/common/SpeakerAvatar";
+import { uid, emptyForm, generateAndStoreQrBadge, uploadSpeakerPhoto } from "../api/speakersApi";
 
 export default function RegisterPage({ onAdd, toast }) {
     const [form, setForm] = useState(emptyForm);
@@ -10,8 +11,28 @@ export default function RegisterPage({ onAdd, toast }) {
     const [qrDataUrl, setQrDataUrl] = useState(null);
     const [syncFailed, setSyncFailed] = useState(false);
     const [badgeStored, setBadgeStored] = useState(false);
+    const [photoFile, setPhotoFile] = useState(null);
+    const [photoPreview, setPhotoPreview] = useState(null);
+    const photoInputRef = useRef(null);
 
     const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+    const handlePhotoSelect = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith("image/")) {
+            toast("Please select an image file.");
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            toast("Image must be under 5 MB.");
+            return;
+        }
+        setPhotoFile(file);
+        const reader = new FileReader();
+        reader.onload = (ev) => setPhotoPreview(ev.target.result);
+        reader.readAsDataURL(file);
+    };
 
     const submit = async () => {
         if (!form.name.trim()) {
@@ -21,6 +42,12 @@ export default function RegisterPage({ onAdd, toast }) {
         setSaving(true);
         const id = uid();
         const rec = { id, ...form, name: form.name.trim(), checkedIn: false, checkedInAt: null, createdAt: Date.now() };
+
+        // Upload speaker photo if one was selected
+        if (photoFile) {
+            const photoPublicUrl = await uploadSpeakerPhoto(id, photoFile);
+            rec.photoUrl = photoPublicUrl;
+        }
 
         // Generate the QR locally first so the badge shows immediately,
         // independent of network conditions.
@@ -35,6 +62,8 @@ export default function RegisterPage({ onAdd, toast }) {
         setSyncFailed(!ok);
         setSaving(false);
         setForm(emptyForm);
+        setPhotoFile(null);
+        setPhotoPreview(null);
         toast(ok ? "Speaker added — QR badge saved." : "QR badge ready — sync pending.");
     };
 
@@ -47,6 +76,48 @@ export default function RegisterPage({ onAdd, toast }) {
     return (
         <div className="bg-white border border-slate-200 rounded-xl p-5">
             <h2 className="text-base font-semibold mb-4">Add a speaker</h2>
+
+            {/* Speaker photo upload */}
+            <div className="flex items-center gap-4 mb-5">
+                <button
+                    type="button"
+                    onClick={() => photoInputRef.current?.click()}
+                    className="relative group shrink-0"
+                >
+                    {photoPreview ? (
+                        <img
+                            src={photoPreview}
+                            alt="Speaker preview"
+                            className="w-20 h-20 rounded-full object-cover border-2 border-slate-200 group-hover:border-amber-400 transition-colors"
+                        />
+                    ) : (
+                        <div className="w-20 h-20 rounded-full bg-slate-50 border-2 border-dashed border-slate-300 group-hover:border-amber-400 flex flex-col items-center justify-center transition-colors">
+                            <ImagePlus size={22} className="text-slate-400 group-hover:text-amber-500 transition-colors" />
+                        </div>
+                    )}
+                    <div className="absolute inset-0 rounded-full bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                        <Camera size={18} className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow" />
+                    </div>
+                </button>
+                <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handlePhotoSelect}
+                />
+                <div>
+                    <div className="text-sm font-semibold text-slate-700">Speaker photo</div>
+                    <div className="text-xs text-slate-400 mt-0.5">
+                        {photoPreview ? (
+                            <button onClick={() => { setPhotoFile(null); setPhotoPreview(null); }} className="text-rose-500 hover:underline">Remove photo</button>
+                        ) : (
+                            "Click to upload · JPG, PNG · Max 5 MB"
+                        )}
+                    </div>
+                </div>
+            </div>
+
             <div className="grid sm:grid-cols-2 gap-x-3">
                 <Field label="Full name *">
                     <input className={inputCls} value={form.name} onChange={set("name")} placeholder="e.g. Fatima Al Suwaidi" />
@@ -127,7 +198,10 @@ export default function RegisterPage({ onAdd, toast }) {
 
             {lastAdded && (
                 <div className="flex gap-5 items-center flex-wrap mt-4 pt-4 border-t border-dashed border-slate-200">
-                    <img src={qrDataUrl} alt="QR badge" className="border border-slate-200 rounded-lg p-2 bg-white" width={140} height={140} />
+                    <div className="flex flex-col items-center gap-2">
+                        <SpeakerAvatar src={lastAdded.photoUrl} size={56} />
+                        <img src={qrDataUrl} alt="QR badge" className="border border-slate-200 rounded-lg p-2 bg-white" width={140} height={140} />
+                    </div>
                     <div className="flex-1 min-w-[200px]">
                         <div className="font-bold text-base">{lastAdded.name}</div>
                         <div className="text-xs text-slate-500 font-mono">Badge ID: {lastAdded.id}</div>

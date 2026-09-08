@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { AlertTriangle } from "lucide-react";
 import { Field, StatusBadge, inputCls } from "./common/UIAtoms";
+import SpeakerAvatar from "./common/SpeakerAvatar";
 
 export default function ProfileCard({ speaker, onConfirm, onSaveNotes }) {
     const [notes, setNotes] = useState(speaker.concerns || "");
@@ -19,6 +20,7 @@ export default function ProfileCard({ speaker, onConfirm, onSaveNotes }) {
                 <div className="flex justify-between gap-4 py-1.5 border-b border-slate-200 text-sm">
                     <div className="text-slate-500">Name</div>
                     <div className="font-semibold text-right flex items-center gap-2 justify-end">
+                        <SpeakerAvatar src={speaker.photoUrl} size={32} />
                         {speaker.name}
                         <StatusBadge checkedIn={speaker.checkedIn} />
                         {(speaker.allergy || speaker.concerns) && (

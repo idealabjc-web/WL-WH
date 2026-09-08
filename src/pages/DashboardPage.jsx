@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Download, RefreshCw } from "lucide-react";
 import { StatCard, StatusBadge, inputCls } from "../components/common/UIAtoms";
+import SpeakerAvatar from "../components/common/SpeakerAvatar";
 
 export default function DashboardPage({ speakers, onRefresh }) {
     const [search, setSearch] = useState("");
@@ -117,7 +118,12 @@ export default function DashboardPage({ speakers, onRefresh }) {
                             ) : (
                                 rows.map((s) => (
                                     <tr key={s.id} className="border-b border-slate-100 hover:bg-slate-50">
-                                        <td className="py-2 px-2.5 font-semibold whitespace-nowrap">{s.name}</td>
+                                        <td className="py-2 px-2.5 font-semibold whitespace-nowrap">
+                                            <div className="flex items-center gap-2">
+                                                <SpeakerAvatar src={s.photoUrl} size={28} />
+                                                {s.name}
+                                            </div>
+                                        </td>
                                         <td className="py-2 px-2.5 whitespace-nowrap">{s.sessionTitle || "—"}</td>
                                         <td className="py-2 px-2.5 whitespace-nowrap">
                                             {s.day || "—"} {s.timeSlot ? `· ${s.timeSlot}` : ""}
