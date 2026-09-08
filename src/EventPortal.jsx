@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Users, ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, Menu } from "lucide-react";
+import { Users, ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, Menu, BadgeCheck } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./supabaseClient";
 import { fetchSpeakers, speakerToRow } from "./api/speakersApi";
 import { fetchFeedback, feedbackToRow } from "./api/feedbackApi";
@@ -11,9 +11,10 @@ import Sidebar from "./components/navigation/Sidebar";
 import RegisterPage from "./pages/RegisterPage";
 import CheckinPage from "./pages/CheckinPage";
 import DashboardPage from "./pages/DashboardPage";
+import IdCardsPage from "./pages/IdCardsPage";
 import FeedbackPage from "./pages/FeedbackPage";
 
-const VALID_TABS = ["register", "checkin", "dashboard", "feedback"];
+const VALID_TABS = ["register", "checkin", "dashboard", "idcards", "feedback"];
 
 function getInitialTab() {
     const hash = window.location.hash.replace("#", "").toLowerCase();
@@ -38,6 +39,8 @@ export default function EventPortal() {
         }
     });
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    // Cached generated ID cards map: { [speakerId]: { id, speaker, dataUrl, blob, filename } }
+    const [idCards, setIdCards] = useState({});
 
     const toggleSidebar = () => {
         setSidebarCollapsed((prev) => {
@@ -164,6 +167,7 @@ export default function EventPortal() {
         { id: "register", label: "Register", icon: Users },
         { id: "checkin", label: "Check-In", icon: ScanLine },
         { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+        { id: "idcards", label: "ID Cards", icon: BadgeCheck },
         { id: "feedback", label: "Feedback", icon: MessageSquare },
     ];
 
@@ -256,6 +260,14 @@ export default function EventPortal() {
                                 />
                             )}
                             {tab === "dashboard" && <DashboardPage speakers={speakers} onRefresh={refresh} />}
+                            {tab === "idcards" && (
+                                <IdCardsPage
+                                    speakers={speakers}
+                                    cards={idCards}
+                                    setCards={setIdCards}
+                                    toast={toast}
+                                />
+                            )}
                             {tab === "feedback" && <FeedbackPage feedback={feedback} onAdd={addFeedback} toast={toast} />}
                         </>
                     )}
