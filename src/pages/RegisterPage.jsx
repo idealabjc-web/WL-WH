@@ -1,10 +1,10 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { CheckCircle2, AlertTriangle, ExternalLink, ImagePlus, Camera } from "lucide-react";
 import { Field, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
 import { uid, emptyForm, generateAndStoreQrBadge, uploadSpeakerPhoto } from "../api/speakersApi";
 
-export default function RegisterPage({ onAdd, toast }) {
+export default function RegisterPage({ speakers = [], onAdd, toast }) {
     const [form, setForm] = useState(emptyForm);
     const [saving, setSaving] = useState(false);
     const [lastAdded, setLastAdded] = useState(null);
@@ -16,6 +16,18 @@ export default function RegisterPage({ onAdd, toast }) {
     const photoInputRef = useRef(null);
 
     const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+    useEffect(() => {
+        if (form.checkinDate && form.checkoutDate) {
+            const inDate = new Date(form.checkinDate);
+            const outDate = new Date(form.checkoutDate);
+            if (!isNaN(inDate) && !isNaN(outDate) && outDate >= inDate) {
+                const diffTime = Math.abs(outDate - inDate);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                setForm(prev => ({ ...prev, nights: String(diffDays) }));
+            }
+        }
+    }, [form.checkinDate, form.checkoutDate]);
 
     const handlePhotoSelect = (e) => {
         const file = e.target.files?.[0];
@@ -38,6 +50,14 @@ export default function RegisterPage({ onAdd, toast }) {
         if (!form.name.trim()) {
             toast("Speaker name is required.");
             return;
+        }
+
+        if (form.day && form.timeSlot) {
+            const isBlocked = speakers.some(s => s.day === form.day && s.timeSlot === form.timeSlot);
+            if (isBlocked) {
+                toast(`Time slot ${form.timeSlot} on ${form.day} is already booked.`);
+                return;
+            }
         }
         setSaving(true);
         const id = uid();
@@ -136,10 +156,27 @@ export default function RegisterPage({ onAdd, toast }) {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-3">
                 <Field label="Day">
-                    <input className={inputCls} value={form.day} onChange={set("day")} placeholder="e.g. Day 1 — 14 Oct" />
+                    <select className={inputCls} value={form.day} onChange={set("day")}>
+                        <option value="">Select a day...</option>
+                        <option value="Day 1">Day 1</option>
+                        <option value="Day 2">Day 2</option>
+                        <option value="Day 3">Day 3</option>
+                        <option value="Day 4">Day 4</option>
+                        <option value="Day 5">Day 5</option>
+                    </select>
                 </Field>
                 <Field label="Time slot">
-                    <input className={inputCls} value={form.timeSlot} onChange={set("timeSlot")} placeholder="e.g. 10:00 – 10:30" />
+                    <select className={inputCls} value={form.timeSlot} onChange={set("timeSlot")}>
+                        <option value="">Select a time slot...</option>
+                        <option value="09:00 - 10:00">09:00 - 10:00</option>
+                        <option value="10:00 - 11:00">10:00 - 11:00</option>
+                        <option value="11:00 - 12:00">11:00 - 12:00</option>
+                        <option value="12:00 - 13:00">12:00 - 13:00</option>
+                        <option value="13:00 - 14:00">13:00 - 14:00</option>
+                        <option value="14:00 - 15:00">14:00 - 15:00</option>
+                        <option value="15:00 - 16:00">15:00 - 16:00</option>
+                        <option value="16:00 - 17:00">16:00 - 17:00</option>
+                    </select>
                 </Field>
                 <Field label="Hotel room no.">
                     <input className={inputCls} value={form.room} onChange={set("room")} placeholder="e.g. 1204" />

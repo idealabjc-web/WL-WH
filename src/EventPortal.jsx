@@ -246,7 +246,7 @@ export default function EventPortal() {
                         </div>
                     ) : (
                         <>
-                            {tab === "register" && <RegisterPage onAdd={addSpeaker} toast={toast} />}
+                            {tab === "register" && <RegisterPage speakers={speakers} onAdd={addSpeaker} toast={toast} />}
                             {tab === "checkin" && (
                                 <CheckinPage
                                     speakers={speakers}
