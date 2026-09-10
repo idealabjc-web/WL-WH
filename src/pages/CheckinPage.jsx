@@ -400,7 +400,9 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
 
             {showStaffTools && (
                 <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-sm">
-                    <h2 className="text-base sm:text-lg font-semibold mb-4 text-slate-900">Front desk check-in</h2>
+                    <h2 className="text-base sm:text-lg font-semibold mb-4 text-slate-900">
+                        {isSpeaker ? "Speaker Badge Scanner & Directory" : "Front desk check-in"}
+                    </h2>
             
             <div className="flex flex-col sm:flex-row gap-2.5 mb-4">
                 {!scanning ? (
@@ -458,7 +460,9 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                 </div>
                 
                 <div className="flex items-center justify-between w-full mt-2.5 px-1">
-                    <span className="text-xs text-slate-300 font-medium">Point camera at the speaker's badge QR</span>
+                    <span className="text-xs text-slate-300 font-medium">
+                        {isSpeaker ? "Point camera at any speaker's badge QR to view session details" : "Point camera at the speaker's badge QR"}
+                    </span>
                     <button
                         type="button"
                         onClick={toggleCamera}
@@ -491,7 +495,15 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                 </div>
             )}
 
-            {current && <ProfileCard speaker={current} onConfirm={onConfirm} onSaveNotes={onSaveNotes} />}
+            {current && (
+                <ProfileCard 
+                    speaker={current} 
+                    onConfirm={onConfirm} 
+                    onSaveNotes={onSaveNotes}
+                    isSpeaker={isSpeaker}
+                    currentSpeaker={currentSpeaker}
+                />
+            )}
                 </div>
             )}
         </div>

@@ -14,7 +14,15 @@ import { supabase, isSupabaseConfigured } from "../../supabaseClient";
 import { fetchSpeakers, speakerToRow } from "../../api/speakersApi";
 import { fetchFeedback, feedbackToRow } from "../../api/feedbackApi";
 
-const VALID_TABS = ["checkin", "feedback", "dashboard", "logistics", "settings"];
+const TABS = [
+    { id: "checkin", label: "Check-In", icon: ScanLine },
+    { id: "feedback", label: "Feedback", icon: MessageSquare },
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "logistics", label: "Logistics & Travel", mobileLabel: "Logistics", icon: Hotel },
+    { id: "settings", label: "Settings", icon: SettingsIcon },
+];
+
+const VALID_TABS = TABS.map(t => t.id);
 
 function getInitialTab() {
     const hash = window.location.hash.replace("#", "").toLowerCase();
@@ -174,43 +182,91 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
             )}
 
             {/* Header / Navbar styled like the Hero Section */}
-            <header className="sticky top-0 z-30 bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950 text-white border-b border-slate-800 px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between shadow-xl relative overflow-hidden">
+            <header className="sticky top-0 z-30 bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950 text-white border-b border-slate-800 shadow-xl relative overflow-hidden">
                 {/* Ambient warm amber glow matching the hero section */}
                 <div className="absolute right-0 top-0 w-80 h-full bg-amber-500/10 rounded-full blur-3xl -translate-y-1/4 translate-x-1/4 pointer-events-none" />
 
-                <div className="relative z-10 flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-black text-slate-950 text-sm shadow-md shadow-amber-500/20 shrink-0">
-                        WL
-                    </div>
-                    <div>
-                        <div className="text-[10px] sm:text-xs text-amber-400 font-bold tracking-wider uppercase leading-none">
-                            WL-WH Dubai 2026
+                <div className="w-full max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8">
+                    <div className="flex items-center justify-between h-16 sm:h-18 gap-3 sm:gap-6">
+                        {/* Left: Brand Logo & Title */}
+                        <div className="relative z-10 flex items-center gap-3 shrink-0">
+                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-black text-slate-950 text-sm shadow-md shadow-amber-500/20 shrink-0">
+                                WL
+                            </div>
+                            <div>
+                                <div className="text-[10px] sm:text-xs text-amber-400 font-bold tracking-wider uppercase leading-none">
+                                    WL-WH Dubai 2026
+                                </div>
+                                <div className="text-sm sm:text-base font-extrabold text-white leading-none mt-1 tracking-tight">
+                                    Speaker Portal
+                                </div>
+                            </div>
                         </div>
-                        <div className="text-sm sm:text-base font-extrabold text-white leading-none mt-1 tracking-tight">
-                            Speaker Portal
-                        </div>
-                    </div>
-                </div>
 
-                <div className="relative z-10 flex items-center gap-3">
-                    <div className={`hidden sm:flex items-center gap-2 rounded-xl px-3.5 py-1.5 backdrop-blur-md border text-xs font-semibold ${
-                        isCheckedIn 
-                        ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
-                        : "bg-amber-500/15 border-amber-500/30 text-amber-300"
-                    }`}>
-                        <span className={`w-2 h-2 rounded-full shrink-0 ${isCheckedIn ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-amber-400"}`} />
-                        <span>{currentSpeaker.name || "Speaker"}</span>
+                        {/* Center: Desktop Navigation Tabs inside Navbar */}
+                        <nav className="relative z-10 hidden md:flex items-center gap-1.5 lg:gap-2" aria-label="Portal Navigation">
+                            {TABS.map((t) => {
+                                const Icon = t.icon;
+                                const isActive = tab === t.id;
+                                return (
+                                    <button
+                                        key={t.id}
+                                        onClick={() => handleTabChange(t.id)}
+                                        className={`flex items-center gap-2 px-3 lg:px-4 py-2 rounded-xl text-xs lg:text-sm font-semibold transition-all whitespace-nowrap ${
+                                            isActive
+                                                ? "bg-amber-500/25 text-white border border-amber-400/60 shadow-[0_0_16px_rgba(245,158,11,0.35)] font-bold"
+                                                : "text-white/90 hover:text-white hover:bg-white/10 border border-transparent"
+                                        }`}
+                                    >
+                                        <Icon size={16} className={isActive ? "text-amber-400" : "text-white"} />
+                                        <span className="text-white">
+                                            {t.id === "logistics" ? (
+                                                <>Logistics<span className="hidden xl:inline"> & Travel</span></>
+                                            ) : (
+                                                t.label
+                                            )}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </nav>
+
+                        {/* Right: Logout */}
+                        <div className="relative z-10 flex items-center gap-2.5 shrink-0">
+                            {onLogout && (
+                                <button
+                                    onClick={onLogout}
+                                    className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-white/90 hover:text-rose-300 hover:bg-rose-500/15 transition-all px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-white/15 hover:border-rose-400/40 shadow-xs"
+                                    title="Sign out of speaker portal"
+                                >
+                                    <LogOut size={15} />
+                                    <span>Sign out</span>
+                                </button>
+                            )}
+                        </div>
                     </div>
-                    {onLogout && (
-                        <button
-                            onClick={onLogout}
-                            className="flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-rose-400 hover:bg-white/10 transition-colors px-3 py-1.5 rounded-xl border border-white/10 hover:border-rose-400/30"
-                            title="Sign out of speaker portal"
-                        >
-                            <LogOut size={14} />
-                            <span className="hidden sm:inline">Sign out</span>
-                        </button>
-                    )}
+
+                    {/* Sub-row for Tablet / Small Screen viewports (< md) inside Navbar */}
+                    <div className="hidden sm:flex md:hidden items-center gap-1.5 pb-2.5 pt-0.5 border-t border-slate-800/80 overflow-x-auto scrollbar-none" style={{ scrollbarWidth: "none" }}>
+                        {TABS.map((t) => {
+                            const Icon = t.icon;
+                            const isActive = tab === t.id;
+                            return (
+                                <button
+                                    key={t.id}
+                                    onClick={() => handleTabChange(t.id)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
+                                        isActive
+                                            ? "bg-amber-500/25 text-white border border-amber-400/60 font-bold shadow-xs"
+                                            : "text-white/90 hover:text-white hover:bg-white/10 border border-transparent"
+                                    }`}
+                                >
+                                    <Icon size={14} className={isActive ? "text-amber-400" : "text-white"} />
+                                    <span className="text-white">{t.label}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
             </header>
 
@@ -245,32 +301,6 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                     </div>
                     {/* Subtle warm decorative glow */}
                     <div className="absolute right-0 top-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none" />
-                </div>
-
-                {/* Desktop Tabs Navigation (Styled like the Hero Section) */}
-                <div className="hidden sm:flex items-center flex-wrap gap-2 mb-6 p-2 rounded-2xl shadow-lg bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950 text-white border border-slate-800 relative overflow-hidden">
-                    {[
-                        { id: "checkin", label: "Check-In", icon: ScanLine },
-                        { id: "feedback", label: "Feedback", icon: MessageSquare },
-                        { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-                        { id: "logistics", label: "Logistics & Travel", icon: Hotel },
-                        { id: "settings", label: "Settings", icon: SettingsIcon },
-                    ].map(t => (
-                        <button
-                            key={t.id}
-                            onClick={() => handleTabChange(t.id)}
-                            className={`relative z-10 flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
-                                tab === t.id 
-                                ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.25)] font-bold" 
-                                : "text-slate-400 hover:text-white hover:bg-white/5 border border-transparent"
-                            }`}
-                        >
-                            <t.icon size={16} className={tab === t.id ? "text-amber-400" : "text-slate-400"} />
-                            {t.label}
-                        </button>
-                    ))}
-                    {/* Subtle warm decorative glow */}
-                    <div className="absolute right-0 top-0 w-48 h-48 bg-amber-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/4 pointer-events-none" />
                 </div>
 
                 {/* Tab Content Views */}
@@ -379,13 +409,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
             {/* Mobile Bottom Navigation Bar */}
             <div className="sm:hidden fixed bottom-0 left-0 right-0 z-30 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800/80 pb-safe overflow-x-auto shadow-2xl" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
                 <div className="flex items-center justify-around px-2 py-1.5 min-w-full" style={{ WebkitOverflowScrolling: "touch" }}>
-                    {[
-                        { id: "checkin", label: "Check-In", icon: ScanLine },
-                        { id: "feedback", label: "Feedback", icon: MessageSquare },
-                        { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-                        { id: "logistics", label: "Logistics", icon: Hotel },
-                        { id: "settings", label: "Settings", icon: SettingsIcon },
-                    ].map(t => (
+                    {TABS.map(t => (
                         <button
                             key={t.id}
                             onClick={() => handleTabChange(t.id)}
@@ -396,7 +420,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                             }`}
                         >
                             <t.icon size={18} className={tab === t.id ? "text-amber-400" : ""} />
-                            <span className="text-[10px] mt-0.5 tracking-tight">{t.label}</span>
+                            <span className="text-[10px] mt-0.5 tracking-tight">{t.mobileLabel || t.label}</span>
                         </button>
                     ))}
                 </div>
