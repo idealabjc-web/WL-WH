@@ -3,11 +3,19 @@ import { Star } from "lucide-react";
 import { Field, inputCls } from "../components/common/UIAtoms";
 import { uid } from "../api/speakersApi";
 
-export default function FeedbackPage({ feedback, onAdd, toast }) {
-    const [name, setName] = useState("");
+export default function FeedbackPage({ feedback, onAdd, toast, currentSpeaker = null, initialName = "" }) {
+    const defaultName = (currentSpeaker && (currentSpeaker.name || currentSpeaker.sessionTitle)) || initialName || "";
+    const [name, setName] = useState(defaultName);
     const [category, setCategory] = useState("Overall event");
     const [rating, setRating] = useState(0);
     const [comment, setComment] = useState("");
+
+    // Sync default name if speaker loads asynchronously
+    React.useEffect(() => {
+        if (defaultName && !name) {
+            setName(defaultName);
+        }
+    }, [defaultName]);
 
     const submit = async () => {
         if (rating === 0) {

@@ -1,187 +1,374 @@
-﻿import React, { useState } from "react";
-import { LogOut, Calendar, Clock, Hotel, Utensils, MapPin, BadgeCheck, User, Settings as SettingsIcon, LayoutList } from "lucide-react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { 
+    LogOut, Calendar, Clock, Hotel, Utensils, MapPin, 
+    BadgeCheck, User, Settings as SettingsIcon, LayoutList, 
+    ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, 
+    Sparkles, CheckCircle2 
+} from "lucide-react";
 import ChangePasswordModal from "../../components/common/ChangePasswordModal";
+import CheckinPage from "../CheckinPage";
+import DashboardPage from "../DashboardPage";
+import FeedbackPage from "../FeedbackPage";
+import Toast from "../../components/common/Toast";
+import { supabase, isSupabaseConfigured } from "../../supabaseClient";
+import { fetchSpeakers, speakerToRow } from "../../api/speakersApi";
+import { fetchFeedback, feedbackToRow } from "../../api/feedbackApi";
+
+const VALID_TABS = ["checkin", "feedback", "dashboard", "logistics", "settings"];
+
+function getInitialTab() {
+    const hash = window.location.hash.replace("#", "").toLowerCase();
+    return VALID_TABS.includes(hash) ? hash : "checkin";
+}
 
 export default function SpeakerPortalPage({ speaker, onLogout }) {
-    const [tab, setTab] = useState("overview");
+    const [tab, setTab] = useState(getInitialTab);
     const [showPasswordModal, setShowPasswordModal] = useState(false);
+
+    const [speakers, setSpeakers] = useState([]);
+    const [feedback, setFeedback] = useState([]);
+    const [toastMsg, setToastMsg] = useState("");
+    const toastTimer = useRef(null);
+
+    // Sync tab with URL hash
+    useEffect(() => {
+        const onHashChange = () => {
+            const currentHash = window.location.hash.replace("#", "").toLowerCase();
+            if (VALID_TABS.includes(currentHash)) {
+                setTab(currentHash);
+            }
+        };
+        window.addEventListener("hashchange", onHashChange);
+        return () => window.removeEventListener("hashchange", onHashChange);
+    }, []);
+
+    const handleTabChange = (nextTab) => {
+        setTab(nextTab);
+        window.location.hash = nextTab;
+    };
+
+    const toast = (msg) => {
+        setToastMsg(msg);
+        clearTimeout(toastTimer.current);
+        toastTimer.current = setTimeout(() => setToastMsg(""), 2200);
+    };
+
+    const refresh = useCallback(async () => {
+        if (!isSupabaseConfigured) return;
+        try {
+            const [s, f] = await Promise.all([fetchSpeakers(), fetchFeedback()]);
+            setSpeakers(s || []);
+            setFeedback(f || []);
+        } catch (err) {
+            console.error("Failed to refresh data", err);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!isSupabaseConfigured) return;
+        refresh();
+        const channel = supabase
+            .channel("speaker-portal-changes")
+            .on("postgres_changes", { event: "*", schema: "public", table: "speakers" }, refresh)
+            .on("postgres_changes", { event: "*", schema: "public", table: "feedback" }, refresh)
+            .subscribe();
+        return () => supabase.removeChannel(channel);
+    }, [refresh]);
+
+    // Derived active speaker from live list or fallback to initial speaker prop
+    const currentSpeaker = (speakers && speakers.length > 0
+        ? speakers.find(s => s.id === speaker?.id || (s.email && speaker?.email && s.email.toLowerCase() === speaker.email.toLowerCase()))
+        : null) || speaker || {};
+
+    const confirmCheckin = async (id, notes) => {
+        const checkedInAt = Date.now();
+        setSpeakers((prev) => prev.map((s) => (s.id === id ? { ...s, checkedIn: true, checkedInAt, concerns: notes } : s)));
+        
+        if (isSupabaseConfigured && supabase) {
+            const { error } = await supabase.from("speakers").update({ 
+                checked_in: true, 
+                checked_in_at: new Date(checkedInAt).toISOString(), 
+                concerns: notes 
+            }).eq("id", id);
+            
+            if (error) { 
+                toast("Check-in saved locally but failed to sync."); 
+                return; 
+            }
+        }
+        
+        const s = speakers.find((x) => x.id === id) || currentSpeaker;
+        toast((s?.name || "Speaker") + " checked in ✓");
+    };
+
+    const saveNotes = async (id, notes) => {
+        setSpeakers((prev) => prev.map((s) => (s.id === id ? { ...s, concerns: notes } : s)));
+        
+        if (isSupabaseConfigured && supabase) {
+            const { error } = await supabase.from("speakers").update({ concerns: notes }).eq("id", id);
+            if (error) {
+                toast("Notes saved locally but failed to sync.");
+                return;
+            }
+        }
+        toast("Notes saved successfully.");
+    };
+
+    const updateSpeaker = async (id, updatedData) => {
+        setSpeakers((prev) => prev.map((s) => (s.id === id ? { ...s, ...updatedData } : s)));
+        const existing = speakers.find(s => s.id === id) || currentSpeaker;
+        if (!existing) return false;
+        const merged = { ...existing, ...updatedData };
+        
+        if (isSupabaseConfigured && supabase) {
+            const { error } = await supabase.from("speakers").update(speakerToRow(merged)).eq("id", id);
+            if (error) { 
+                toast("Failed to update speaker."); 
+                return false; 
+            }
+        }
+        toast("Details updated successfully.");
+        return true;
+    };
+
+    const addFeedback = async (entry) => {
+        setFeedback((prev) => [...prev, entry]);
+        if (isSupabaseConfigured && supabase) {
+            const { error } = await supabase.from("feedback").insert(feedbackToRow(entry));
+            if (error) {
+                toast("Feedback saved locally but failed to sync.");
+                return;
+            }
+        }
+        toast("Thank you for your feedback!");
+    };
 
     const infoCard = (icon, label, value) => {
         if (!value) return null;
         return (
-            <div className="flex items-start gap-3 p-4 rounded-xl transition-all"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center shadow-inner"
-                    style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.2)" }}>
-                    {React.cloneElement(icon, { size: 18, className: "text-amber-400" })}
+            <div className="flex items-start gap-3.5 p-4 rounded-xl bg-white border border-slate-200/80 shadow-xs">
+                <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center bg-amber-50 border border-amber-200/60 text-amber-700">
+                    {React.cloneElement(icon, { size: 18 })}
                 </div>
                 <div className="min-w-0 flex-1">
-                    <div className="text-xs text-slate-400 font-medium tracking-wide uppercase mb-1">{label}</div>
-                    <div className="text-base text-white font-medium break-words leading-tight">{value}</div>
+                    <div className="text-[11px] text-slate-500 font-semibold tracking-wider uppercase mb-1">{label}</div>
+                    <div className="text-sm sm:text-base text-slate-900 font-medium break-words leading-tight">{value}</div>
                 </div>
             </div>
         );
     };
 
+    const isCheckedIn = !!(currentSpeaker.checkedIn || currentSpeaker.checked_in);
+
     return (
         <div
-            className="min-h-screen pb-20 sm:pb-0"
-            style={{
-                fontFamily: "Inter, sans-serif",
-                background: "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #451a03 100%)"
-            }}
+            className="min-h-screen pb-24 sm:pb-12 bg-stone-100 text-slate-900"
+            style={{ fontFamily: "Inter, sans-serif" }}
         >
             {showPasswordModal && (
                 <ChangePasswordModal 
-                    user={speaker} 
+                    user={currentSpeaker} 
                     type="speaker" 
                     onClose={() => setShowPasswordModal(false)} 
                 />
             )}
 
-            {/* Header */}
-            <header className="sticky top-0 z-20 flex items-center justify-between px-4 sm:px-6 py-4"
-                style={{
-                    background: "rgba(15,23,42,0.8)",
-                    backdropFilter: "blur(20px)",
-                    borderBottom: "1px solid rgba(255,255,255,0.08)"
-                }}>
-                <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg">
-                        <span className="text-sm font-black text-white">W</span>
+            {/* Header / Navbar styled like the Hero Section */}
+            <header className="sticky top-0 z-30 bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950 text-white border-b border-slate-800 px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between shadow-xl relative overflow-hidden">
+                {/* Ambient warm amber glow matching the hero section */}
+                <div className="absolute right-0 top-0 w-80 h-full bg-amber-500/10 rounded-full blur-3xl -translate-y-1/4 translate-x-1/4 pointer-events-none" />
+
+                <div className="relative z-10 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-black text-slate-950 text-sm shadow-md shadow-amber-500/20 shrink-0">
+                        WL
                     </div>
                     <div>
-                        <div className="text-xs text-amber-400 font-semibold leading-none">WL-WH 2026</div>
-                        <div className="text-xs text-slate-500 leading-none mt-0.5">Speaker Portal</div>
+                        <div className="text-[10px] sm:text-xs text-amber-400 font-bold tracking-wider uppercase leading-none">
+                            WL-WH Dubai 2026
+                        </div>
+                        <div className="text-sm sm:text-base font-extrabold text-white leading-none mt-1 tracking-tight">
+                            Speaker Portal
+                        </div>
                     </div>
                 </div>
-                <button
-                    onClick={onLogout}
-                    className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-rose-400 transition-colors px-3 py-2 rounded-lg hover:bg-rose-500/10"
-                >
-                    <LogOut size={14} />
-                    Sign out
-                </button>
+
+                <div className="relative z-10 flex items-center gap-3">
+                    <div className={`hidden sm:flex items-center gap-2 rounded-xl px-3.5 py-1.5 backdrop-blur-md border text-xs font-semibold ${
+                        isCheckedIn 
+                        ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
+                        : "bg-amber-500/15 border-amber-500/30 text-amber-300"
+                    }`}>
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${isCheckedIn ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-amber-400"}`} />
+                        <span>{currentSpeaker.name || "Speaker"}</span>
+                    </div>
+                    {onLogout && (
+                        <button
+                            onClick={onLogout}
+                            className="flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-rose-400 hover:bg-white/10 transition-colors px-3 py-1.5 rounded-xl border border-white/10 hover:border-rose-400/30"
+                            title="Sign out of speaker portal"
+                        >
+                            <LogOut size={14} />
+                            <span className="hidden sm:inline">Sign out</span>
+                        </button>
+                    )}
+                </div>
             </header>
 
-            <main className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
-                {/* Welcome banner (shows on all tabs) */}
-                <div className="rounded-2xl p-6 mb-8 relative overflow-hidden shadow-2xl"
-                    style={{
-                        background: "linear-gradient(135deg, rgba(251,191,36,0.15) 0%, rgba(217,119,6,0.1) 100%)",
-                        border: "1px solid rgba(251,191,36,0.2)"
-                    }}>
+            <main className="w-full max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-6 sm:py-8">
+                {/* Speaker Hero Banner */}
+                <div className="rounded-2xl p-5 sm:p-7 mb-6 relative overflow-hidden shadow-lg bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950 text-white border border-slate-800">
                     <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
                             <div className="flex items-center gap-2 mb-2">
                                 <BadgeCheck size={16} className="text-amber-400" />
                                 <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Confirmed Speaker</span>
                             </div>
-                            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">
-                                Hi, {speaker.name?.split(" ")[0]}!
+                            <h1 className="text-2xl sm:text-3xl font-extrabold text-white mb-1.5">
+                                Welcome, {currentSpeaker.name ? currentSpeaker.name.split(" ")[0] : "Speaker"}!
                             </h1>
-                            <p className="text-slate-300 text-sm font-medium">
-                                {speaker.sessionTitle || speaker.session_title || "We are excited to have you."}
+                            <p className="text-slate-300 text-xs sm:text-sm font-medium max-w-2xl leading-relaxed">
+                                {currentSpeaker.sessionTitle || currentSpeaker.session_title || "We are delighted to welcome you to the WL-WH Global Conference 2026 in Dubai."}
                             </p>
                         </div>
                         
                         {/* Check-in status badge inside banner */}
-                        <div className={`flex items-center gap-2 rounded-xl px-4 py-2.5 backdrop-blur-md self-start sm:self-center ${
-                            speaker.checked_in
-                            ? "bg-emerald-500/20 border border-emerald-500/30"
-                            : "bg-slate-900/40 border border-white/10"
+                        <div className={`flex items-center gap-2.5 rounded-xl px-4 py-2.5 backdrop-blur-md self-start sm:self-center shrink-0 border ${
+                            isCheckedIn
+                                ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
+                                : "bg-amber-500/15 border-amber-500/30 text-amber-300"
                         }`}>
-                            <div className={`w-2 h-2 rounded-full shrink-0 ${speaker.checked_in ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-slate-500"}`} />
-                            <div className={`text-xs font-semibold tracking-wide uppercase ${speaker.checked_in ? "text-emerald-300" : "text-slate-400"}`}>
-                                {speaker.checked_in ? "Checked In" : "Pending Check-In"}
+                            <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${isCheckedIn ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-amber-400"}`} />
+                            <div className="text-xs font-bold tracking-wide uppercase">
+                                {isCheckedIn ? "Checked In" : "Pending Check-In"}
                             </div>
                         </div>
                     </div>
-                    {/* Decorative element */}
-                    <div className="absolute right-0 top-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
+                    {/* Subtle warm decorative glow */}
+                    <div className="absolute right-0 top-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none" />
                 </div>
 
-                {/* Tab Navigation (Desktop) */}
-                <div className="hidden sm:flex items-center gap-2 mb-8 bg-slate-800/40 p-1.5 rounded-xl border border-slate-700/50 backdrop-blur-sm w-fit">
+                {/* Desktop Tabs Navigation (Styled like the Hero Section) */}
+                <div className="hidden sm:flex items-center flex-wrap gap-2 mb-6 p-2 rounded-2xl shadow-lg bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950 text-white border border-slate-800 relative overflow-hidden">
                     {[
-                        { id: "overview", label: "Overview", icon: LayoutList },
-                        { id: "logistics", label: "Logistics", icon: Hotel },
+                        { id: "checkin", label: "Check-In", icon: ScanLine },
+                        { id: "feedback", label: "Feedback", icon: MessageSquare },
+                        { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+                        { id: "logistics", label: "Logistics & Travel", icon: Hotel },
                         { id: "settings", label: "Settings", icon: SettingsIcon },
                     ].map(t => (
                         <button
                             key={t.id}
-                            onClick={() => setTab(t.id)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                            onClick={() => handleTabChange(t.id)}
+                            className={`relative z-10 flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
                                 tab === t.id 
-                                ? "bg-amber-500/20 text-amber-400 border border-amber-500/30 shadow-lg" 
-                                : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 border border-transparent"
+                                ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-[0_0_15px_rgba(245,158,11,0.25)] font-bold" 
+                                : "text-slate-400 hover:text-white hover:bg-white/5 border border-transparent"
                             }`}
                         >
-                            <t.icon size={16} />
+                            <t.icon size={16} className={tab === t.id ? "text-amber-400" : "text-slate-400"} />
                             {t.label}
                         </button>
                     ))}
+                    {/* Subtle warm decorative glow */}
+                    <div className="absolute right-0 top-0 w-48 h-48 bg-amber-500/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/4 pointer-events-none" />
                 </div>
 
-                {/* Tab Content */}
-                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    {tab === "overview" && (
-                        <div className="space-y-3">
-                            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                                <LayoutList size={20} className="text-amber-500" /> Session Details
-                            </h2>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {infoCard(<Calendar />, "Day", speaker.day)}
-                                {infoCard(<Clock />, "Time Slot", speaker.time_slot || speaker.timeSlot)}
-                            </div>
-                            {infoCard(<MapPin />, "Session Title", speaker.session_title || speaker.sessionTitle)}
-                        </div>
+                {/* Tab Content Views */}
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-200">
+                    {tab === "checkin" && (
+                        <CheckinPage 
+                            speakers={speakers} 
+                            onConfirm={confirmCheckin} 
+                            onSaveNotes={saveNotes} 
+                            toast={toast} 
+                            isSpeaker={true}
+                            currentSpeaker={currentSpeaker}
+                        />
+                    )}
+
+                    {tab === "feedback" && (
+                        <FeedbackPage 
+                            feedback={feedback} 
+                            onAdd={addFeedback} 
+                            toast={toast} 
+                            currentSpeaker={currentSpeaker}
+                        />
+                    )}
+
+                    {tab === "dashboard" && (
+                        <DashboardPage 
+                            speakers={speakers} 
+                            onRefresh={refresh} 
+                            onUpdate={updateSpeaker} 
+                            isSpeaker={true} 
+                            currentSpeaker={currentSpeaker}
+                        />
                     )}
 
                     {tab === "logistics" && (
-                        <div className="space-y-3">
-                            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                                <Hotel size={20} className="text-amber-500" /> Accommodation & Travel
-                            </h2>
-                            {infoCard(<Hotel />, "Hotel Room", speaker.room || "To be assigned")}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {infoCard(<Calendar />, "Check-in Date", speaker.checkin_date || speaker.checkinDate)}
-                                {infoCard(<Calendar />, "Check-out Date", speaker.checkout_date || speaker.checkoutDate)}
+                        <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-7 shadow-sm space-y-6">
+                            <div>
+                                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                    <Hotel size={20} className="text-amber-600" /> Accommodation & Travel Itinerary
+                                </h2>
+                                <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                                    Hotel reservation and logistics details for your stay in Dubai.
+                                </p>
                             </div>
-                            {speaker.nights && infoCard(<Hotel />, "Total Nights", `${speaker.nights} nights`)}
-                            
-                            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mt-6 mb-3 pt-4 border-t border-slate-700/50">Preferences</h3>
-                            {infoCard(<Utensils />, "Dietary Preference", speaker.diet !== "No preference" ? speaker.diet : null)}
-                            {speaker.allergy && infoCard(<AlertTriangle />, "Food Allergy", speaker.allergy)}
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                                {infoCard(<Hotel />, "Hotel Room", currentSpeaker.room || "To be assigned at front desk")}
+                                {infoCard(<Calendar />, "Check-in Date", currentSpeaker.checkin_date || currentSpeaker.checkinDate)}
+                                {infoCard(<Calendar />, "Check-out Date", currentSpeaker.checkout_date || currentSpeaker.checkoutDate)}
+                                {currentSpeaker.nights && infoCard(<Hotel />, "Duration of Stay", `${currentSpeaker.nights} nights`)}
+                                {infoCard(<Utensils />, "Dietary Preference", currentSpeaker.diet !== "No preference" ? currentSpeaker.diet : "Standard (No dietary restrictions)")}
+                                {currentSpeaker.allergy && infoCard(<AlertTriangle />, "Allergy Notification", currentSpeaker.allergy)}
+                            </div>
+
+                            <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-500">
+                                <span>Need to adjust your hotel dates or travel plans?</span>
+                                <span className="font-semibold text-slate-700">Contact event concierge: concierge@wlwh.com</span>
+                            </div>
                         </div>
                     )}
 
                     {tab === "settings" && (
-                        <div className="space-y-6">
-                            <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                                <SettingsIcon size={20} className="text-amber-500" /> Account Settings
-                            </h2>
-                            
-                            <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5 backdrop-blur-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-7 shadow-sm space-y-6">
+                            <div>
+                                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                    <SettingsIcon size={20} className="text-amber-600" /> Speaker Account Settings
+                                </h2>
+                                <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                                    Manage your account credentials and security preferences.
+                                </p>
+                            </div>
+
+                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                                 <div>
-                                    <h3 className="text-base font-semibold text-white">Password & Security</h3>
-                                    <p className="text-sm text-slate-400 mt-1">Update your password to keep your account secure.</p>
+                                    <h3 className="text-sm font-bold text-slate-900">Password & Portal Security</h3>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        Update your personal portal password to ensure account security.
+                                    </p>
                                 </div>
                                 <button
                                     onClick={() => setShowPasswordModal(true)}
-                                    className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-white text-sm font-semibold rounded-xl transition-colors shadow-lg shadow-amber-500/20 shrink-0 w-full sm:w-auto"
+                                    className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold rounded-xl transition-colors shadow-xs shrink-0 w-full sm:w-auto"
                                 >
                                     Change Password
                                 </button>
                             </div>
 
-                            <div className="sm:hidden bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5 backdrop-blur-sm mt-4 text-center">
+                            <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                                <div>
+                                    <div className="text-xs font-semibold text-slate-700">Logged in as:</div>
+                                    <div className="text-sm font-bold text-slate-900">{currentSpeaker.email || currentSpeaker.name}</div>
+                                </div>
                                 <button
                                     onClick={onLogout}
-                                    className="flex items-center justify-center gap-2 w-full px-5 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-sm font-semibold rounded-xl transition-colors"
+                                    className="flex items-center justify-center gap-2 px-4 py-2 text-rose-600 hover:bg-rose-50 border border-rose-200 text-xs font-semibold rounded-xl transition-colors"
                                 >
-                                    <LogOut size={16} />
-                                    Sign out completely
+                                    <LogOut size={14} />
+                                    Sign out of portal
                                 </button>
                             </div>
                         </div>
@@ -189,29 +376,33 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                 </div>
             </main>
 
-            {/* Bottom Navigation (Mobile) */}
-            <div className="sm:hidden fixed bottom-0 left-0 right-0 z-30 bg-slate-900/90 backdrop-blur-xl border-t border-slate-800 pb-safe">
-                <div className="flex items-center justify-around px-2 py-2">
+            {/* Mobile Bottom Navigation Bar */}
+            <div className="sm:hidden fixed bottom-0 left-0 right-0 z-30 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800/80 pb-safe overflow-x-auto shadow-2xl" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
+                <div className="flex items-center justify-around px-2 py-1.5 min-w-full" style={{ WebkitOverflowScrolling: "touch" }}>
                     {[
-                        { id: "overview", label: "Overview", icon: LayoutList },
+                        { id: "checkin", label: "Check-In", icon: ScanLine },
+                        { id: "feedback", label: "Feedback", icon: MessageSquare },
+                        { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
                         { id: "logistics", label: "Logistics", icon: Hotel },
                         { id: "settings", label: "Settings", icon: SettingsIcon },
                     ].map(t => (
                         <button
                             key={t.id}
-                            onClick={() => setTab(t.id)}
-                            className={`flex flex-col items-center justify-center w-full py-2 gap-1 rounded-xl transition-all ${
+                            onClick={() => handleTabChange(t.id)}
+                            className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition-all ${
                                 tab === t.id 
-                                ? "text-amber-400 bg-amber-400/10" 
-                                : "text-slate-500 hover:text-slate-300"
+                                ? "text-amber-300 bg-amber-500/15 border border-amber-500/30 font-bold shadow-[0_0_10px_rgba(245,158,11,0.2)]" 
+                                : "text-slate-400 hover:text-slate-200 font-medium"
                             }`}
                         >
-                            <t.icon size={20} className={tab === t.id ? "animate-in zoom-in duration-200" : ""} />
-                            <span className="text-[10px] font-semibold tracking-wide">{t.label}</span>
+                            <t.icon size={18} className={tab === t.id ? "text-amber-400" : ""} />
+                            <span className="text-[10px] mt-0.5 tracking-tight">{t.label}</span>
                         </button>
                     ))}
                 </div>
             </div>
+            
+            <Toast message={toastMsg} />
         </div>
     );
 }

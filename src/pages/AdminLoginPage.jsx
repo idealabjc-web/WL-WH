@@ -29,6 +29,12 @@ export default function AdminLoginPage({ onLogin }) {
 
         const trimmedEmail = email.trim().toLowerCase();
 
+        if (!supabase) {
+            setError("Database is not connected. Please check your Supabase environment configuration.");
+            setLoading(false);
+            return;
+        }
+
         // Check 1: Is this a support team member?
         const { data: supportData } = await supabase
             .from("support_team")

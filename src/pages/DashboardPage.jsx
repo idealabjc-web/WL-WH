@@ -1,14 +1,24 @@
 import React, { useState, useEffect } from "react";
-import { Download, RefreshCw, Search, Filter, AlertTriangle, LayoutList, Table as TableIcon, X, ChevronDown } from "lucide-react";
+import { 
+    Download, RefreshCw, Search, Filter, AlertTriangle, 
+    LayoutList, Table as TableIcon, X, ChevronDown, 
+    Calendar, Clock, MapPin, Sparkles, BadgeCheck 
+} from "lucide-react";
 import { StatCard, StatusBadge, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
 import { TIME_SLOTS } from "../api/speakersApi";
 import PhoneField from "../components/common/PhoneField";
 
-function SpeakerDetail({ speaker, onClose, onUpdate, allSpeakers }) {
+function SpeakerDetail({ speaker, onClose, onUpdate, allSpeakers, isSpeaker = false, currentSpeaker = null }) {
     const [isEditing, setIsEditing] = useState(false);
     const [form, setForm] = useState(speaker);
     const [saving, setSaving] = useState(false);
+
+    const isSelf = currentSpeaker && (
+        speaker.id === currentSpeaker.id || 
+        (speaker.email && currentSpeaker.email && speaker.email.toLowerCase() === currentSpeaker.email.toLowerCase())
+    );
+    const canEdit = !isSpeaker || isSelf;
 
     useEffect(() => {
         setForm(speaker);
@@ -56,7 +66,9 @@ function SpeakerDetail({ speaker, onClose, onUpdate, allSpeakers }) {
         return (
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-4 animate-in">
                 <div className="flex items-center justify-between mb-4">
-                    <div className="font-bold text-lg text-slate-900">Edit Details</div>
+                    <div className="font-bold text-lg text-slate-900">
+                        {isSelf ? "Edit Your Details" : "Edit Details"}
+                    </div>
                     <button onClick={() => setIsEditing(false)} className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-400 hover:text-slate-700">
                         <X size={18} />
                     </button>
@@ -130,12 +142,14 @@ function SpeakerDetail({ speaker, onClose, onUpdate, allSpeakers }) {
                     </div>
                 </div>
                 <div className="flex gap-2 items-center">
-                    <button
-                        onClick={() => setIsEditing(true)}
-                        className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
-                    >
-                        Edit Details
-                    </button>
+                    {canEdit && (
+                        <button
+                            onClick={() => setIsEditing(true)}
+                            className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
+                        >
+                            {isSelf ? "Edit Your Details" : "Edit Details"}
+                        </button>
+                    )}
                     <button
                         onClick={onClose}
                         className="p-1.5 rounded-lg hover:bg-slate-200 transition-colors text-slate-400 hover:text-slate-700"
@@ -155,18 +169,18 @@ function SpeakerDetail({ speaker, onClose, onUpdate, allSpeakers }) {
                 </div>
                 <div>
                     <div className="text-xs font-semibold text-amber-600 tracking-wide mb-1.5">CONTACT</div>
-                    {row("Email", speaker.email)}
-                    {row("Phone", speaker.phone)}
+                    {row("Email", isSpeaker && !isSelf ? "Confidential" : speaker.email)}
+                    {row("Phone", isSpeaker && !isSelf ? "Confidential" : speaker.phone)}
                 </div>
             </div>
             <div className="grid sm:grid-cols-2 gap-x-6 mt-3">
                 <div>
                     <div className="text-xs font-semibold text-amber-600 tracking-wide mb-1.5">ACCOMMODATION</div>
-                    {row("Hotel Room", speaker.room)}
+                    {row("Hotel Room", isSpeaker && !isSelf ? "Assigned" : speaker.room)}
                     {row("Check-in Date", speaker.checkinDate)}
                     {row("Check-out Date", speaker.checkoutDate)}
                     {row("No. of Nights", speaker.nights)}
-                    {row("Room Concerns", speaker.concerns || "None")}
+                    {row("Room Concerns", isSpeaker && !isSelf ? "—" : (speaker.concerns || "None"))}
                 </div>
                 <div>
                     <div className="text-xs font-semibold text-amber-600 tracking-wide mb-1.5">PREFERENCES</div>
@@ -191,11 +205,16 @@ function SpeakerDetail({ speaker, onClose, onUpdate, allSpeakers }) {
     );
 }
 
-export default function DashboardPage({ speakers, onRefresh, onUpdate }) {
+export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker = false, currentSpeaker = null }) {
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState("all");
+    const [dayFilter, setDayFilter] = useState("all");
     const [mobileView, setMobileView] = useState("cards"); // 'cards' | 'table'
     const [selectedId, setSelectedId] = useState(null);
+
+    const mySpeaker = isSpeaker && currentSpeaker
+        ? speakers.find(s => s.id === currentSpeaker.id || (s.email && currentSpeaker.email && s.email.toLowerCase() === currentSpeaker.email.toLowerCase())) || currentSpeaker
+        : null;
 
     const total = speakers.length;
     const checked = speakers.filter((s) => s.checkedIn).length;
@@ -213,6 +232,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate }) {
             )
         )
             return false;
+        if (dayFilter !== "all" && s.day !== dayFilter) return false;
         if (filter === "checked" && !s.checkedIn) return false;
         if (filter === "pending" && s.checkedIn) return false;
         if (filter === "flag" && !(s.allergy || s.concerns)) return false;
@@ -251,6 +271,54 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate }) {
 
     return (
         <div>
+            {/* Logged-in Speaker's Hero Card (When in Speaker Mode) */}
+            {isSpeaker && mySpeaker && (
+                <div className="bg-gradient-to-r from-amber-500/10 via-amber-400/5 to-slate-50 border border-amber-300/60 rounded-2xl p-5 mb-5 shadow-xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <div className="flex items-center gap-2 mb-1.5">
+                                <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full">
+                                    <Sparkles size={12} className="text-amber-600" />
+                                    Your Scheduled Session
+                                </span>
+                                <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
+                                    mySpeaker.checkedIn || mySpeaker.checked_in
+                                        ? "bg-emerald-100 text-emerald-800"
+                                        : "bg-amber-100 text-amber-800"
+                                }`}>
+                                    {mySpeaker.checkedIn || mySpeaker.checked_in ? "✓ Checked In" : "⏳ Pending Arrival"}
+                                </span>
+                            </div>
+                            <h3 className="text-lg sm:text-xl font-bold text-slate-900 leading-snug">
+                                {mySpeaker.sessionTitle || mySpeaker.session_title || "Confirmed Speaker Session"}
+                            </h3>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-2.5 text-xs text-slate-600 font-medium">
+                                <span className="flex items-center gap-1">
+                                    <Calendar size={14} className="text-amber-600" />
+                                    {mySpeaker.day || "Day TBA"}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                    <Clock size={14} className="text-amber-600" />
+                                    {mySpeaker.timeSlot || mySpeaker.time_slot || "Time TBA"}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                    <MapPin size={14} className="text-amber-600" />
+                                    {mySpeaker.room || "Room TBA"}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+                            <button
+                                onClick={() => setSelectedId(mySpeaker.id)}
+                                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold rounded-xl transition-all shadow-xs"
+                            >
+                                View Your Full Profile
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Aggregate Stats Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 mb-4">
                 <StatCard num={total} label="Registered" />
@@ -261,14 +329,24 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate }) {
             </div>
 
             {selectedSpeaker && (
-                <SpeakerDetail speaker={selectedSpeaker} onClose={() => setSelectedId(null)} onUpdate={onUpdate} allSpeakers={speakers} />
+                <SpeakerDetail 
+                    speaker={selectedSpeaker} 
+                    onClose={() => setSelectedId(null)} 
+                    onUpdate={onUpdate} 
+                    allSpeakers={speakers}
+                    isSpeaker={isSpeaker}
+                    currentSpeaker={currentSpeaker}
+                />
             )}
 
             {/* Main Table / List Container */}
             <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-sm">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
                     <h2 className="text-base sm:text-lg font-semibold text-slate-900">
-                        All speakers <span className="font-normal text-slate-500 text-xs sm:text-sm block sm:inline mt-0.5 sm:mt-0">— live with ops team</span>
+                        {isSpeaker ? "Conference Speakers & Schedule" : "All speakers"}{" "}
+                        <span className="font-normal text-slate-500 text-xs sm:text-sm block sm:inline mt-0.5 sm:mt-0">
+                            — {isSpeaker ? "Live directory for WLWH Dubai 2026" : "live with ops team"}
+                        </span>
                     </h2>
 
                     {/* View mode toggle on mobile */}
@@ -303,6 +381,20 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate }) {
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
+                    <div className="relative md:w-36">
+                        <select
+                            className={`${inputCls} mb-0`}
+                            value={dayFilter}
+                            onChange={(e) => setDayFilter(e.target.value)}
+                        >
+                            <option value="all">All Days</option>
+                            <option value="Day 1">Day 1</option>
+                            <option value="Day 2">Day 2</option>
+                            <option value="Day 3">Day 3</option>
+                            <option value="Day 4">Day 4</option>
+                            <option value="Day 5">Day 5</option>
+                        </select>
+                    </div>
                     <div className="relative md:w-48">
                         <Filter size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                         <select
@@ -318,12 +410,14 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate }) {
                         </select>
                     </div>
                     <div className="flex gap-2">
-                        <button
-                            onClick={exportCsv}
-                            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-xs sm:text-sm font-semibold px-3.5 py-2.5 rounded-lg transition-colors min-h-[42px]"
-                        >
-                            <Download size={15} /> Export CSV
-                        </button>
+                        {!isSpeaker && (
+                            <button
+                                onClick={exportCsv}
+                                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-xs sm:text-sm font-semibold px-3.5 py-2.5 rounded-lg transition-colors min-h-[42px]"
+                            >
+                                <Download size={15} /> Export CSV
+                            </button>
+                        )}
                         <button
                             onClick={onRefresh}
                             className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-xs sm:text-sm font-semibold px-3.5 py-2.5 rounded-lg transition-colors min-h-[42px]"
