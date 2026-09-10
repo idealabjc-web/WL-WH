@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { supabase } from "../supabaseClient";
 import bcrypt from "bcryptjs";
 import { Lock, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, Shield } from "lucide-react";
@@ -37,7 +37,8 @@ export default function SettingsPage({ userEmail }) {
 
         if (fetchError || !dbUser) {
             setLoading(false);
-            return setError("Error verifying user.");
+            console.error("Fetch error:", fetchError);
+            return setError(fetchError?.message || "Error verifying user.");
         }
 
         const isCurrentValid = dbUser.password_hash 
@@ -52,14 +53,19 @@ export default function SettingsPage({ userEmail }) {
         const salt = bcrypt.genSaltSync(10);
         const hash = bcrypt.hashSync(newPassword, salt);
 
-        const { error: updateError } = await supabase
+        console.log("Updating password for email:", userEmail);
+
+        const { data: updateData, error: updateError } = await supabase
             .from("support_team")
             .update({ password_hash: hash })
-            .eq("email", userEmail);
+            .eq("email", userEmail)
+            .select();
+
+        console.log("Update result:", updateData, updateError);
 
         setLoading(false);
 
-        if (updateError) {
+        if (updateError || !updateData || updateData.length === 0) {
             return setError("Failed to update password. Please try again.");
         }
 
