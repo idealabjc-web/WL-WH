@@ -170,7 +170,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
 
     return (
         <div
-            className="min-h-screen pb-24 sm:pb-12 bg-stone-100 text-slate-900"
+            className="min-h-screen pb-28 sm:pb-12 bg-stone-100 text-slate-900"
             style={{ fontFamily: "Inter, sans-serif" }}
         >
             {showPasswordModal && (
@@ -187,24 +187,24 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                 <div className="absolute right-0 top-0 w-80 h-full bg-amber-500/10 rounded-full blur-3xl -translate-y-1/4 translate-x-1/4 pointer-events-none" />
 
                 <div className="w-full max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between h-16 sm:h-18 gap-3 sm:gap-6">
+                    <div className="flex items-center justify-between h-14 sm:h-18 gap-2 sm:gap-6">
                         {/* Left: Brand Logo & Title */}
-                        <div className="relative z-10 flex items-center gap-3 shrink-0">
-                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-black text-slate-950 text-sm shadow-md shadow-amber-500/20 shrink-0">
+                        <div className="relative z-10 flex items-center gap-2.5 sm:gap-3 shrink-0">
+                            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-black text-slate-950 text-xs sm:text-sm shadow-md shadow-amber-500/20 shrink-0">
                                 WL
                             </div>
                             <div>
-                                <div className="text-[10px] sm:text-xs text-amber-400 font-bold tracking-wider uppercase leading-none">
+                                <div className="text-[9px] sm:text-xs text-amber-400 font-bold tracking-wider uppercase leading-none">
                                     WL-WH Dubai 2026
                                 </div>
-                                <div className="text-sm sm:text-base font-extrabold text-white leading-none mt-1 tracking-tight">
+                                <div className="text-xs sm:text-base font-extrabold text-white leading-none mt-1 tracking-tight">
                                     Speaker Portal
                                 </div>
                             </div>
                         </div>
 
-                        {/* Center: Desktop Navigation Tabs inside Navbar */}
-                        <nav className="relative z-10 hidden md:flex items-center gap-1.5 lg:gap-2" aria-label="Portal Navigation">
+                        {/* Center: Desktop / Tablet Navigation Tabs inside Navbar */}
+                        <nav className="relative z-10 hidden md:flex items-center gap-1 lg:gap-2" aria-label="Portal Navigation">
                             {TABS.map((t) => {
                                 const Icon = t.icon;
                                 const isActive = tab === t.id;
@@ -212,16 +212,16 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                                     <button
                                         key={t.id}
                                         onClick={() => handleTabChange(t.id)}
-                                        className={`flex items-center gap-2 px-3 lg:px-4 py-2 rounded-xl text-xs lg:text-sm font-semibold transition-all whitespace-nowrap ${
+                                        className={`flex items-center gap-1.5 lg:gap-2 px-2.5 lg:px-4 py-1.5 lg:py-2 rounded-xl text-xs lg:text-sm font-semibold transition-all whitespace-nowrap ${
                                             isActive
                                                 ? "bg-amber-500/25 text-white border border-amber-400/60 shadow-[0_0_16px_rgba(245,158,11,0.35)] font-bold"
                                                 : "text-white/90 hover:text-white hover:bg-white/10 border border-transparent"
                                         }`}
                                     >
-                                        <Icon size={16} className={isActive ? "text-amber-400" : "text-white"} />
+                                        <Icon size={15} className={isActive ? "text-amber-400" : "text-white"} />
                                         <span className="text-white">
                                             {t.id === "logistics" ? (
-                                                <>Logistics<span className="hidden xl:inline"> & Travel</span></>
+                                                <>Logistics<span className="hidden lg:inline"> & Travel</span></>
                                             ) : (
                                                 t.label
                                             )}
@@ -270,16 +270,16 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                 </div>
             </header>
 
-            <main className="w-full max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-6 sm:py-8">
+            <main className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
                 {/* Speaker Hero Banner */}
-                <div className="rounded-2xl p-5 sm:p-7 mb-6 relative overflow-hidden shadow-lg bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950 text-white border border-slate-800">
-                    <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="rounded-2xl p-4 sm:p-7 mb-4 sm:mb-6 relative overflow-hidden shadow-lg bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950 text-white border border-slate-800">
+                    <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                         <div>
-                            <div className="flex items-center gap-2 mb-2">
-                                <BadgeCheck size={16} className="text-amber-400" />
-                                <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Confirmed Speaker</span>
+                            <div className="flex items-center gap-1.5 sm:gap-2 mb-1 sm:mb-2">
+                                <BadgeCheck size={15} className="text-amber-400 shrink-0" />
+                                <span className="text-[10px] sm:text-xs font-bold text-amber-400 uppercase tracking-wider">Confirmed Speaker</span>
                             </div>
-                            <h1 className="text-2xl sm:text-3xl font-extrabold text-white mb-1.5">
+                            <h1 className="text-xl sm:text-3xl font-extrabold text-white mb-1 break-words">
                                 Welcome, {currentSpeaker.name ? currentSpeaker.name.split(" ")[0] : "Speaker"}!
                             </h1>
                             <p className="text-slate-300 text-xs sm:text-sm font-medium max-w-2xl leading-relaxed">
@@ -288,13 +288,13 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                         </div>
                         
                         {/* Check-in status badge inside banner */}
-                        <div className={`flex items-center gap-2.5 rounded-xl px-4 py-2.5 backdrop-blur-md self-start sm:self-center shrink-0 border ${
+                        <div className={`flex items-center gap-2 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 backdrop-blur-md self-start sm:self-center shrink-0 border ${
                             isCheckedIn
                                 ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
                                 : "bg-amber-500/15 border-amber-500/30 text-amber-300"
                         }`}>
-                            <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${isCheckedIn ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-amber-400"}`} />
-                            <div className="text-xs font-bold tracking-wide uppercase">
+                            <div className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full shrink-0 ${isCheckedIn ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-amber-400"}`} />
+                            <div className="text-[11px] sm:text-xs font-bold tracking-wide uppercase">
                                 {isCheckedIn ? "Checked In" : "Pending Check-In"}
                             </div>
                         </div>
@@ -407,20 +407,20 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
             </main>
 
             {/* Mobile Bottom Navigation Bar */}
-            <div className="sm:hidden fixed bottom-0 left-0 right-0 z-30 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800/80 pb-safe overflow-x-auto shadow-2xl" style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}>
-                <div className="flex items-center justify-around px-2 py-1.5 min-w-full" style={{ WebkitOverflowScrolling: "touch" }}>
+            <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800/80 pb-safe shadow-2xl">
+                <div className="grid grid-cols-5 w-full items-center px-1 py-1">
                     {TABS.map(t => (
                         <button
                             key={t.id}
                             onClick={() => handleTabChange(t.id)}
-                            className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition-all ${
+                            className={`flex flex-col items-center justify-center py-1.5 px-0.5 rounded-xl transition-all w-full text-center ${
                                 tab === t.id 
                                 ? "text-amber-300 bg-amber-500/15 border border-amber-500/30 font-bold shadow-[0_0_10px_rgba(245,158,11,0.2)]" 
                                 : "text-slate-400 hover:text-slate-200 font-medium"
                             }`}
                         >
                             <t.icon size={18} className={tab === t.id ? "text-amber-400" : ""} />
-                            <span className="text-[10px] mt-0.5 tracking-tight">{t.mobileLabel || t.label}</span>
+                            <span className="text-[10px] mt-0.5 tracking-tight truncate w-full px-0.5">{t.mobileLabel || t.label}</span>
                         </button>
                     ))}
                 </div>

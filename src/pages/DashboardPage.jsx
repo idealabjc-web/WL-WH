@@ -121,9 +121,9 @@ function SpeakerDetail({ speaker, onClose, onUpdate, allSpeakers, isSpeaker = fa
                     </div>
                     <div><label className="text-xs font-semibold text-slate-700">Allergies</label><input className={inputCls} value={form.allergy} onChange={set("allergy")} /></div>
                 </div>
-                <div className="flex gap-2 justify-end pt-2 border-t border-slate-200">
-                    <button onClick={() => setIsEditing(false)} className="px-4 py-2 text-sm font-semibold rounded-lg hover:bg-slate-200 text-slate-700">Cancel</button>
-                    <button onClick={save} disabled={saving} className="px-4 py-2 text-sm font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm disabled:opacity-50">
+                <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end pt-2 border-t border-slate-200">
+                    <button onClick={() => setIsEditing(false)} className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg hover:bg-slate-200 text-slate-700 min-h-[42px] transition-colors">Cancel</button>
+                    <button onClick={save} disabled={saving} className="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm disabled:opacity-50 min-h-[42px] transition-colors">
                         {saving ? "Saving..." : "Save Changes"}
                     </button>
                 </div>
@@ -132,20 +132,20 @@ function SpeakerDetail({ speaker, onClose, onUpdate, allSpeakers, isSpeaker = fa
     }
 
     return (
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-4 animate-in">
-            <div className="flex items-start justify-between gap-4 mb-4">
-                <div className="flex items-center gap-3">
-                    <SpeakerAvatar src={speaker.photoUrl} size={52} />
-                    <div>
-                        <div className="font-bold text-lg">{speaker.name}</div>
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5 mb-4 animate-in">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+                <div className="flex items-center gap-3 min-w-0">
+                    <SpeakerAvatar src={speaker.photoUrl} size={48} />
+                    <div className="min-w-0">
+                        <div className="font-bold text-base sm:text-lg text-slate-900 truncate">{speaker.name}</div>
                         <div className="text-xs text-slate-500 font-mono">ID: {speaker.id}</div>
                     </div>
                 </div>
-                <div className="flex gap-2 items-center">
+                <div className="flex gap-2 items-center self-end sm:self-auto shrink-0">
                     {canEdit && (
                         <button
                             onClick={() => setIsEditing(true)}
-                            className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
+                            className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-700 bg-white transition-colors"
                         >
                             {isSelf ? "Edit Your Details" : "Edit Details"}
                         </button>
@@ -153,6 +153,7 @@ function SpeakerDetail({ speaker, onClose, onUpdate, allSpeakers, isSpeaker = fa
                     <button
                         onClick={onClose}
                         className="p-1.5 rounded-lg hover:bg-slate-200 transition-colors text-slate-400 hover:text-slate-700"
+                        title="Close details"
                     >
                         <X size={18} />
                     </button>
@@ -177,25 +178,25 @@ function SpeakerDetail({ speaker, onClose, onUpdate, allSpeakers, isSpeaker = fa
                 <div>
                     <div className="text-xs font-semibold text-amber-600 tracking-wide mb-1.5">ACCOMMODATION</div>
                     {row("Hotel Room", isSpeaker && !isSelf ? "Assigned" : speaker.room)}
-                    {row("Check-in Date", speaker.checkinDate)}
-                    {row("Check-out Date", speaker.checkoutDate)}
-                    {row("No. of Nights", speaker.nights)}
+                    {row("Check-in Date", isSpeaker && !isSelf ? "—" : speaker.checkinDate)}
+                    {row("Check-out Date", isSpeaker && !isSelf ? "—" : speaker.checkoutDate)}
+                    {row("No. of Nights", isSpeaker && !isSelf ? "—" : speaker.nights)}
                     {row("Room Concerns", isSpeaker && !isSelf ? "—" : (speaker.concerns || "None"))}
                 </div>
                 <div>
                     <div className="text-xs font-semibold text-amber-600 tracking-wide mb-1.5">PREFERENCES</div>
-                    {row("Dietary Preference", speaker.diet)}
-                    {row("Allergies", speaker.allergy || "None reported")}
-                    {row("Speaker Tour", speaker.tour)}
+                    {row("Dietary Preference", isSpeaker && !isSelf ? "Confidential" : speaker.diet)}
+                    {row("Allergies", isSpeaker && !isSelf ? "Confidential" : (speaker.allergy || "None reported"))}
+                    {row("Speaker Tour", isSpeaker && !isSelf ? "Confidential" : speaker.tour)}
                 </div>
             </div>
-            {speaker.qrUrl && (
+            {(!isSpeaker || isSelf) && speaker.qrUrl && (
                 <div className="mt-4 pt-3 border-t border-slate-200">
                     <a
                         href={speaker.qrUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-block border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-sm font-semibold px-4 py-2 rounded-lg"
+                        className="inline-block border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-xs sm:text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
                     >
                         View QR Badge
                     </a>
@@ -371,8 +372,8 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker
                 </div>
 
                 {/* Filters and Controls */}
-                <div className="flex flex-col md:flex-row gap-2 sm:gap-3 mb-4 items-stretch md:items-center">
-                    <div className="relative flex-1">
+                <div className="flex flex-col xl:flex-row gap-2.5 sm:gap-3 mb-4 items-stretch xl:items-center">
+                    <div className="relative flex-1 min-w-0">
                         <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                         <input
                             className={`${inputCls} !pl-10 sm:!pl-10 mb-0`}
@@ -381,49 +382,54 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
-                    <div className="relative md:w-36">
-                        <select
-                            className={`${inputCls} mb-0`}
-                            value={dayFilter}
-                            onChange={(e) => setDayFilter(e.target.value)}
-                        >
-                            <option value="all">All Days</option>
-                            <option value="Day 1">Day 1</option>
-                            <option value="Day 2">Day 2</option>
-                            <option value="Day 3">Day 3</option>
-                            <option value="Day 4">Day 4</option>
-                            <option value="Day 5">Day 5</option>
-                        </select>
-                    </div>
-                    <div className="relative md:w-48">
-                        <Filter size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                        <select
-                            className={`${inputCls} !pl-10 sm:!pl-10 mb-0`}
-                            value={filter}
-                            onChange={(e) => setFilter(e.target.value)}
-                        >
-                            <option value="all">All statuses</option>
-                            <option value="checked">Checked in</option>
-                            <option value="pending">Not yet arrived</option>
-                            <option value="flag">Allergy / Concern</option>
-                            <option value="tour">Wants tour</option>
-                        </select>
-                    </div>
-                    <div className="flex gap-2">
-                        {!isSpeaker && (
+                    {/* On phones: 2-column grid. On tablets & desktops: horizontal flex */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+                        <div className="grid grid-cols-2 sm:flex items-center gap-2 sm:gap-3">
+                            <div className="relative sm:w-36">
+                                <select
+                                    className={`${inputCls} mb-0`}
+                                    value={dayFilter}
+                                    onChange={(e) => setDayFilter(e.target.value)}
+                                >
+                                    <option value="all">All Days</option>
+                                    <option value="Day 1">Day 1</option>
+                                    <option value="Day 2">Day 2</option>
+                                    <option value="Day 3">Day 3</option>
+                                    <option value="Day 4">Day 4</option>
+                                    <option value="Day 5">Day 5</option>
+                                </select>
+                            </div>
+                            <div className="relative sm:w-48">
+                                <Filter size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none hidden sm:block" />
+                                <select
+                                    className={`${inputCls} sm:!pl-9 mb-0 text-xs sm:text-sm`}
+                                    value={filter}
+                                    onChange={(e) => setFilter(e.target.value)}
+                                >
+                                    <option value="all">All statuses</option>
+                                    <option value="checked">Checked in</option>
+                                    <option value="pending">Not yet arrived</option>
+                                    <option value="flag">Allergy / Concern</option>
+                                    <option value="tour">Wants tour</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            {!isSpeaker && (
+                                <button
+                                    onClick={exportCsv}
+                                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-xs sm:text-sm font-semibold px-3.5 py-2.5 rounded-lg transition-colors min-h-[42px]"
+                                >
+                                    <Download size={15} /> Export CSV
+                                </button>
+                            )}
                             <button
-                                onClick={exportCsv}
+                                onClick={onRefresh}
                                 className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-xs sm:text-sm font-semibold px-3.5 py-2.5 rounded-lg transition-colors min-h-[42px]"
                             >
-                                <Download size={15} /> Export CSV
+                                <RefreshCw size={15} /> Refresh
                             </button>
-                        )}
-                        <button
-                            onClick={onRefresh}
-                            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-xs sm:text-sm font-semibold px-3.5 py-2.5 rounded-lg transition-colors min-h-[42px]"
-                        >
-                            <RefreshCw size={15} /> Refresh
-                        </button>
+                        </div>
                     </div>
                 </div>
 
@@ -432,53 +438,68 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker
                     {rows.length === 0 ? (
                         <div className="text-center text-slate-500 py-8 text-sm">No speakers match.</div>
                     ) : (
-                        rows.map((s) => (
-                            <div
-                                key={s.id}
-                                onClick={() => setSelectedId(selectedId === s.id ? null : s.id)}
-                                className={`border rounded-xl p-3.5 cursor-pointer transition-colors ${
-                                    selectedId === s.id ? "bg-amber-50/80 border-amber-300" : "bg-slate-50/60 border-slate-200 hover:bg-slate-100/70"
-                                }`}
-                            >
-                                <div className="flex justify-between items-start gap-2 mb-2">
-                                    <div className="flex items-center gap-2.5">
-                                        <SpeakerAvatar src={s.photoUrl} size={36} />
-                                        <div>
-                                            <div className="font-bold text-slate-900 text-sm text-amber-700 flex items-center gap-1">
-                                                {s.name}
-                                                <ChevronDown size={14} className={`text-slate-400 transition-transform ${selectedId === s.id ? "rotate-180" : ""}`} />
+                        rows.map((s) => {
+                            const isSelf = isSpeaker && currentSpeaker && (
+                                s.id === currentSpeaker.id || 
+                                (s.email && currentSpeaker.email && s.email.toLowerCase() === currentSpeaker.email.toLowerCase())
+                            );
+                            const hideConfidential = isSpeaker && !isSelf;
+
+                            return (
+                                <div
+                                    key={s.id}
+                                    onClick={() => setSelectedId(selectedId === s.id ? null : s.id)}
+                                    className={`border rounded-xl p-3.5 cursor-pointer transition-colors ${
+                                        selectedId === s.id ? "bg-amber-50/80 border-amber-300" : "bg-slate-50/60 border-slate-200 hover:bg-slate-100/70"
+                                    }`}
+                                >
+                                    <div className="flex justify-between items-start gap-2 mb-2">
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                            <SpeakerAvatar src={s.photoUrl} size={36} />
+                                            <div className="min-w-0">
+                                                <div className="font-bold text-slate-900 text-sm text-amber-700 flex items-center gap-1">
+                                                    <span className="truncate">{s.name}</span>
+                                                    <ChevronDown size={14} className={`text-slate-400 shrink-0 transition-transform ${selectedId === s.id ? "rotate-180" : ""}`} />
+                                                </div>
+                                                <div className="text-xs text-slate-500 truncate max-w-[200px]">{s.sessionTitle || "Confirmed Speaker"}</div>
                                             </div>
-                                            <div className="text-xs text-slate-500">{s.sessionTitle || "No session title"}</div>
                                         </div>
+                                        <StatusBadge checkedIn={s.checkedIn} />
                                     </div>
-                                    <StatusBadge checkedIn={s.checkedIn} />
+                                    
+                                    {/* Responsive metadata grid */}
+                                    <div className={`grid ${hideConfidential ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"} gap-2 text-xs text-slate-600 border-t border-slate-200/70 pt-2 mt-2`}>
+                                        <div>
+                                            <span className="text-slate-400 block text-[10px] uppercase font-semibold">Day</span>
+                                            <span className="font-semibold text-slate-800">{s.day || "—"}</span>
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-400 block text-[10px] uppercase font-semibold">Slot</span>
+                                            <span className="font-semibold text-slate-800">{s.timeSlot || "—"}</span>
+                                        </div>
+                                        {!hideConfidential && (
+                                            <>
+                                                <div>
+                                                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Room</span>
+                                                    <span className="font-semibold text-slate-800">{s.room || "—"}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Dietary</span>
+                                                    <span className="font-medium text-slate-800 truncate block">{s.diet}{s.allergy ? ` ⚠ ${s.allergy}` : ""}</span>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+
+                                    {!hideConfidential && s.concerns && (
+                                        <div className="mt-2 text-xs bg-amber-50 text-amber-800 p-2 rounded border border-amber-200 flex items-start gap-1.5">
+                                            <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+                                            <span className="break-words">{s.concerns}</span>
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-slate-600 border-t border-slate-200/70 pt-2 mt-2">
-                                    <div>
-                                        <span className="text-slate-400 block">Day</span>
-                                        <span className="font-semibold text-slate-800">{s.day || "—"}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-slate-400 block">Slot</span>
-                                        <span className="font-semibold text-slate-800">{s.timeSlot || "—"}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-slate-400 block">Room</span>
-                                        <span className="font-semibold text-slate-800">{s.room || "—"}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-slate-400 block">Dietary</span>
-                                        <span className="font-medium text-slate-800">{s.diet}{s.allergy ? ` ⚠ ${s.allergy}` : ""}</span>
-                                    </div>
-                                </div>
-                                {s.concerns && (
-                                    <div className="mt-2 text-xs bg-amber-50 text-amber-800 p-2 rounded border border-amber-200 flex items-start gap-1.5">
-                                        <AlertTriangle size={13} className="shrink-0 mt-0.5" />
-                                        <span>{s.concerns}</span>
-                                    </div>
-                                )}
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
 

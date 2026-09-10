@@ -243,7 +243,7 @@ export default function IdCardsPage({
             <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-6 shadow-sm">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             <h2 className="text-lg sm:text-xl font-bold text-slate-900">Speaker ID Cards</h2>
                             <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
                                 Official Template + QR Code
@@ -252,19 +252,19 @@ export default function IdCardsPage({
                         <p className="text-xs sm:text-sm text-slate-500 mt-1">
                             Generate official printable JPEG badges with scannable on-site check-in QR codes, partner logos, and speaker photos.
                         </p>
-                        <div className="flex items-center gap-4 mt-2 text-xs font-medium text-slate-600">
-                            <span>Registered Speakers: <strong className="text-slate-900">{totalSpeakers}</strong></span>
+                        <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-2 text-xs font-medium text-slate-600">
+                            <span>Registered: <strong className="text-slate-900">{totalSpeakers}</strong></span>
                             <span>•</span>
-                            <span>Generated Badges: <strong className="text-teal-700">{generatedCount} of {totalSpeakers}</strong></span>
+                            <span>Generated: <strong className="text-teal-700">{generatedCount} of {totalSpeakers}</strong></span>
                         </div>
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex flex-wrap items-center gap-2.5">
+                    <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:gap-2.5 w-full lg:w-auto">
                         <button
                             onClick={() => handleGenerateCards(false)}
                             disabled={generating || zipping || totalSpeakers === 0}
-                            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white font-semibold text-sm px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-95 min-h-[44px]"
+                            className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-95 min-h-[44px]"
                         >
                             <Sparkles size={16} className={generating ? "animate-spin" : ""} />
                             {generating ? "Generating Badges..." : "Generate ID Cards"}
@@ -275,7 +275,7 @@ export default function IdCardsPage({
                                 onClick={() => handleGenerateCards(true)}
                                 disabled={generating || zipping}
                                 title="Regenerate all ID cards with QR codes"
-                                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 text-slate-700 font-semibold text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 transition-all active:scale-95 min-h-[44px]"
+                                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 disabled:bg-slate-50 text-slate-700 font-semibold text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-slate-200 transition-all active:scale-95 min-h-[44px]"
                             >
                                 <RefreshCw size={15} className={generating ? "animate-spin" : ""} />
                                 Regenerate All
@@ -285,7 +285,7 @@ export default function IdCardsPage({
                         <button
                             onClick={handleDownloadZip}
                             disabled={zipping || generating || totalSpeakers === 0}
-                            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-200 text-slate-950 font-bold text-sm px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-95 min-h-[44px]"
+                            className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-200 text-slate-950 font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-95 min-h-[44px]"
                         >
                             <FileArchive size={16} />
                             {zipping ? "Creating ZIP..." : "Generate & Download ZIP"}
@@ -442,16 +442,16 @@ export default function IdCardsPage({
                             />
                         </div>
 
-                        <div className="flex gap-2.5 mt-5 w-full max-w-[340px]">
+                        <div className="flex flex-col sm:flex-row gap-2.5 mt-5 w-full max-w-[340px]">
                             <button
                                 onClick={() => downloadSingleCard(previewCard)}
-                                className="flex-1 inline-flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm py-2.5 rounded-xl shadow-xs transition-colors"
+                                className="w-full sm:flex-1 inline-flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm py-2.5 rounded-xl shadow-xs transition-colors min-h-[44px]"
                             >
                                 <Download size={16} /> Download JPEG
                             </button>
                             <button
                                 onClick={() => setPreviewCard(null)}
-                                className="px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold hover:bg-slate-50 transition-colors"
+                                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold hover:bg-slate-50 transition-colors min-h-[44px]"
                             >
                                 Close
                             </button>

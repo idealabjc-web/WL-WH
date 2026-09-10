@@ -212,14 +212,14 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
         <div className="space-y-6">
             {/* Personal Digital Check-In Pass for Speaker */}
             {isSpeaker && mySpeaker && (
-                <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-7 shadow-sm overflow-hidden relative">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
-                        <div className="flex items-center gap-2.5">
+                <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-7 shadow-sm overflow-hidden relative">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 sm:pb-5 border-b border-slate-100">
+                        <div className="flex items-center gap-2.5 min-w-0">
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-bold text-white shadow-md shrink-0">
                                 WL
                             </div>
-                            <div>
-                                <div className="text-xs font-bold uppercase tracking-wider text-amber-700">
+                            <div className="min-w-0">
+                                <div className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-amber-700 truncate">
                                     WL-WH Dubai 2026 · Official Speaker Pass
                                 </div>
                                 <div className="text-xs text-slate-500 font-mono">
@@ -228,7 +228,7 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                             </div>
                         </div>
 
-                        <div className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold self-start md:self-center ${
+                        <div className={`inline-flex items-center gap-2 px-3 py-1.5 sm:px-3.5 rounded-full text-xs font-semibold self-start sm:self-center shrink-0 ${
                             mySpeaker.checkedIn || mySpeaker.checked_in
                                 ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                 : "bg-amber-50 text-amber-700 border border-amber-200"
@@ -240,24 +240,24 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 sm:gap-6 pt-5 sm:pt-6">
                         {/* Speaker & Session Info */}
                         <div className="lg:col-span-2 space-y-4">
                             <div>
-                                <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                                <h1 className="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight break-words">
                                     {mySpeaker.name}
                                 </h1>
-                                <p className="text-slate-600 text-sm sm:text-base font-medium mt-1 leading-relaxed">
+                                <p className="text-slate-600 text-xs sm:text-base font-medium mt-1 leading-relaxed">
                                     {mySpeaker.sessionTitle || mySpeaker.session_title || "Confirmed Speaker"}
                                 </p>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 pt-1">
                                 <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
                                     <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
                                         <Calendar size={16} />
                                     </div>
-                                    <div className="min-w-0">
+                                    <div className="min-w-0 flex-1">
                                         <div className="text-[10px] uppercase font-bold text-slate-400">Day & Time</div>
                                         <div className="text-xs font-semibold text-slate-800 truncate">
                                             {mySpeaker.day || "Day TBA"} · {mySpeaker.timeSlot || mySpeaker.time_slot || "Time TBA"}
@@ -269,7 +269,7 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                                     <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
                                         <MapPin size={16} />
                                     </div>
-                                    <div className="min-w-0">
+                                    <div className="min-w-0 flex-1">
                                         <div className="text-[10px] uppercase font-bold text-slate-400">Venue / Room</div>
                                         <div className="text-xs font-semibold text-slate-800 truncate">
                                             {mySpeaker.room || "Main Conference Hall"}
@@ -281,7 +281,7 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                                     <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
                                         <Hotel size={16} />
                                     </div>
-                                    <div className="min-w-0">
+                                    <div className="min-w-0 flex-1">
                                         <div className="text-[10px] uppercase font-bold text-slate-400">Accommodation</div>
                                         <div className="text-xs font-semibold text-slate-800 truncate">
                                             {mySpeaker.room ? `Room ${mySpeaker.room}` : "Assigned upon arrival"}
@@ -293,7 +293,7 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                                     <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
                                         <Utensils size={16} />
                                     </div>
-                                    <div className="min-w-0">
+                                    <div className="min-w-0 flex-1">
                                         <div className="text-[10px] uppercase font-bold text-slate-400">Dietary</div>
                                         <div className="text-xs font-semibold text-slate-800 truncate">
                                             {mySpeaker.diet || "Standard"}
@@ -305,13 +305,13 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                             {/* Self Check-in Action / Status Message */}
                             <div className="pt-2">
                                 {mySpeaker.checkedIn || mySpeaker.checked_in ? (
-                                    <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex items-start sm:items-center gap-3">
-                                        <CheckCircle2 size={24} className="text-emerald-600 shrink-0 mt-0.5 sm:mt-0" />
+                                    <div className="p-3.5 sm:p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex items-start sm:items-center gap-3">
+                                        <CheckCircle2 size={22} className="text-emerald-600 shrink-0 mt-0.5 sm:mt-0" />
                                         <div>
-                                            <div className="text-sm font-bold text-emerald-900">
+                                            <div className="text-xs sm:text-sm font-bold text-emerald-900">
                                                 Welcome, you are checked in!
                                             </div>
-                                            <div className="text-xs text-emerald-700 mt-0.5">
+                                            <div className="text-[11px] sm:text-xs text-emerald-700 mt-0.5 leading-relaxed">
                                                 {mySpeaker.checkedInAt || mySpeaker.checked_in_at
                                                     ? `Recorded on ${new Date(mySpeaker.checkedInAt || mySpeaker.checked_in_at).toLocaleString()}`
                                                     : "Your presence has been confirmed with on-site event operations."}
@@ -319,14 +319,14 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                    <div className="p-3.5 sm:p-4 rounded-xl bg-amber-50/70 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                         <div>
-                                            <div className="text-sm font-bold text-amber-950">Have you arrived at the venue?</div>
-                                            <div className="text-xs text-amber-800 mt-0.5">Confirm your arrival to notify the stage coordinators.</div>
+                                            <div className="text-xs sm:text-sm font-bold text-amber-950">Have you arrived at the venue?</div>
+                                            <div className="text-[11px] sm:text-xs text-amber-800 mt-0.5">Confirm your arrival to notify the stage coordinators.</div>
                                         </div>
                                         <button
                                             onClick={() => onConfirm(mySpeaker.id, noteInput || "Self checked in via portal")}
-                                            className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 shrink-0"
+                                            className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 shrink-0 min-h-[44px]"
                                         >
                                             <CheckCircle2 size={16} />
                                             Confirm My Check-In
@@ -340,34 +340,34 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                                 <label className="text-xs font-semibold text-slate-700 block mb-1.5">
                                     Special On-Site Notes / AV Requests:
                                 </label>
-                                <div className="flex gap-2">
+                                <div className="flex flex-col sm:flex-row gap-2">
                                     <input
-                                        className={`${inputCls} mb-0 flex-1`}
+                                        className={`${inputCls} mb-0 flex-1 min-h-[42px]`}
                                         placeholder="e.g., HDMI adapter needed, slide deck update..."
                                         value={noteInput}
                                         onChange={(e) => setNoteInput(e.target.value)}
                                     />
                                     <button
                                         onClick={() => onSaveNotes(mySpeaker.id, noteInput)}
-                                        className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shrink-0 transition-colors flex items-center gap-1.5"
+                                        className="w-full sm:w-auto px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-lg shrink-0 transition-colors flex items-center justify-center gap-1.5 min-h-[42px]"
                                     >
-                                        <Send size={13} /> Save
+                                        <Send size={13} /> Save Note
                                     </button>
                                 </div>
                             </div>
                         </div>
 
                         {/* Digital QR Code Box */}
-                        <div className="flex flex-col items-center justify-center p-6 bg-slate-50 border border-slate-200 rounded-2xl text-center">
+                        <div className="flex flex-col items-center justify-center p-4 sm:p-6 bg-slate-50 border border-slate-200 rounded-2xl text-center">
                             <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 mb-3">
                                 {qrDataUrl ? (
                                     <img 
                                         src={qrDataUrl} 
                                         alt={`QR Badge for ${mySpeaker.name}`}
-                                        className="w-44 h-44 object-contain rounded-lg"
+                                        className="w-36 h-36 sm:w-44 sm:h-44 object-contain rounded-lg"
                                     />
                                 ) : (
-                                    <div className="w-44 h-44 flex items-center justify-center text-slate-400 bg-slate-100 rounded-lg text-xs font-mono">
+                                    <div className="w-36 h-36 sm:w-44 sm:h-44 flex items-center justify-center text-slate-400 bg-slate-100 rounded-lg text-xs font-mono">
                                         Loading QR...
                                     </div>
                                 )}
@@ -375,7 +375,7 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                             <div className="text-xs font-bold text-slate-800 uppercase tracking-wider">
                                 On-Site QR Pass
                             </div>
-                            <p className="text-[11px] text-slate-500 mt-1 max-w-[200px]">
+                            <p className="text-[11px] text-slate-500 mt-1 max-w-[220px]">
                                 Show this barcode to reception desk staff or room coordinators to scan your entry.
                             </p>
                         </div>

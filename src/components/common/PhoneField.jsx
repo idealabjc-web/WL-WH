@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 const COUNTRIES = [
     { code: "ae", dial: "+971", name: "United Arab Emirates", flag: "ae" },
@@ -157,7 +157,7 @@ export default function PhoneField({ value = "", onChange }) {
 
             {/* Dropdown */}
             {open && (
-                <div className="absolute top-[calc(100%+4px)] left-0 z-[9999] w-72 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
+                <div className="absolute top-[calc(100%+4px)] left-0 z-[9999] w-72 max-w-[calc(100vw-2.5rem)] bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden">
                     <div className="p-2 border-b border-slate-100">
                         <input
                             ref={searchRef}

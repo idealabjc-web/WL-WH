@@ -214,41 +214,41 @@ export default function EventPortal({ displayName = "", userEmail = "", onLogout
             {/* Main Fluid Content Area (expands naturally to fill screen) */}
             <div className="flex-1 min-w-0 flex flex-col min-h-screen">
                 {/* Top App Bar Header with Hamburger Menu Button */}
-                <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-3.5 sm:px-6 py-3 flex items-center justify-between shadow-xs">
-                    <div className="flex items-center gap-3">
+                <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between shadow-xs">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                         {/* Mobile Only: opens drawer on phone viewports (completely hidden on tablet/desktop) */}
                         <button
                             id="hamburger-btn"
                             onClick={() => setMobileMenuOpen(true)}
                             type="button"
-                            className="md:hidden p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors touch-manipulation"
+                            className="md:hidden p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors touch-manipulation shrink-0"
                             title="Open navigation menu"
                             aria-label="Open navigation menu"
                         >
                             <Menu size={22} />
                         </button>
 
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-[10px] sm:text-xs font-semibold text-amber-600 uppercase tracking-wider">
+                        <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 sm:gap-2">
+                                <span className="text-[9px] sm:text-xs font-semibold text-amber-600 uppercase tracking-wider">
                                     DUBAI · ON-SITE
                                 </span>
-                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full">
+                                <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-semibold text-teal-700 bg-teal-50 px-1.5 sm:px-2 py-0.5 rounded-full">
                                     <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"></span>
                                     Live Ops
                                 </span>
                             </div>
-                            <h1 className="text-base sm:text-lg md:text-xl font-bold text-slate-900 leading-tight">
-                                {currentTabObj.label} · <span className="text-slate-500 font-medium">Speaker Portal</span>
+                            <h1 className="text-sm sm:text-lg md:text-xl font-bold text-slate-900 leading-tight truncate">
+                                {currentTabObj.label} · <span className="text-slate-500 font-medium">Operations</span>
                             </h1>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                         <div className="text-right hidden sm:block">
                             <div className="text-xs text-slate-500 font-medium">WL-WH Conference Operations</div>
                             {displayName && (
-                                <div className="text-xs font-semibold text-slate-700">
+                                <div className="text-xs font-semibold text-slate-700 truncate max-w-[140px]">
                                     {displayName}
                                 </div>
                             )}
@@ -256,10 +256,10 @@ export default function EventPortal({ displayName = "", userEmail = "", onLogout
                         {onLogout && (
                             <button
                                 onClick={onLogout}
-                                className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-rose-500 hover:bg-rose-50 px-2 py-2 rounded-lg transition-colors"
+                                className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50 px-2.5 py-1.5 sm:py-2 rounded-lg transition-colors border border-slate-200/80 shadow-xs"
                                 title="Sign out"
                             >
-                                <LogOut size={16} />
+                                <LogOut size={15} />
                                 <span className="hidden sm:inline">Sign out</span>
                             </button>
                         )}
@@ -267,7 +267,7 @@ export default function EventPortal({ displayName = "", userEmail = "", onLogout
                 </header>
 
                 {/* Main Content View (Fluid width, not restricted to narrow max-w-5xl) */}
-                <main className="flex-1 p-3.5 sm:p-6 lg:p-8 pb-12 w-full max-w-[1600px] mx-auto">
+                <main className="flex-1 p-3 sm:p-6 lg:p-8 pb-16 sm:pb-12 w-full max-w-[1600px] mx-auto min-w-0">
                     {connectionError && (
                         <div className="flex items-start gap-2 bg-rose-50 text-rose-700 text-xs font-medium px-4 py-3 rounded-xl mb-4 border border-rose-200 shadow-xs">
                             <AlertTriangle size={15} className="mt-0.5 shrink-0" />

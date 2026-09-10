@@ -102,11 +102,15 @@ export default function FeedbackPage({ feedback, onAdd, toast, currentSpeaker = 
                         .reverse()
                         .map((f) => (
                             <div key={f.id} className="border-b border-slate-100 py-3 text-sm last:border-0">
-                                <div className="flex justify-between items-center font-semibold">
-                                    <span className="text-slate-800">{f.name} · <span className="text-slate-500 font-normal">{f.category}</span></span>
-                                    <span className="text-amber-500 text-base">{"★".repeat(f.rating)}{"☆".repeat(5 - f.rating)}</span>
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 font-semibold">
+                                    <div className="text-slate-800 min-w-0 break-words">
+                                        {f.name} <span className="text-slate-500 font-normal">· {f.category}</span>
+                                    </div>
+                                    <div className="text-amber-500 text-sm sm:text-base shrink-0 tracking-wider">
+                                        {"★".repeat(f.rating)}{"☆".repeat(5 - f.rating)}
+                                    </div>
                                 </div>
-                                {f.comment && <div className="text-slate-600 mt-1 text-xs sm:text-sm">{f.comment}</div>}
+                                {f.comment && <div className="text-slate-600 mt-1 text-xs sm:text-sm break-words leading-relaxed">{f.comment}</div>}
                                 <div className="text-slate-400 text-[11px] sm:text-xs mt-1">{new Date(f.ts).toLocaleString()}</div>
                             </div>
                         ))
