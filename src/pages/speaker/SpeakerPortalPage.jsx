@@ -15,8 +15,8 @@ import { fetchSpeakers, speakerToRow } from "../../api/speakersApi";
 import { fetchFeedback, feedbackToRow } from "../../api/feedbackApi";
 
 const TABS = [
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "checkin", label: "Check-In", icon: ScanLine },
+    { id: "home", label: "Home", icon: BadgeCheck },
+    { id: "checkin", label: "Scanner", icon: ScanLine },
     { id: "feedback", label: "Feedback", icon: MessageSquare },
     { id: "logistics", label: "Logistics & Travel", mobileLabel: "Logistics", icon: Hotel },
     { id: "settings", label: "Settings", icon: SettingsIcon },
@@ -26,7 +26,7 @@ const VALID_TABS = TABS.map(t => t.id);
 
 function getInitialTab() {
     const hash = window.location.hash.replace("#", "").toLowerCase();
-    return VALID_TABS.includes(hash) ? hash : "dashboard";
+    return VALID_TABS.includes(hash) ? hash : "home";
 }
 
 export default function SpeakerPortalPage({ speaker, onLogout }) {
@@ -272,6 +272,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
 
             <main className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
                 {/* Speaker Hero Banner */}
+                {tab === "home" && (
                 <div className="rounded-2xl p-4 sm:p-7 mb-4 sm:mb-6 relative overflow-hidden shadow-lg bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950 text-white border border-slate-800">
                     <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                         <div>
@@ -302,9 +303,22 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                     {/* Subtle warm decorative glow */}
                     <div className="absolute right-0 top-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none" />
                 </div>
+                )}
 
                 {/* Tab Content Views */}
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-200">
+                    {tab === "home" && (
+                        <CheckinPage 
+                            speakers={speakers} 
+                            onConfirm={confirmCheckin} 
+                            onSaveNotes={saveNotes} 
+                            toast={toast} 
+                            isSpeaker={true}
+                            currentSpeaker={currentSpeaker}
+                            forcedSubTab="home"
+                        />
+                    )}
+
                     {tab === "checkin" && (
                         <CheckinPage 
                             speakers={speakers} 
@@ -313,6 +327,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                             toast={toast} 
                             isSpeaker={true}
                             currentSpeaker={currentSpeaker}
+                            forcedSubTab="qr"
                         />
                     )}
 
@@ -321,16 +336,6 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                             feedback={feedback} 
                             onAdd={addFeedback} 
                             toast={toast} 
-                            currentSpeaker={currentSpeaker}
-                        />
-                    )}
-
-                    {tab === "dashboard" && (
-                        <DashboardPage 
-                            speakers={speakers} 
-                            onRefresh={refresh} 
-                            onUpdate={updateSpeaker} 
-                            isSpeaker={true} 
                             currentSpeaker={currentSpeaker}
                         />
                     )}

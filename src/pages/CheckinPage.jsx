@@ -12,9 +12,10 @@ import { inputCls } from "../components/common/UIAtoms";
 import ProfileCard from "../components/ProfileCard";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
 
-export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, isSpeaker = false, currentSpeaker = null }) {
+export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, isSpeaker = false, currentSpeaker = null, forcedSubTab = null }) {
     // Top subnav bar state: "home" | "qr"
-    const [activeSubTab, setActiveSubTab] = useState("home");
+    const [activeSubTabState, setActiveSubTabState] = useState("home");
+    const activeSubTab = forcedSubTab || activeSubTabState;
     
     // Mobile station view toggle for QR Scan tab on phones (< md): "camera" | "directory"
     const [qrMobileView, setQrMobileView] = useState("camera");
@@ -241,7 +242,7 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
     };
 
     const handleSubTabChange = (nextTab) => {
-        setActiveSubTab(nextTab);
+        setActiveSubTabState(nextTab);
         if (nextTab !== "qr" && scanning) {
             stopScan();
         }
@@ -275,7 +276,8 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
     return (
         <div className="space-y-4 sm:space-y-6">
             {/* Top Subnav / Filter Bar: Home vs QR Scan (Optimized for Mobile Touch & Tablet) */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 sm:pb-3 border-b border-slate-200/90">
+            {!forcedSubTab && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 sm:pb-3 border-b border-slate-200/90">
                 <div className="grid grid-cols-2 w-full sm:w-auto sm:flex items-center p-1 sm:p-1.5 bg-slate-200/75 rounded-2xl border border-slate-300/70 shadow-xs backdrop-blur-xs">
                     <button
                         type="button"
@@ -327,7 +329,8 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                             : "Reception Scanner & Attendee Verification Hub"}
                     </span>
                 </div>
-            </div>
+                </div>
+            )}
 
             {/* Hidden canvas element for continuous QR decoding */}
             <canvas ref={canvasRef} style={{ display: "none" }} />
@@ -447,18 +450,16 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div className="p-3.5 sm:p-4 rounded-xl bg-amber-50/70 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                            <div className="p-3.5 sm:p-4 rounded-xl bg-amber-50/70 border border-amber-200 flex items-start sm:items-center gap-3">
+                                                <Clock size={22} className="text-amber-600 shrink-0 mt-0.5 sm:mt-0" />
                                                 <div>
-                                                    <div className="text-xs sm:text-sm font-bold text-amber-950">Have you arrived at the venue?</div>
-                                                    <div className="text-[11px] sm:text-xs text-amber-800 mt-0.5">Confirm your arrival to notify the stage coordinators.</div>
+                                                    <div className="text-xs sm:text-sm font-bold text-amber-950">
+                                                        Awaiting Arrival Check-In
+                                                    </div>
+                                                    <div className="text-[11px] sm:text-xs text-amber-800 mt-0.5 leading-relaxed">
+                                                        Please present your QR pass at the reception desk upon arrival.
+                                                    </div>
                                                 </div>
-                                                <button
-                                                    onClick={() => onConfirm(mySpeaker.id, noteInput || "Self checked in via portal")}
-                                                    className="w-full sm:w-auto px-5 py-3 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 shrink-0 min-h-[48px] touch-manipulation"
-                                                >
-                                                    <CheckCircle2 size={16} />
-                                                    Confirm My Check-In
-                                                </button>
                                             </div>
                                         )}
                                     </div>
