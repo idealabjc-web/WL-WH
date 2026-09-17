@@ -26,8 +26,8 @@ export default function ProfileCard({
         const slotDisplay = [speaker.day, speaker.timeSlot || speaker.time_slot].filter(Boolean).join(" · ") || "—";
 
         return (
-            <div className="mt-5 animate-in fade-in duration-200">
-                <div className="border border-slate-200 rounded-2xl p-5 sm:p-6 bg-slate-50 shadow-xs">
+            <div className="mt-2.5 sm:mt-3.5 animate-in fade-in duration-200">
+                <div className="border border-slate-200 rounded-xl sm:rounded-2xl p-3 sm:p-5 bg-slate-50 shadow-xs">
                     <div className="flex items-center gap-3 pb-4 border-b border-slate-200">
                         <SpeakerAvatar src={speaker.photoUrl || speaker.photo_url} size={40} />
                         <div className="min-w-0 flex-1">
@@ -67,8 +67,8 @@ export default function ProfileCard({
     const checkedInAt = speaker.checkedInAt || speaker.checked_in_at;
 
     return (
-        <div className="mt-5 animate-in fade-in duration-200">
-            <div className="border border-slate-200 rounded-xl p-4 sm:p-5 bg-slate-50 shadow-xs">
+        <div className="mt-2.5 sm:mt-3.5 animate-in fade-in duration-200">
+            <div className="border border-slate-200 rounded-xl p-3 sm:p-5 bg-slate-50 shadow-xs">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 py-2 border-b border-slate-200 text-sm">
                     <div className="text-slate-500 text-xs sm:text-sm font-medium">
                         {isSelf ? "Your Verified Profile" : "Speaker Name"}
@@ -111,13 +111,13 @@ export default function ProfileCard({
                 </div>
             )}
 
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-2.5 mt-2">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-2.5 mt-3">
                 {/* Checkin button: ONLY available for staff (!isSpeaker), never from user account */}
                 {!isSpeaker && onConfirm && (
                     <button
                         onClick={() => onConfirm(speaker.id, notes)}
                         disabled={isCheckedIn}
-                        className="flex-1 min-h-[44px] inline-flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-800 disabled:bg-slate-300 disabled:text-slate-500 text-white font-semibold text-sm px-5 py-3 rounded-lg shadow-sm transition-all"
+                        className="flex-1 min-h-[48px] inline-flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-800 disabled:bg-slate-300 disabled:text-slate-500 text-white font-semibold text-sm px-5 py-3 rounded-xl shadow-sm transition-all touch-manipulation active:scale-[0.98]"
                     >
                         <CheckCircle2 size={16} />
                         {isCheckedIn ? "Already checked in" : "Confirm check-in"}
@@ -126,7 +126,7 @@ export default function ProfileCard({
                 {(!isSpeaker || isSelf) && onSaveNotes && (
                     <button
                         onClick={() => onSaveNotes(speaker.id, notes)}
-                        className="sm:flex-none min-h-[44px] inline-flex items-center justify-center border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-slate-700 font-semibold text-sm px-4 py-3 rounded-lg transition-colors"
+                        className="sm:flex-none min-h-[48px] inline-flex items-center justify-center border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-slate-700 font-semibold text-sm px-5 py-3 rounded-xl transition-colors touch-manipulation active:scale-[0.98]"
                     >
                         Save notes
                     </button>
@@ -136,7 +136,7 @@ export default function ProfileCard({
                         href={speaker.qrUrl || speaker.qr_url}
                         target="_blank"
                         rel="noreferrer"
-                        className="sm:flex-none min-h-[44px] inline-flex items-center justify-center gap-1.5 border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-slate-700 font-semibold text-sm px-4 py-3 rounded-lg transition-colors"
+                        className="sm:flex-none min-h-[48px] inline-flex items-center justify-center gap-1.5 border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-slate-700 font-semibold text-sm px-4 py-3 rounded-xl transition-colors touch-manipulation"
                     >
                         <ExternalLink size={14} /> View QR badge
                     </a>

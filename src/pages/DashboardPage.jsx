@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { 
     Download, RefreshCw, Search, Filter, AlertTriangle, 
-    LayoutList, Table as TableIcon, X, ChevronDown, 
-    Calendar, Clock, MapPin, Sparkles, BadgeCheck 
+    LayoutList, Table as TableIcon, X, ChevronDown, ChevronUp,
+    Calendar, Clock, MapPin, Sparkles, BadgeCheck,
+    Users, CheckCircle2, Utensils, Map
 } from "lucide-react";
 import { StatCard, StatusBadge, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
@@ -64,12 +65,13 @@ function SpeakerDetail({ speaker, onClose, onUpdate, allSpeakers, isSpeaker = fa
 
     if (isEditing) {
         return (
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-4 animate-in">
-                <div className="flex items-center justify-between mb-4">
-                    <div className="font-bold text-lg text-slate-900">
-                        {isSelf ? "Edit Your Details" : "Edit Details"}
+            <div className="bg-white border border-amber-300/80 rounded-xl p-4 sm:p-5 shadow-xs animate-in fade-in duration-200">
+                <div className="flex items-center justify-between mb-4 pb-2.5 border-b border-slate-100">
+                    <div className="font-bold text-base sm:text-lg text-slate-900 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                        <span>{isSelf ? "Edit Your Details" : "Edit Details"}</span>
                     </div>
-                    <button onClick={() => setIsEditing(false)} className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-400 hover:text-slate-700">
+                    <button onClick={() => setIsEditing(false)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700">
                         <X size={18} />
                     </button>
                 </div>
@@ -132,8 +134,8 @@ function SpeakerDetail({ speaker, onClose, onUpdate, allSpeakers, isSpeaker = fa
     }
 
     return (
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5 mb-4 animate-in">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+        <div className="bg-white border border-amber-300/80 rounded-xl p-4 sm:p-5 shadow-xs animate-in fade-in duration-200">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-3 min-w-0">
                     <SpeakerAvatar src={speaker.photoUrl} size={48} />
                     <div className="min-w-0">
@@ -152,10 +154,11 @@ function SpeakerDetail({ speaker, onClose, onUpdate, allSpeakers, isSpeaker = fa
                     )}
                     <button
                         onClick={onClose}
-                        className="p-1.5 rounded-lg hover:bg-slate-200 transition-colors text-slate-400 hover:text-slate-700"
+                        className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors text-xs font-semibold text-slate-600 flex items-center gap-1"
                         title="Close details"
                     >
-                        <X size={18} />
+                        <span>Close</span>
+                        <X size={14} />
                     </button>
                 </div>
             </div>
@@ -190,18 +193,26 @@ function SpeakerDetail({ speaker, onClose, onUpdate, allSpeakers, isSpeaker = fa
                     {row("Speaker Tour", isSpeaker && !isSelf ? "Confidential" : speaker.tour)}
                 </div>
             </div>
-            {(!isSpeaker || isSelf) && speaker.qrUrl && (
-                <div className="mt-4 pt-3 border-t border-slate-200">
+            <div className="mt-4 pt-3 border-t border-slate-200 flex flex-wrap items-center gap-2.5">
+                {(!isSpeaker || isSelf) && speaker.qrUrl && (
                     <a
                         href={speaker.qrUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-block border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-xs sm:text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+                        className="inline-flex items-center gap-1.5 border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-xs sm:text-sm font-semibold px-3.5 py-2 rounded-lg transition-colors"
                     >
                         View QR Badge
                     </a>
-                </div>
-            )}
+                )}
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="inline-flex items-center gap-1.5 border border-slate-200 hover:bg-slate-100 text-xs sm:text-sm font-semibold px-3.5 py-2 rounded-lg text-slate-700 bg-white transition-colors"
+                >
+                    <X size={14} />
+                    <span>Close</span>
+                </button>
+            </div>
         </div>
     );
 }
@@ -212,6 +223,19 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker
     const [dayFilter, setDayFilter] = useState("all");
     const [mobileView, setMobileView] = useState("cards"); // 'cards' | 'table'
     const [selectedId, setSelectedId] = useState(null);
+    const [showHeroProfile, setShowHeroProfile] = useState(false);
+
+    // Close open dropdown on Escape key
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === "Escape" && (selectedId || showHeroProfile)) {
+                setSelectedId(null);
+                setShowHeroProfile(false);
+            }
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [selectedId, showHeroProfile]);
 
     const mySpeaker = isSpeaker && currentSpeaker
         ? speakers.find(s => s.id === currentSpeaker.id || (s.email && currentSpeaker.email && s.email.toLowerCase() === currentSpeaker.email.toLowerCase())) || currentSpeaker
@@ -240,8 +264,6 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker
         if (filter === "tour" && s.tour !== "yes") return false;
         return true;
     });
-
-    const selectedSpeaker = selectedId ? speakers.find((s) => s.id === selectedId) : null;
 
     const exportCsv = () => {
         const cols = [
@@ -310,35 +332,38 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker
                         </div>
                         <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
                             <button
-                                onClick={() => setSelectedId(mySpeaker.id)}
-                                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold rounded-xl transition-all shadow-xs"
+                                onClick={() => setShowHeroProfile(!showHeroProfile)}
+                                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold rounded-xl transition-all shadow-xs flex items-center gap-1.5"
                             >
-                                View Your Full Profile
+                                <span>{showHeroProfile ? "Hide Profile" : "View Your Full Profile"}</span>
+                                <ChevronDown size={14} className={`transition-transform duration-200 ${showHeroProfile ? "rotate-180" : ""}`} />
                             </button>
                         </div>
                     </div>
+
+                    {showHeroProfile && (
+                        <div className="mt-4 pt-4 border-t border-amber-200/80 animate-in slide-in-from-top-1 duration-200">
+                            <SpeakerDetail 
+                                speaker={mySpeaker} 
+                                onClose={() => setShowHeroProfile(false)} 
+                                onUpdate={onUpdate} 
+                                allSpeakers={speakers}
+                                isSpeaker={isSpeaker}
+                                currentSpeaker={currentSpeaker}
+                            />
+                        </div>
+                    )}
                 </div>
             )}
 
             {/* Aggregate Stats Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 mb-4">
-                <StatCard num={total} label="Registered" />
-                <StatCard num={checked} label="Checked in" />
-                <StatCard num={total - checked} label="Awaiting arrival" />
-                <StatCard num={dietary} label="Dietary needs" />
-                <StatCard num={tour} label="Tour interest" className="col-span-2 sm:col-span-1" />
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3 sm:gap-4 mb-6">
+                <StatCard num={total} label="Registered" icon={Users} colorClass="text-blue-600" bgClass="bg-blue-100" />
+                <StatCard num={checked} label="Checked in" icon={CheckCircle2} colorClass="text-emerald-600" bgClass="bg-emerald-100" />
+                <StatCard num={total - checked} label="Awaiting arrival" icon={Clock} colorClass="text-amber-600" bgClass="bg-amber-100" />
+                <StatCard num={dietary} label="Dietary needs" icon={Utensils} colorClass="text-rose-600" bgClass="bg-rose-100" />
+                <StatCard num={tour} label="Tour interest" icon={Map} colorClass="text-indigo-600" bgClass="bg-indigo-100" />
             </div>
-
-            {selectedSpeaker && (
-                <SpeakerDetail 
-                    speaker={selectedSpeaker} 
-                    onClose={() => setSelectedId(null)} 
-                    onUpdate={onUpdate} 
-                    allSpeakers={speakers}
-                    isSpeaker={isSpeaker}
-                    currentSpeaker={currentSpeaker}
-                />
-            )}
 
             {/* Main Table / List Container */}
             <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-sm">
@@ -372,22 +397,22 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker
                 </div>
 
                 {/* Filters and Controls */}
-                <div className="flex flex-col xl:flex-row gap-2.5 sm:gap-3 mb-4 items-stretch xl:items-center">
+                <div className="bg-slate-50/70 backdrop-blur-md border border-slate-200 rounded-2xl p-2 sm:p-3 mb-5 flex flex-col xl:flex-row gap-3 items-stretch xl:items-center shadow-xs">
                     <div className="relative flex-1 min-w-0">
                         <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                         <input
-                            className={`${inputCls} !pl-10 sm:!pl-10 mb-0`}
+                            className={`${inputCls} !bg-white !pl-10 mb-0 !border-slate-300/80 shadow-xs rounded-xl focus:!ring-amber-500`}
                             placeholder="Search name, session, room..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
                     {/* On phones: 2-column grid. On tablets & desktops: horizontal flex */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-                        <div className="grid grid-cols-2 sm:flex items-center gap-2 sm:gap-3">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                        <div className="grid grid-cols-2 sm:flex items-center gap-3">
                             <div className="relative sm:w-36">
                                 <select
-                                    className={`${inputCls} mb-0`}
+                                    className={`${inputCls} !bg-white mb-0 !border-slate-300/80 shadow-xs rounded-xl focus:!ring-amber-500`}
                                     value={dayFilter}
                                     onChange={(e) => setDayFilter(e.target.value)}
                                 >
@@ -402,7 +427,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker
                             <div className="relative sm:w-48">
                                 <Filter size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none hidden sm:block" />
                                 <select
-                                    className={`${inputCls} sm:!pl-9 mb-0 text-xs sm:text-sm`}
+                                    className={`${inputCls} !bg-white sm:!pl-9 mb-0 text-xs sm:text-sm !border-slate-300/80 shadow-xs rounded-xl focus:!ring-amber-500`}
                                     value={filter}
                                     onChange={(e) => setFilter(e.target.value)}
                                 >
@@ -414,18 +439,18 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker
                                 </select>
                             </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 shrink-0">
                             {!isSpeaker && (
                                 <button
                                     onClick={exportCsv}
-                                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-xs sm:text-sm font-semibold px-3.5 py-2.5 rounded-lg transition-colors min-h-[42px]"
+                                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 bg-white border border-slate-300/80 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700 text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs transition-all min-h-[42px]"
                                 >
-                                    <Download size={15} /> Export CSV
+                                    <Download size={15} /> Export
                                 </button>
                             )}
                             <button
                                 onClick={onRefresh}
-                                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-xs sm:text-sm font-semibold px-3.5 py-2.5 rounded-lg transition-colors min-h-[42px]"
+                                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 bg-white border border-slate-300/80 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700 text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs transition-all min-h-[42px]"
                             >
                                 <RefreshCw size={15} /> Refresh
                             </button>
@@ -444,57 +469,78 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker
                                 (s.email && currentSpeaker.email && s.email.toLowerCase() === currentSpeaker.email.toLowerCase())
                             );
                             const hideConfidential = isSpeaker && !isSelf;
+                            const isSelected = selectedId === s.id;
 
                             return (
                                 <div
                                     key={s.id}
-                                    onClick={() => setSelectedId(selectedId === s.id ? null : s.id)}
-                                    className={`border rounded-xl p-3.5 cursor-pointer transition-colors ${
-                                        selectedId === s.id ? "bg-amber-50/80 border-amber-300" : "bg-slate-50/60 border-slate-200 hover:bg-slate-100/70"
+                                    className={`border rounded-xl transition-all overflow-hidden ${
+                                        isSelected 
+                                            ? "bg-amber-50/70 border-amber-400/90 shadow-sm ring-1 ring-amber-300/50" 
+                                            : "bg-slate-50/60 border-slate-200 hover:bg-slate-100/70"
                                     }`}
                                 >
-                                    <div className="flex justify-between items-start gap-2 mb-2">
-                                        <div className="flex items-center gap-2.5 min-w-0">
-                                            <SpeakerAvatar src={s.photoUrl} size={36} />
-                                            <div className="min-w-0">
-                                                <div className="font-bold text-slate-900 text-sm text-amber-700 flex items-center gap-1">
-                                                    <span className="truncate">{s.name}</span>
-                                                    <ChevronDown size={14} className={`text-slate-400 shrink-0 transition-transform ${selectedId === s.id ? "rotate-180" : ""}`} />
+                                    <div
+                                        onClick={() => setSelectedId(isSelected ? null : s.id)}
+                                        className="p-3.5 cursor-pointer touch-manipulation active:scale-[0.99]"
+                                    >
+                                        <div className="flex justify-between items-start gap-2 mb-2">
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <SpeakerAvatar src={s.photoUrl} size={36} />
+                                                <div className="min-w-0">
+                                                    <div className="font-bold text-slate-900 text-sm text-amber-700 flex items-center gap-1.5">
+                                                        <span className="truncate">{s.name}</span>
+                                                        <ChevronDown size={14} className={`text-slate-400 shrink-0 transition-transform duration-200 ${isSelected ? "rotate-180 text-amber-600" : ""}`} />
+                                                    </div>
+                                                    <div className="text-xs text-slate-500 truncate max-w-[200px]">{s.sessionTitle || "Confirmed Speaker"}</div>
                                                 </div>
-                                                <div className="text-xs text-slate-500 truncate max-w-[200px]">{s.sessionTitle || "Confirmed Speaker"}</div>
                                             </div>
+                                            <StatusBadge checkedIn={s.checkedIn} />
                                         </div>
-                                        <StatusBadge checkedIn={s.checkedIn} />
-                                    </div>
-                                    
-                                    {/* Responsive metadata grid */}
-                                    <div className={`grid ${hideConfidential ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"} gap-2 text-xs text-slate-600 border-t border-slate-200/70 pt-2 mt-2`}>
-                                        <div>
-                                            <span className="text-slate-400 block text-[10px] uppercase font-semibold">Day</span>
-                                            <span className="font-semibold text-slate-800">{s.day || "—"}</span>
+                                        
+                                        {/* Responsive metadata grid */}
+                                        <div className={`grid ${hideConfidential ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-4"} gap-2 text-xs text-slate-600 border-t border-slate-200/70 pt-2 mt-2`}>
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">Day</span>
+                                                <span className="font-semibold text-slate-800">{s.day || "—"}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">Slot</span>
+                                                <span className="font-semibold text-slate-800">{s.timeSlot || "—"}</span>
+                                            </div>
+                                            {!hideConfidential && (
+                                                <>
+                                                    <div>
+                                                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Room</span>
+                                                        <span className="font-semibold text-slate-800">{s.room || "—"}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Dietary</span>
+                                                        <span className="font-medium text-slate-800 truncate block">{s.diet}{s.allergy ? ` ⚠ ${s.allergy}` : ""}</span>
+                                                    </div>
+                                                </>
+                                            )}
                                         </div>
-                                        <div>
-                                            <span className="text-slate-400 block text-[10px] uppercase font-semibold">Slot</span>
-                                            <span className="font-semibold text-slate-800">{s.timeSlot || "—"}</span>
-                                        </div>
-                                        {!hideConfidential && (
-                                            <>
-                                                <div>
-                                                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Room</span>
-                                                    <span className="font-semibold text-slate-800">{s.room || "—"}</span>
-                                                </div>
-                                                <div>
-                                                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Dietary</span>
-                                                    <span className="font-medium text-slate-800 truncate block">{s.diet}{s.allergy ? ` ⚠ ${s.allergy}` : ""}</span>
-                                                </div>
-                                            </>
+
+                                        {!hideConfidential && s.concerns && (
+                                            <div className="mt-2 text-xs bg-amber-50 text-amber-800 p-2 rounded border border-amber-200 flex items-start gap-1.5">
+                                                <AlertTriangle size={13} className="shrink-0 mt-0.5" />
+                                                <span className="break-words">{s.concerns}</span>
+                                            </div>
                                         )}
                                     </div>
 
-                                    {!hideConfidential && s.concerns && (
-                                        <div className="mt-2 text-xs bg-amber-50 text-amber-800 p-2 rounded border border-amber-200 flex items-start gap-1.5">
-                                            <AlertTriangle size={13} className="shrink-0 mt-0.5" />
-                                            <span className="break-words">{s.concerns}</span>
+                                    {/* Inline Expandable Dropdown Drawer */}
+                                    {isSelected && (
+                                        <div className="border-t border-amber-200/90 p-3 sm:p-4 bg-white animate-in slide-in-from-top-1 duration-200">
+                                            <SpeakerDetail 
+                                                speaker={s} 
+                                                onClose={() => setSelectedId(null)} 
+                                                onUpdate={onUpdate} 
+                                                allSpeakers={speakers}
+                                                isSpeaker={isSpeaker}
+                                                currentSpeaker={currentSpeaker}
+                                            />
                                         </div>
                                     )}
                                 </div>
@@ -505,67 +551,107 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker
 
                 {/* Table View (for iPad, Desktop, and toggleable on mobile) */}
                 <div className={`overflow-x-auto ${mobileView === "table" ? "block" : "hidden sm:block"}`}>
-                    <table className="w-full text-sm border-collapse min-w-[750px]">
+                    <table className="w-full text-sm border-collapse min-w-[500px]">
                         <thead>
-                            <tr className="text-left text-xs text-slate-500 border-b-2 border-slate-200">
-                                <th className="py-2.5 px-3 sticky left-0 bg-white shadow-xs">Name</th>
-                                <th className="py-2.5 px-3">Session</th>
-                                <th className="py-2.5 px-3">Day</th>
-                                <th className="py-2.5 px-3">Slot</th>
-                                <th className="py-2.5 px-3">Room</th>
-                                <th className="py-2.5 px-3">Nights</th>
-                                <th className="py-2.5 px-3">Dietary</th>
-                                <th className="py-2.5 px-3">Tour</th>
-                                <th className="py-2.5 px-3">Concerns</th>
-                                <th className="py-2.5 px-3">Status</th>
+                            <tr className="text-left text-[11px] uppercase tracking-wider text-slate-500 border-b-2 border-slate-200 bg-slate-50/50">
+                                <th className="py-3 px-4 font-semibold sticky left-0 bg-slate-50/50 z-10 backdrop-blur-sm shadow-xs">Speaker & Session</th>
+                                <th className="py-3 px-4 font-semibold">Schedule</th>
+                                <th className="py-3 px-4 font-semibold">Preferences</th>
+                                <th className="py-3 px-4 font-semibold">Concerns</th>
+                                <th className="py-3 px-4 font-semibold">Stay</th>
+                                <th className="py-3 px-4 font-semibold text-right">Status</th>
                             </tr>
                         </thead>
                         <tbody>
                             {rows.length === 0 ? (
                                 <tr>
-                                    <td colSpan={10} className="text-center text-slate-500 py-8">
+                                    <td colSpan={6} className="text-center text-slate-500 py-8">
                                         No speakers match.
                                     </td>
                                 </tr>
                             ) : (
-                                rows.map((s) => (
-                                    <tr
-                                        key={s.id}
-                                        className={`border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors ${
-                                            selectedId === s.id ? "bg-amber-50" : ""
-                                        }`}
-                                        onClick={() => setSelectedId(selectedId === s.id ? null : s.id)}
-                                    >
-                                        <td className="py-2.5 px-3 font-semibold whitespace-nowrap sticky left-0 bg-white/95">
-                                            <div className="flex items-center gap-2">
-                                                <SpeakerAvatar src={s.photoUrl} size={28} />
-                                                <span className="text-amber-700 hover:underline">{s.name}</span>
-                                                <ChevronDown
-                                                    size={14}
-                                                    className={`text-slate-400 transition-transform ${
-                                                        selectedId === s.id ? "rotate-180" : ""
-                                                    }`}
-                                                />
-                                            </div>
-                                        </td>
-                                        <td className="py-2.5 px-3 whitespace-nowrap">{s.sessionTitle || "—"}</td>
-                                        <td className="py-2.5 px-3 whitespace-nowrap">{s.day || "—"}</td>
-                                        <td className="py-2.5 px-3 whitespace-nowrap">{s.timeSlot || "—"}</td>
-                                        <td className="py-2.5 px-3 whitespace-nowrap font-mono text-xs">{s.room || "—"}</td>
-                                        <td className="py-2.5 px-3 whitespace-nowrap">{s.nights || "—"}</td>
-                                        <td className="py-2.5 px-3 whitespace-nowrap">
-                                            {s.diet}
-                                            {s.allergy ? ` ⚠ ${s.allergy}` : ""}
-                                        </td>
-                                        <td className="py-2.5 px-3 whitespace-nowrap capitalize">{s.tour}</td>
-                                        <td className="py-2.5 px-3 whitespace-nowrap max-w-[160px] truncate" title={s.concerns || ""}>
-                                            {s.concerns || "—"}
-                                        </td>
-                                        <td className="py-2.5 px-3 whitespace-nowrap">
-                                            <StatusBadge checkedIn={s.checkedIn} />
-                                        </td>
-                                    </tr>
-                                ))
+                                rows.map((s) => {
+                                    const isSelected = selectedId === s.id;
+                                    return (
+                                        <React.Fragment key={s.id}>
+                                            <tr
+                                                className={`border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-all group ${
+                                                    isSelected ? "bg-amber-50/60 ring-1 ring-amber-200 inset-0 z-10 relative" : ""
+                                                }`}
+                                                onClick={() => setSelectedId(isSelected ? null : s.id)}
+                                            >
+                                                <td className={`py-3 px-4 sticky left-0 transition-colors ${
+                                                    isSelected ? "bg-amber-50/90" : "bg-white/95 group-hover:bg-slate-50/95"
+                                                }`}>
+                                                    <div className="flex items-start gap-3 min-w-[200px]">
+                                                        <SpeakerAvatar src={s.photoUrl} size={36} />
+                                                        <div className="min-w-0 flex-1 mt-0.5">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="font-bold text-slate-900 group-hover:text-amber-700 transition-colors truncate">{s.name}</span>
+                                                                <ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 shrink-0 ${isSelected ? "rotate-180 text-amber-600" : ""}`} />
+                                                            </div>
+                                                            <div className="text-[11px] text-slate-500 truncate font-medium mt-0.5 max-w-[220px]" title={s.sessionTitle}>{s.sessionTitle || "—"}</div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-4 min-w-[140px]">
+                                                    <div className="text-xs font-bold text-slate-800 whitespace-nowrap">{s.day ? `${s.day} • ${s.timeSlot || ""}` : "—"}</div>
+                                                    <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-1 font-medium whitespace-nowrap">
+                                                        <MapPin size={11} className="text-slate-400" />
+                                                        {s.room || "Room TBA"}
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    <div className="flex flex-wrap items-center gap-1.5 min-w-[120px]">
+                                                        {s.diet && s.diet !== "No preference" && (
+                                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700" title={s.diet}>{s.diet}</span>
+                                                        )}
+                                                        {s.allergy && (
+                                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700" title={`Allergy: ${s.allergy}`}>⚠ Allergy</span>
+                                                        )}
+                                                        {s.tour === "yes" && (
+                                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700" title="Tour Requested">Map</span>
+                                                        )}
+                                                        {(!s.diet || s.diet === "No preference") && !s.allergy && s.tour !== "yes" && (
+                                                            <span className="text-[11px] text-slate-400 font-medium">—</span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="py-3 px-4">
+                                                    {s.concerns ? (
+                                                        <div className="text-[11px] font-medium text-amber-800 max-w-[140px] xl:max-w-[200px] truncate bg-amber-50 border border-amber-200/60 px-2 py-1 rounded shadow-xs" title={s.concerns}>
+                                                            {s.concerns}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-[11px] text-slate-400 font-medium">—</span>
+                                                    )}
+                                                </td>
+                                                <td className="py-3 px-4 text-xs font-semibold text-slate-700 whitespace-nowrap">
+                                                    {s.nights ? `${s.nights} N` : "—"}
+                                                </td>
+                                                <td className="py-3 px-4 text-right whitespace-nowrap">
+                                                    <StatusBadge checkedIn={s.checkedIn} />
+                                                </td>
+                                            </tr>
+                                            {isSelected && (
+                                                <tr className="bg-amber-50/20 border-b-2 border-amber-300">
+                                                    <td colSpan={6} className="p-3 sm:p-5 bg-slate-50/70">
+                                                        <div className="animate-in slide-in-from-top-1 duration-200 max-w-4xl mx-auto">
+                                                            <SpeakerDetail 
+                                                                speaker={s} 
+                                                                onClose={() => setSelectedId(null)} 
+                                                                onUpdate={onUpdate} 
+                                                                allSpeakers={speakers}
+                                                                isSpeaker={isSpeaker}
+                                                                currentSpeaker={currentSpeaker}
+                                                            />
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </React.Fragment>
+                                    );
+                                })
                             )}
                         </tbody>
                     </table>

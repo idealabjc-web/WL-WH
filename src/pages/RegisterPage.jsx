@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { CheckCircle2, AlertTriangle, ExternalLink, ImagePlus, Camera } from "lucide-react";
 import { Field, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
-import { uid, emptyForm, generateAndStoreQrBadge, uploadSpeakerPhoto, TIME_SLOTS } from "../api/speakersApi";
+import { uid, emptyForm, generateAndStoreQrBadge, uploadSpeakerPhoto, uploadSpeakerAbstract, TIME_SLOTS } from "../api/speakersApi";
 import PhoneField from "../components/common/PhoneField";
 
 export default function RegisterPage({ speakers = [], onAdd, toast }) {
@@ -15,6 +15,8 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
     const [photoFile, setPhotoFile] = useState(null);
     const [photoPreview, setPhotoPreview] = useState(null);
     const photoInputRef = useRef(null);
+    const [abstractFile, setAbstractFile] = useState(null);
+    const abstractInputRef = useRef(null);
 
     const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -64,19 +66,49 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
         const id = uid();
         const rec = { id, ...form, name: form.name.trim(), checkedIn: false, checkedInAt: null, createdAt: Date.now() };
 
+        const uploadTasks = [];
+
         // Upload speaker photo if one was selected
         if (photoFile) {
-            const photoPublicUrl = await uploadSpeakerPhoto(id, photoFile);
-            rec.photoUrl = photoPublicUrl;
+            uploadTasks.push(
+                uploadSpeakerPhoto(id, photoFile).then(photoPublicUrl => {
+                    rec.photoUrl = photoPublicUrl;
+                })
+            );
+        }
+
+        // Handle abstract
+        if (form.abstractProvided === "yes") {
+            if (abstractFile) {
+                uploadTasks.push(
+                    uploadSpeakerAbstract(id, abstractFile).then(abstractUrl => {
+                        rec.abstractUrl = abstractUrl;
+                        rec.abstractStatus = "submitted";
+                    })
+                );
+            } else {
+                rec.abstractStatus = "pending";
+            }
+        } else {
+            rec.abstractStatus = "not submitted";
         }
 
         // Generate the QR locally first so the badge shows immediately,
         // independent of network conditions.
-        const { dataUrl, publicUrl } = await generateAndStoreQrBadge(id);
-        rec.qrUrl = publicUrl;
+        let localQrDataUrl = null;
+        let localBadgeStored = false;
+        uploadTasks.push(
+            generateAndStoreQrBadge(id).then(({ dataUrl, publicUrl }) => {
+                rec.qrUrl = publicUrl;
+                localQrDataUrl = dataUrl;
+                localBadgeStored = !!publicUrl;
+            })
+        );
+
+        await Promise.all(uploadTasks);
         setLastAdded(rec);
-        setQrDataUrl(dataUrl);
-        setBadgeStored(!!publicUrl);
+        setQrDataUrl(localQrDataUrl);
+        setBadgeStored(localBadgeStored);
         setSyncFailed(false);
 
         const ok = await onAdd(rec);
@@ -85,6 +117,7 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
         setForm(emptyForm);
         setPhotoFile(null);
         setPhotoPreview(null);
+        setAbstractFile(null);
         toast(ok ? "Speaker added — QR badge saved." : "QR badge ready — sync pending.");
     };
 
@@ -158,6 +191,58 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                     <input className={inputCls} value={form.sessionTitle} onChange={set("sessionTitle")} placeholder="e.g. The Future of Renewable Energy" />
                 </Field>
             </div>
+            <div className="mb-6 relative bg-gradient-to-r from-amber-50/50 to-white border border-amber-200 rounded-xl p-5 shadow-sm ring-4 ring-amber-50/50">
+                <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-400 rounded-l-xl"></div>
+                <div className="pl-1">
+                    <Field label="Is abstract provided?">
+                        <div className="flex gap-2">
+                            {["yes", "no"].map((v) => (
+                                <label
+                                    key={v}
+                                    className={`flex-1 text-center border rounded-lg py-2.5 sm:py-2 text-xs sm:text-sm font-semibold cursor-pointer capitalize transition-colors min-h-[44px] flex items-center justify-center ${
+                                        form.abstractProvided === v ? "border-amber-400 bg-amber-50 text-slate-900 shadow-xs" : "border-slate-200 text-slate-500 hover:bg-slate-50 bg-white"
+                                    }`}
+                                >
+                                    <input type="radio" className="hidden" checked={form.abstractProvided === v} onChange={() => setForm((f) => ({ ...f, abstractProvided: v }))} />
+                                    {v}
+                                </label>
+                            ))}
+                        </div>
+                    </Field>
+                
+                {form.abstractProvided === "yes" && (
+                    <div className="mt-4 pt-4 border-t border-slate-200">
+                        <Field label="Upload abstract file">
+                            <input 
+                                ref={abstractInputRef}
+                                type="file" 
+                                className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100 transition-colors cursor-pointer"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) setAbstractFile(file);
+                                }}
+                            />
+                        </Field>
+                        {abstractFile && (
+                            <div className="flex items-center gap-3 mt-3">
+                                <div className="text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-1.5 rounded-md border border-emerald-100">Selected: {abstractFile.name}</div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setAbstractFile(null);
+                                        if (abstractInputRef.current) abstractInputRef.current.value = "";
+                                    }}
+                                    className="text-xs text-rose-500 hover:text-rose-700 hover:bg-rose-100 font-medium bg-rose-50 px-3 py-1.5 rounded-md transition-colors"
+                                >
+                                    Remove file
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+                </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-3">
                 <Field label="Day">
                     <select className={inputCls} value={form.day} onChange={set("day")}>

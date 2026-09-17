@@ -15,9 +15,8 @@ import { fetchSpeakers, speakerToRow } from "../../api/speakersApi";
 import { fetchFeedback, feedbackToRow } from "../../api/feedbackApi";
 
 const TABS = [
-    { id: "checkin", label: "Check-In", icon: ScanLine },
-    { id: "feedback", label: "Feedback", icon: MessageSquare },
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "feedback", label: "Feedback", icon: MessageSquare },
     { id: "logistics", label: "Logistics & Travel", mobileLabel: "Logistics", icon: Hotel },
     { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
@@ -26,7 +25,7 @@ const VALID_TABS = TABS.map(t => t.id);
 
 function getInitialTab() {
     const hash = window.location.hash.replace("#", "").toLowerCase();
-    return VALID_TABS.includes(hash) ? hash : "checkin";
+    return VALID_TABS.includes(hash) ? hash : "dashboard";
 }
 
 export default function SpeakerPortalPage({ speaker, onLogout }) {
@@ -305,16 +304,6 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
 
                 {/* Tab Content Views */}
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-200">
-                    {tab === "checkin" && (
-                        <CheckinPage 
-                            speakers={speakers} 
-                            onConfirm={confirmCheckin} 
-                            onSaveNotes={saveNotes} 
-                            toast={toast} 
-                            isSpeaker={true}
-                            currentSpeaker={currentSpeaker}
-                        />
-                    )}
 
                     {tab === "feedback" && (
                         <FeedbackPage 

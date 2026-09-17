@@ -18,7 +18,8 @@ export const TIME_SLOTS = [
 export const emptyForm = {
     name: "", email: "", phone: "", sessionTitle: "", day: "", timeSlot: "",
     room: "", checkinDate: "", checkoutDate: "", nights: "", diet: "No preference",
-    allergy: "", tour: "yes", concerns: "", photoUrl: ""
+    allergy: "", tour: "yes", concerns: "", photoUrl: "",
+    abstractProvided: "no", abstractUrl: ""
 };
 
 // Supabase <-> app-state mapping
@@ -44,6 +45,8 @@ export function speakerToRow(s) {
         qr_url: s.qrUrl || null,
         photo_url: s.photoUrl || null,
         id_card_url: s.idCardUrl || null,
+        abstract_status: s.abstractStatus || null,
+        abstract_url: s.abstractUrl || null,
     };
 }
 
@@ -70,6 +73,8 @@ export function rowToSpeaker(r) {
         qrUrl: r.qr_url || null,
         photoUrl: r.photo_url || null,
         idCardUrl: r.id_card_url || null,
+        abstractStatus: r.abstract_status || null,
+        abstractUrl: r.abstract_url || null,
     };
 }
 
@@ -111,6 +116,22 @@ export async function uploadSpeakerPhoto(id, file) {
         return data?.publicUrl || null;
     } catch (e) {
         console.error("Speaker photo upload failed:", e);
+        return null;
+    }
+}
+
+export async function uploadSpeakerAbstract(id, file) {
+    try {
+        const ext = file.name.split(".").pop();
+        const path = `${id}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+            .from("speaker-abstracts")
+            .upload(path, file, { upsert: true });
+        if (uploadError) throw uploadError;
+        const { data } = supabase.storage.from("speaker-abstracts").getPublicUrl(path);
+        return data?.publicUrl || null;
+    } catch (e) {
+        console.error("Speaker abstract upload failed:", e);
         return null;
     }
 }

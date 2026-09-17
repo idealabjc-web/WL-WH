@@ -34,8 +34,8 @@ export default function Sidebar({
                     fixed md:sticky top-0 inset-y-0 left-0 z-50 md:z-30
                     h-screen flex flex-col bg-white text-slate-800 border-r border-slate-200 shadow-sm
                     transition-all duration-300 ease-in-out shrink-0 select-none
-                    ${mobileOpen ? "w-64 translate-x-0" : "-translate-x-full md:translate-x-0"}
-                    ${collapsed ? "md:w-20" : "md:w-64"}
+                    ${mobileOpen ? "w-56 translate-x-0" : "-translate-x-full md:translate-x-0"}
+                    ${collapsed ? "md:w-20" : "md:w-56"}
                 `}
             >
                 {/* Brand Header */}

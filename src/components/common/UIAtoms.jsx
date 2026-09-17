@@ -43,11 +43,21 @@ export function StatusBadge({ checkedIn }) {
     );
 }
 
-export function StatCard({ num, label, className = "" }) {
+export function StatCard({ num, label, icon: Icon, colorClass = "text-amber-500", bgClass = "bg-amber-50", className = "" }) {
     return (
-        <div className={`bg-white border border-slate-200 rounded-xl p-3 sm:p-4 shadow-sm flex flex-col justify-center ${className}`}>
-            <div className="text-xl sm:text-2xl font-bold text-slate-900">{num}</div>
-            <div className="text-xs text-slate-500 mt-0.5 font-medium leading-tight">{label}</div>
+        <div className={`relative overflow-hidden bg-white border border-slate-200 hover:border-slate-300 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all duration-300 group ${className}`}>
+            <div className={`absolute top-0 right-0 w-24 h-24 ${bgClass} rounded-bl-full -mr-4 -mt-4 opacity-50 transition-transform duration-500 group-hover:scale-110 ease-out`}></div>
+            <div className="relative flex justify-between items-start">
+                <div>
+                    <div className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">{num}</div>
+                    <div className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">{label}</div>
+                </div>
+                {Icon && (
+                    <div className={`p-2.5 rounded-xl ${bgClass} ${colorClass} shadow-inner transition-transform group-hover:scale-105 duration-300`}>
+                        <Icon size={22} />
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

@@ -17,11 +17,11 @@ import IdCardsPage from "./pages/IdCardsPage";
 import FeedbackPage from "./pages/FeedbackPage";
 import SettingsPage from "./pages/SettingsPage";
 
-const VALID_TABS = ["register", "checkin", "dashboard", "idcards", "feedback", "settings"];
+const VALID_TABS = ["dashboard", "register", "checkin", "idcards", "feedback", "settings"];
 
 function getInitialTab() {
     const hash = window.location.hash.replace("#", "").toLowerCase();
-    return VALID_TABS.includes(hash) ? hash : "register";
+    return VALID_TABS.includes(hash) ? hash : "dashboard";
 }
 
 export default function EventPortal({ displayName = "", userEmail = "", onLogout }) {
@@ -185,9 +185,9 @@ export default function EventPortal({ displayName = "", userEmail = "", onLogout
     };
 
     const tabs = [
+        { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
         { id: "register", label: "Register", icon: Users },
         { id: "checkin", label: "Check-In", icon: ScanLine },
-        { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
         { id: "idcards", label: "ID Cards", icon: BadgeCheck },
         { id: "feedback", label: "Feedback", icon: MessageSquare },
         { id: "settings", label: "Settings", icon: Settings },
