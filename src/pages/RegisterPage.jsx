@@ -191,6 +191,12 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                     <input className={inputCls} value={form.sessionTitle} onChange={set("sessionTitle")} placeholder="e.g. The Future of Renewable Energy" />
                 </Field>
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3">
+                <Field label="Whose speaker is this?">
+                    <input className={inputCls} value={form.whoseSpeaker} onChange={set("whoseSpeaker")} placeholder="e.g. Operations Team" />
+                </Field>
+                <div className="hidden sm:block"></div>
+            </div>
             <div className="mb-6 relative bg-gradient-to-r from-amber-50/50 to-white border border-amber-200 rounded-xl p-5 shadow-sm ring-4 ring-amber-50/50">
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-400 rounded-l-xl"></div>
                 <div className="pl-1">

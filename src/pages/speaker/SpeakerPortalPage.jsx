@@ -16,6 +16,7 @@ import { fetchFeedback, feedbackToRow } from "../../api/feedbackApi";
 
 const TABS = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "checkin", label: "Check-In", icon: ScanLine },
     { id: "feedback", label: "Feedback", icon: MessageSquare },
     { id: "logistics", label: "Logistics & Travel", mobileLabel: "Logistics", icon: Hotel },
     { id: "settings", label: "Settings", icon: SettingsIcon },
@@ -304,6 +305,16 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
 
                 {/* Tab Content Views */}
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-200">
+                    {tab === "checkin" && (
+                        <CheckinPage 
+                            speakers={speakers} 
+                            onConfirm={confirmCheckin} 
+                            onSaveNotes={saveNotes} 
+                            toast={toast} 
+                            isSpeaker={true}
+                            currentSpeaker={currentSpeaker}
+                        />
+                    )}
 
                     {tab === "feedback" && (
                         <FeedbackPage 

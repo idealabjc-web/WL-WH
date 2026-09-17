@@ -19,7 +19,7 @@ export const emptyForm = {
     name: "", email: "", phone: "", sessionTitle: "", day: "", timeSlot: "",
     room: "", checkinDate: "", checkoutDate: "", nights: "", diet: "No preference",
     allergy: "", tour: "yes", concerns: "", photoUrl: "",
-    abstractProvided: "no", abstractUrl: ""
+    abstractProvided: "no", abstractUrl: "", whoseSpeaker: ""
 };
 
 // Supabase <-> app-state mapping
@@ -47,6 +47,7 @@ export function speakerToRow(s) {
         id_card_url: s.idCardUrl || null,
         abstract_status: s.abstractStatus || null,
         abstract_url: s.abstractUrl || null,
+        whose_speaker: s.whoseSpeaker || null,
     };
 }
 
@@ -75,6 +76,7 @@ export function rowToSpeaker(r) {
         idCardUrl: r.id_card_url || null,
         abstractStatus: r.abstract_status || null,
         abstractUrl: r.abstract_url || null,
+        whoseSpeaker: r.whose_speaker || null,
     };
 }
 
