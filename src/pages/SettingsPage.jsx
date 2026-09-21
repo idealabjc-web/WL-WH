@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { supabase } from "../supabaseClient";
 import bcrypt from "bcryptjs";
-import { Lock, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, Shield } from "lucide-react";
+import { Lock, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, Shield, Moon, Sun } from "lucide-react";
 
 export default function SettingsPage({ userEmail }) {
     const [currentPassword, setCurrentPassword] = useState("");
@@ -12,6 +12,24 @@ export default function SettingsPage({ userEmail }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
+    
+    // Dark mode state
+    const [darkMode, setDarkMode] = useState(() => {
+        return localStorage.getItem("theme") === "dark" || 
+               (!("theme" in localStorage) && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    });
+
+    const toggleDarkMode = () => {
+        const nextMode = !darkMode;
+        setDarkMode(nextMode);
+        if (nextMode) {
+            document.documentElement.classList.add("dark");
+            localStorage.setItem("theme", "dark");
+        } else {
+            document.documentElement.classList.remove("dark");
+            localStorage.setItem("theme", "light");
+        }
+    };
 
     const STAFF_PASSWORD = import.meta.env.VITE_STAFF_PASSWORD || "staff2026";
 
@@ -78,8 +96,8 @@ export default function SettingsPage({ userEmail }) {
     return (
         <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full animate-in fade-in duration-300">
             <div className="mb-8">
-                <h1 className="text-2xl font-bold text-slate-800">Settings</h1>
-                <p className="text-slate-500 mt-1">Manage your portal preferences and security.</p>
+                <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Settings</h1>
+                <p className="text-slate-500 dark:text-slate-400 mt-1">Manage your portal preferences and security.</p>
             </div>
 
             {/* Security Section */}
@@ -89,8 +107,8 @@ export default function SettingsPage({ userEmail }) {
                         <Shield size={20} />
                     </div>
                     <div>
-                        <h2 className="text-lg font-semibold text-slate-800">Security</h2>
-                        <p className="text-sm text-slate-500">Update your password to keep your account secure.</p>
+                        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Security</h2>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">Update your password to keep your account secure.</p>
                     </div>
                 </div>
 
@@ -170,6 +188,27 @@ export default function SettingsPage({ userEmail }) {
                             </button>
                         </div>
                     </form>
+
+                    {/* Dark Mode Toggle */}
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div>
+                            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">App Appearance</h3>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                Toggle between Light and Dark mode for the interface.
+                            </p>
+                        </div>
+                        <button
+                            onClick={toggleDarkMode}
+                            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 ${darkMode ? 'bg-amber-600' : 'bg-slate-200'}`}
+                        >
+                            <span className="sr-only">Toggle Dark Mode</span>
+                            <span
+                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out flex items-center justify-center ${darkMode ? 'translate-x-5' : 'translate-x-0'}`}
+                            >
+                                {darkMode ? <Moon size={10} className="text-amber-600" /> : <Sun size={10} className="text-amber-500" />}
+                            </span>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

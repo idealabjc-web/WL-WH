@@ -197,8 +197,8 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                 </Field>
                 <div className="hidden sm:block"></div>
             </div>
-            <div className="mb-6 relative bg-gradient-to-r from-amber-50/50 to-white border border-amber-200 rounded-xl p-5 shadow-sm ring-4 ring-amber-50/50">
-                <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-400 rounded-l-xl"></div>
+            <div className="mb-6 relative bg-gradient-to-r from-amber-50/50 to-white dark:from-slate-900 dark:to-slate-950 border border-amber-200 dark:border-amber-900/50 rounded-xl p-5 shadow-sm ring-4 ring-amber-50/50 dark:ring-0">
+                <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-400 dark:bg-amber-600 rounded-l-xl"></div>
                 <div className="pl-1">
                     <Field label="Is abstract provided?">
                         <div className="flex gap-2">
@@ -206,7 +206,7 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                                 <label
                                     key={v}
                                     className={`flex-1 text-center border rounded-lg py-2.5 sm:py-2 text-xs sm:text-sm font-semibold cursor-pointer capitalize transition-colors min-h-[44px] flex items-center justify-center ${
-                                        form.abstractProvided === v ? "border-amber-400 bg-amber-50 text-slate-900 shadow-xs" : "border-slate-200 text-slate-500 hover:bg-slate-50 bg-white"
+                                        form.abstractProvided === v ? "border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-500/20 text-slate-900 dark:text-amber-400 shadow-xs" : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 bg-white dark:bg-slate-900"
                                     }`}
                                 >
                                     <input type="radio" className="hidden" checked={form.abstractProvided === v} onChange={() => setForm((f) => ({ ...f, abstractProvided: v }))} />
@@ -321,12 +321,12 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                 </Field>
             </div>
             <Field label="Interested in the speaker tour?">
-                <div className="flex gap-2">
+                <div className="flex gap-2 sm:gap-3">
                     {["yes", "no", "undecided"].map((v) => (
                         <label
                             key={v}
                             className={`flex-1 text-center border rounded-lg py-2.5 sm:py-2 text-xs sm:text-sm font-semibold cursor-pointer capitalize transition-colors min-h-[44px] flex items-center justify-center ${
-                                form.tour === v ? "border-amber-400 bg-amber-50 text-slate-900 shadow-xs" : "border-slate-200 text-slate-500 hover:bg-slate-50"
+                                form.tour === v ? "border-amber-400 dark:border-amber-600 bg-amber-50 dark:bg-amber-500/20 text-slate-900 dark:text-amber-400 shadow-xs" : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 bg-white dark:bg-slate-900"
                             }`}
                         >
                             <input type="radio" className="hidden" checked={form.tour === v} onChange={() => setForm((f) => ({ ...f, tour: v }))} />

@@ -96,10 +96,12 @@ export default function CheckinPage({
         const val = rawId.trim();
         const found = speakersRef.current.find((s) => s.id.toLowerCase() === val.toLowerCase());
         if (found) {
+            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
             setSelected(found);
             setSelectedSource("camera");
             toast(`Scanned badge: ${found.name}`);
         } else {
+            if (navigator.vibrate) navigator.vibrate([400]);
             toast(`No speaker matches badge "${val}". They may not be registered yet.`);
         }
     };
@@ -298,22 +300,22 @@ export default function CheckinPage({
             {/* Top Subnav / Filter Bar: Home vs QR Scan (Optimized for Mobile Touch & Tablet) */}
             {!forcedSubTab && (
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 sm:pb-3 border-b border-slate-200/90">
-                <div className="grid grid-cols-2 w-full sm:w-auto sm:flex items-center p-1 sm:p-1.5 bg-slate-200/75 rounded-2xl border border-slate-300/70 shadow-xs backdrop-blur-xs">
+                <div className="grid grid-cols-2 w-full sm:w-auto sm:flex items-center p-1 sm:p-1.5 bg-slate-200/75 dark:bg-slate-800/75 rounded-2xl border border-slate-300/70 shadow-xs backdrop-blur-xs">
                     <button
                         type="button"
                         id="checkin-subnav-home"
                         onClick={() => handleSubTabChange("home")}
                         className={`flex items-center justify-center gap-2 py-2 sm:py-2.5 px-3.5 sm:px-5 rounded-xl text-xs sm:text-sm font-semibold transition-all min-h-[44px] touch-manipulation ${
                             activeSubTab === "home"
-                                ? "bg-white text-slate-900 shadow-sm border border-slate-200/80 font-bold"
-                                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                                ? "bg-white text-slate-900 dark:text-slate-100 shadow-sm border border-slate-200/80 font-bold"
+                                : "text-slate-600 hover:text-slate-900 dark:text-slate-100 hover:bg-white/50"
                         }`}
                     >
                         <Home size={16} className={activeSubTab === "home" ? "text-amber-600 shrink-0" : "text-slate-500 shrink-0"} />
                         <span>Home</span>
                         {isSpeaker && (
                             <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-md shrink-0 ${
-                                activeSubTab === "home" ? "bg-amber-100 text-amber-800" : "bg-slate-300/60 text-slate-600"
+                                activeSubTab === "home" ? "bg-amber-100 text-amber-600 dark:text-amber-500" : "bg-slate-300/60 text-slate-600"
                             }`}>
                                 Pass
                             </span>
@@ -326,14 +328,14 @@ export default function CheckinPage({
                         onClick={() => handleSubTabChange("qr")}
                         className={`flex items-center justify-center gap-2 py-2 sm:py-2.5 px-3.5 sm:px-5 rounded-xl text-xs sm:text-sm font-semibold transition-all min-h-[44px] touch-manipulation ${
                             activeSubTab === "qr"
-                                ? "bg-white text-slate-900 shadow-sm border border-slate-200/80 font-bold"
-                                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                                ? "bg-white text-slate-900 dark:text-slate-100 shadow-sm border border-slate-200/80 font-bold"
+                                : "text-slate-600 hover:text-slate-900 dark:text-slate-100 hover:bg-white/50"
                         }`}
                     >
                         <QrIcon size={16} className={activeSubTab === "qr" ? "text-amber-600 shrink-0" : "text-slate-500 shrink-0"} />
                         <span>QR Scan</span>
                         <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded-md shrink-0 ${
-                            activeSubTab === "qr" ? "bg-amber-100 text-amber-800" : "bg-slate-300/60 text-slate-600"
+                            activeSubTab === "qr" ? "bg-amber-100 text-amber-600 dark:text-amber-500" : "bg-slate-300/60 text-slate-600"
                         }`}>
                             Scanner
                         </span>
@@ -360,7 +362,7 @@ export default function CheckinPage({
                 <div className="animate-in fade-in duration-200 space-y-4 sm:space-y-6">
                     {/* Personal Digital Check-In Pass for Speaker */}
                     {isSpeaker && mySpeaker && (
-                        <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-7 shadow-sm overflow-hidden relative">
+                        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-7 shadow-sm overflow-hidden relative">
                             {/* Pass Top Banner */}
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 sm:pb-5 border-b border-slate-100">
                                 <div className="flex items-center gap-2.5 min-w-0">
@@ -404,7 +406,7 @@ export default function CheckinPage({
                                 {/* Speaker & Session Info */}
                                 <div className="lg:col-span-2 space-y-4">
                                     <div>
-                                        <h1 className="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight break-words">
+                                        <h1 className="text-xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight break-words">
                                             {mySpeaker.name}
                                         </h1>
                                         <p className="text-slate-600 text-xs sm:text-base font-medium mt-1 leading-relaxed">
@@ -473,20 +475,20 @@ export default function CheckinPage({
                                                     </div>
                                                     <div className="min-w-0 flex-1">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="text-xs sm:text-sm font-bold text-purple-950">
+                                                            <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
                                                                 You are officially checked out
                                                             </span>
                                                             <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-200/60 px-2 py-0.5 rounded-full">
                                                                 Departed
                                                             </span>
                                                         </div>
-                                                        <div className="text-[11px] sm:text-xs text-purple-800 mt-0.5 leading-relaxed">
+                                                        <div className="text-[11px] sm:text-xs text-purple-600 dark:text-purple-500 mt-0.5 leading-relaxed">
                                                             {mySpeakerCheckedOutAt 
                                                                 ? `Departure recorded on ${new Date(mySpeakerCheckedOutAt).toLocaleString()}`
                                                                 : "Departure recorded with conference operations."}
                                                         </div>
                                                         {mySpeaker?.checkoutNotes && (
-                                                            <div className="mt-2 text-xs bg-white/90 p-3 rounded-xl border border-purple-200 text-purple-950 shadow-xs">
+                                                            <div className="mt-2 text-xs bg-white/90 p-3 rounded-xl border border-purple-200 text-slate-900 dark:text-slate-100 shadow-xs">
                                                                 <div className="flex items-center gap-1.5 font-semibold text-[10px] uppercase tracking-wider text-purple-700 mb-1">
                                                                     <Sparkles size={12} className="text-amber-500" />
                                                                     <span>Your Event Testimonial:</span>
@@ -510,7 +512,7 @@ export default function CheckinPage({
                                                             if (onNavigateTab) onNavigateTab("checkout");
                                                             else window.location.hash = "checkout";
                                                         }}
-                                                        className="px-3.5 py-2 text-xs font-semibold text-purple-800 hover:bg-purple-100 rounded-xl border border-purple-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+                                                        className="px-3.5 py-2 text-xs font-semibold text-purple-600 dark:text-purple-500 hover:bg-purple-100 rounded-xl border border-purple-200 transition-colors flex items-center gap-1.5 cursor-pointer"
                                                     >
                                                         <LogOut size={13} />
                                                         <span>View Departure Reflections</span>
@@ -543,10 +545,10 @@ export default function CheckinPage({
                                                 <div className="flex items-start gap-3">
                                                     <CheckCircle2 size={22} className="text-emerald-600 shrink-0 mt-0.5" />
                                                     <div className="min-w-0 flex-1">
-                                                        <div className="text-xs sm:text-sm font-bold text-emerald-950">
+                                                        <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
                                                             Welcome, you are checked in!
                                                         </div>
-                                                        <div className="text-[11px] sm:text-xs text-emerald-800 mt-0.5 leading-relaxed">
+                                                        <div className="text-[11px] sm:text-xs text-emerald-600 dark:text-emerald-500 mt-0.5 leading-relaxed">
                                                             {mySpeakerCheckedInAt
                                                                 ? `Arrival recorded on ${new Date(mySpeakerCheckedInAt).toLocaleString()} · Currently On-Site`
                                                                 : "Your presence has been confirmed on-site at the venue."}
@@ -557,7 +559,7 @@ export default function CheckinPage({
                                                 {/* Check-Out trigger for the speaker */}
                                                 <div className="pt-3 border-t border-emerald-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white/70 p-3 rounded-xl">
                                                     <div>
-                                                        <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                                        <div className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                                                             <LogOut size={14} className="text-purple-600" />
                                                             <span>Departing the conference?</span>
                                                         </div>
@@ -588,10 +590,10 @@ export default function CheckinPage({
                                             <div className="p-3.5 sm:p-4 rounded-xl bg-amber-50/70 border border-amber-200 flex items-start sm:items-center gap-3">
                                                 <Clock size={22} className="text-amber-600 shrink-0 mt-0.5 sm:mt-0" />
                                                 <div>
-                                                    <div className="text-xs sm:text-sm font-bold text-amber-950">
+                                                    <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">
                                                         Awaiting Arrival Check-In
                                                     </div>
-                                                    <div className="text-[11px] sm:text-xs text-amber-800 mt-0.5 leading-relaxed">
+                                                    <div className="text-[11px] sm:text-xs text-amber-600 dark:text-amber-500 mt-0.5 leading-relaxed">
                                                         Please present your QR pass at the reception desk upon arrival.
                                                     </div>
                                                 </div>
@@ -652,39 +654,39 @@ export default function CheckinPage({
                         <div className="space-y-4 sm:space-y-5">
                             {/* Summary metrics header */}
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                                <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
+                                <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
                                     <div className="flex items-center justify-between text-slate-500 mb-1.5">
                                         <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Total Speakers</span>
                                         <Users size={18} className="text-slate-400" />
                                     </div>
-                                    <div className="text-2xl sm:text-3xl font-black text-slate-900">{(speakers || []).length}</div>
+                                    <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">{(speakers || []).length}</div>
                                     <div className="text-[11px] text-slate-500 mt-1">Indexed for conference entry</div>
                                 </div>
 
-                                <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 shadow-xs">
-                                    <div className="flex items-center justify-between text-emerald-800 mb-1.5">
+                                <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-xs">
+                                    <div className="flex items-center justify-between text-emerald-600 dark:text-emerald-500 mb-1.5">
                                         <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">On-Site Now</span>
                                         <CheckCircle2 size={18} className="text-emerald-600" />
                                     </div>
-                                    <div className="text-2xl sm:text-3xl font-black text-emerald-950">{checkedInCount}</div>
+                                    <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">{checkedInCount}</div>
                                     <div className="text-[11px] text-emerald-700 mt-1">Currently at venue</div>
                                 </div>
 
-                                <div className="p-4 sm:p-5 rounded-2xl bg-purple-50/60 border border-purple-200/80 shadow-xs">
-                                    <div className="flex items-center justify-between text-purple-800 mb-1.5">
+                                <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-xs">
+                                    <div className="flex items-center justify-between text-purple-600 dark:text-purple-500 mb-1.5">
                                         <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Checked Out</span>
                                         <LogOut size={18} className="text-purple-600" />
                                     </div>
-                                    <div className="text-2xl sm:text-3xl font-black text-purple-950">{checkedOutCount}</div>
+                                    <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">{checkedOutCount}</div>
                                     <div className="text-[11px] text-purple-700 mt-1">Departed conference</div>
                                 </div>
 
-                                <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/60 border border-amber-200/80 shadow-xs">
-                                    <div className="flex items-center justify-between text-amber-800 mb-1.5">
+                                <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shadow-xs">
+                                    <div className="flex items-center justify-between text-amber-600 dark:text-amber-500 mb-1.5">
                                         <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Pending Arrival</span>
                                         <Clock size={18} className="text-amber-600" />
                                     </div>
-                                    <div className="text-2xl sm:text-3xl font-black text-amber-950">{pendingCount}</div>
+                                    <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100">{pendingCount}</div>
                                     <div className="text-[11px] text-amber-700 mt-1">Awaiting arrival check-in</div>
                                 </div>
                             </div>
@@ -756,7 +758,7 @@ export default function CheckinPage({
                             className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all min-h-[42px] touch-manipulation ${
                                 qrMobileView === "camera"
                                     ? "bg-slate-900 text-white shadow-xs"
-                                    : "text-slate-600 hover:text-slate-900"
+                                    : "text-slate-600 hover:text-slate-900 dark:text-slate-100"
                             }`}
                         >
                             <Camera size={15} />
@@ -768,7 +770,7 @@ export default function CheckinPage({
                             className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition-all min-h-[42px] touch-manipulation ${
                                 qrMobileView === "directory"
                                     ? "bg-slate-900 text-white shadow-xs"
-                                    : "text-slate-600 hover:text-slate-900"
+                                    : "text-slate-600 hover:text-slate-900 dark:text-slate-100"
                             }`}
                         >
                             <Search size={15} />
@@ -783,7 +785,7 @@ export default function CheckinPage({
                     */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-6">
                         {/* Station 1: Live Camera QR Scanner */}
-                        <div className={`md:col-span-1 lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col justify-between lg:self-start lg:sticky lg:top-24 ${
+                        <div className={`md:col-span-1 lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col justify-between lg:self-start lg:sticky lg:top-24 ${
                             qrMobileView === "camera" ? "block" : "hidden md:flex"
                         }`}>
                             <div>
@@ -793,7 +795,7 @@ export default function CheckinPage({
                                             <Camera size={17} />
                                         </div>
                                         <div>
-                                            <div className="text-xs sm:text-sm font-bold text-slate-900">Live Camera Scanner</div>
+                                            <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">Live Camera Scanner</div>
                                             <div className="text-[11px] text-slate-500">Optical badge QR code detection</div>
                                         </div>
                                     </div>
@@ -881,14 +883,14 @@ export default function CheckinPage({
                                     <div className="flex items-center justify-between pb-2.5 border-b border-emerald-200/80 mb-2.5 min-w-0">
                                         <div className="flex items-center gap-2 min-w-0 flex-1">
                                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
-                                            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-emerald-950 truncate">
+                                            <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 truncate">
                                                 Camera Scanned Badge
                                             </span>
                                         </div>
                                         <button
                                             type="button"
                                             onClick={() => { setSelected(null); setSelectedSource(null); }}
-                                            className="shrink-0 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs flex items-center gap-1 transition-colors"
+                                            className="shrink-0 text-xs font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-100 bg-white hover:bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 shadow-2xs flex items-center gap-1 transition-colors"
                                         >
                                             <X size={13} />
                                             <span>Dismiss</span>
@@ -908,7 +910,7 @@ export default function CheckinPage({
                         </div>
 
                         {/* Station 2: Directory Lookup & Search */}
-                        <div className={`md:col-span-1 lg:col-span-7 bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col ${
+                        <div className={`md:col-span-1 lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col ${
                             qrMobileView === "directory" ? "block" : "hidden md:flex"
                         }`}>
                             <div className="flex items-center justify-between pb-3 mb-3.5 border-b border-slate-100">
@@ -917,7 +919,7 @@ export default function CheckinPage({
                                         <Search size={17} />
                                     </div>
                                     <div>
-                                        <div className="text-xs sm:text-sm font-bold text-slate-900">Directory & Badge ID Lookup</div>
+                                        <div className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100">Directory & Badge ID Lookup</div>
                                         <div className="text-[11px] text-slate-500">{(speakers || []).length} registered speakers indexed</div>
                                     </div>
                                 </div>
@@ -973,7 +975,7 @@ export default function CheckinPage({
                                     onClick={() => setFilterStatus("onsite")}
                                     className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-all shrink-0 whitespace-nowrap min-h-[32px] touch-manipulation ${
                                         filterStatus === "onsite" || filterStatus === "checkedin"
-                                            ? "bg-emerald-100 text-emerald-800 font-semibold shadow-xs" 
+                                            ? "bg-emerald-100 text-emerald-600 dark:text-emerald-500 font-semibold shadow-xs" 
                                             : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                                     }`}
                                 >
@@ -984,7 +986,7 @@ export default function CheckinPage({
                                     onClick={() => setFilterStatus("checkedout")}
                                     className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-all shrink-0 whitespace-nowrap min-h-[32px] touch-manipulation ${
                                         filterStatus === "checkedout" 
-                                            ? "bg-purple-100 text-purple-800 font-semibold shadow-xs" 
+                                            ? "bg-purple-100 text-purple-600 dark:text-purple-500 font-semibold shadow-xs" 
                                             : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                                     }`}
                                 >
@@ -995,7 +997,7 @@ export default function CheckinPage({
                                     onClick={() => setFilterStatus("pending")}
                                     className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-all shrink-0 whitespace-nowrap min-h-[32px] touch-manipulation ${
                                         filterStatus === "pending" 
-                                            ? "bg-amber-100 text-amber-800 font-semibold shadow-xs" 
+                                            ? "bg-amber-100 text-amber-600 dark:text-amber-500 font-semibold shadow-xs" 
                                             : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                                     }`}
                                 >
@@ -1064,7 +1066,7 @@ export default function CheckinPage({
                                                         <SpeakerAvatar src={s.photoUrl || s.photo_url} size={36} className="shrink-0" />
                                                         <div className="min-w-0 flex-1">
                                                             <div className="flex items-center gap-1.5">
-                                                                <span className="text-xs sm:text-sm font-bold text-slate-900 truncate">
+                                                                <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 truncate">
                                                                     {s.name || "Speaker"}
                                                                 </span>
                                                                 <span className="hidden sm:inline-block text-[10px] font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
@@ -1103,7 +1105,7 @@ export default function CheckinPage({
                                                                     e.stopPropagation();
                                                                     onUndoCheckout(s.id);
                                                                 }}
-                                                                className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200/90 transition-all min-h-[32px] flex items-center gap-1 touch-manipulation cursor-pointer active:scale-95"
+                                                                className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-600 dark:text-purple-500 border border-purple-200/90 transition-all min-h-[32px] flex items-center gap-1 touch-manipulation cursor-pointer active:scale-95"
                                                                 title="Revert check-out and restore speaker to On-Site"
                                                             >
                                                                 <RotateCcw size={12} />
@@ -1143,7 +1145,7 @@ export default function CheckinPage({
                                                             <div className="flex items-center gap-1.5 min-w-0 flex-1">
                                                                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
                                                                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 truncate">
-                                                                    Details · <span className="font-mono font-semibold text-slate-900 lowercase sm:uppercase">{s.id}</span>
+                                                                    Details · <span className="font-mono font-semibold text-slate-900 dark:text-slate-100 lowercase sm:uppercase">{s.id}</span>
                                                                 </span>
                                                             </div>
                                                             <button

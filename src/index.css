@@ -25,3 +25,31 @@ html, body {
   display: none;
 }
 
+
+
+.dark body {
+  background-color: #0f172a !important; /* slate-900 */
+  color: #f8fafc !important; /* slate-50 */
+}
+.dark .bg-white, .dark .bg-stone-100, .dark .bg-slate-50 {
+  background-color: #1e293b !important; /* slate-800 */
+  border-color: #334155 !important; /* slate-700 */
+}
+.dark .text-slate-900, .dark .text-slate-700, .dark .text-slate-800 {
+  color: #f8fafc !important; /* slate-50 */
+}
+.dark .text-slate-500, .dark .text-slate-600 {
+  color: #94a3b8 !important; /* slate-400 */
+}
+.dark .border-slate-200, .dark .border-slate-100, .dark .border-amber-300\\/80 {
+  border-color: #334155 !important;
+}
+.dark input, .dark textarea, .dark select {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+.dark .shadow-sm, .dark .shadow-md, .dark .shadow-lg {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3) !important;
+}
+

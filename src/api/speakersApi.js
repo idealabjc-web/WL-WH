@@ -1,6 +1,35 @@
 import { supabase } from "../supabaseClient";
 import QRCode from "qrcode";
 
+const QUEUE_KEY = "offline_speaker_queue";
+
+function queueOfflineAction(actionType, id, data) {
+    const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]");
+    q.push({ actionType, id, data, timestamp: Date.now() });
+    localStorage.setItem(QUEUE_KEY, JSON.stringify(q));
+}
+
+export async function syncOfflineQueue() {
+    if (!navigator.onLine) return;
+    const q = JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]");
+    if (q.length === 0) return;
+    
+    localStorage.setItem(QUEUE_KEY, "[]");
+    
+    for (const item of q) {
+        try {
+            if (item.actionType === "UPDATE") {
+                await updateSpeakerRecord(item.id, item.data, true);
+            } else if (item.actionType === "CREATE") {
+                await createSpeakerRecord(item.data, true);
+            }
+        } catch (e) {
+            console.error("Failed to sync offline item", item, e);
+            queueOfflineAction(item.actionType, item.id, item.data);
+        }
+    }
+}
+
 export function uid() {
     return (
         Math.random().toString(36).slice(2, 6).toUpperCase() +
@@ -29,22 +58,10 @@ export function speakerToRow(s) {
         name: s.name,
         email: s.email || null,
         phone: s.phone || null,
-        session_title: s.sessionTitle || null,
-        day: s.day || null,
-        time_slot: s.timeSlot || null,
-        room: s.room || null,
-        checkin_date: s.checkinDate || null,
-        checkout_date: s.checkoutDate || null,
-        nights: s.nights || null,
         diet: s.diet || "No preference",
         allergy: s.allergy || null,
         tour: s.tour || "yes",
         concerns: s.concerns || null,
-        checked_in: !!s.checkedIn,
-        checked_in_at: s.checkedInAt ? new Date(s.checkedInAt).toISOString() : null,
-        checked_out: !!s.checkedOut,
-        checked_out_at: s.checkedOutAt ? new Date(s.checkedOutAt).toISOString() : null,
-        checkout_notes: s.checkoutNotes || null,
         qr_url: s.qrUrl || null,
         photo_url: s.photoUrl || null,
         id_card_url: s.idCardUrl || null,
@@ -55,27 +72,32 @@ export function speakerToRow(s) {
 }
 
 export function rowToSpeaker(r) {
+    // Flatten the joined data into the single speaker object so UI doesn't break
+    const session = r.sessions?.[0] || {};
+    const accomm = r.accommodations?.[0] || {};
+    const att = r.attendance?.[0] || {};
+    
     return {
         id: r.id,
         name: r.name,
         email: r.email,
         phone: r.phone,
-        sessionTitle: r.session_title,
-        day: r.day,
-        timeSlot: r.time_slot,
-        room: r.room,
-        checkinDate: r.checkin_date,
-        checkoutDate: r.checkout_date,
-        nights: r.nights,
+        sessionTitle: session.session_title || null,
+        day: session.day || null,
+        timeSlot: session.time_slot || null,
+        room: session.room || null,
+        checkinDate: accomm.checkin_date || null,
+        checkoutDate: accomm.checkout_date || null,
+        nights: accomm.nights || null,
         diet: r.diet,
         allergy: r.allergy,
         tour: r.tour,
         concerns: r.concerns,
-        checkedIn: r.checked_in,
-        checkedInAt: r.checked_in_at ? new Date(r.checked_in_at).getTime() : null,
-        checkedOut: r.checked_out,
-        checkedOutAt: r.checked_out_at ? new Date(r.checked_out_at).getTime() : null,
-        checkoutNotes: r.checkout_notes || null,
+        checkedIn: att.checked_in || false,
+        checkedInAt: att.checked_in_at ? new Date(att.checked_in_at).getTime() : null,
+        checkedOut: att.checked_out || false,
+        checkedOutAt: att.checked_out_at ? new Date(att.checked_out_at).getTime() : null,
+        checkoutNotes: att.checkout_notes || null,
         createdAt: r.created_at ? new Date(r.created_at).getTime() : null,
         qrUrl: r.qr_url || null,
         photoUrl: r.photo_url || null,
@@ -87,9 +109,130 @@ export function rowToSpeaker(r) {
 }
 
 export async function fetchSpeakers() {
-    const { data, error } = await supabase.from("speakers").select("*").order("created_at", { ascending: true });
+    const { data, error } = await supabase
+        .from("speakers")
+        .select("*, sessions(*), accommodations(*), attendance(*)")
+        .order("created_at", { ascending: true });
     if (error) throw error;
     return (data || []).map(rowToSpeaker);
+}
+
+export async function createSpeakerRecord(rec, skipQueue = false) {
+    if (!navigator.onLine && !skipQueue) {
+        queueOfflineAction("CREATE", rec.id, rec);
+        return true; // Optimistic success
+    }
+    const speakerRow = speakerToRow(rec);
+    const { error: spkError } = await supabase.from("speakers").insert(speakerRow);
+    if (spkError) throw spkError;
+    
+    if (rec.sessionTitle || rec.day || rec.timeSlot || rec.room) {
+        const { error: sessError } = await supabase.from("sessions").insert({
+            speaker_id: rec.id,
+            session_title: rec.sessionTitle || null,
+            day: rec.day || null,
+            time_slot: rec.timeSlot || null,
+            room: rec.room || null
+        });
+        if (sessError) throw sessError;
+    }
+    
+    if (rec.checkinDate || rec.checkoutDate || rec.nights) {
+        const { error: accError } = await supabase.from("accommodations").insert({
+            speaker_id: rec.id,
+            checkin_date: rec.checkinDate || null,
+            checkout_date: rec.checkoutDate || null,
+            nights: rec.nights || null
+        });
+        if (accError) throw accError;
+    }
+
+    // Always insert a default attendance record for tracking check-ins
+    const { error: attError } = await supabase.from("attendance").insert({
+        speaker_id: rec.id,
+        checked_in: !!rec.checkedIn,
+        checked_in_at: rec.checkedInAt ? new Date(rec.checkedInAt).toISOString() : null,
+        checked_out: !!rec.checkedOut,
+        checked_out_at: rec.checkedOutAt ? new Date(rec.checkedOutAt).toISOString() : null,
+        checkout_notes: rec.checkoutNotes || null
+    });
+    if (attError) throw attError;
+    
+    return true;
+}
+
+export async function updateSpeakerRecord(id, mergedRec, skipQueue = false) {
+    if (!navigator.onLine && !skipQueue) {
+        queueOfflineAction("UPDATE", id, mergedRec);
+        return true; // Optimistic success
+    }
+
+    const speakerRow = speakerToRow(mergedRec);
+    const { error: spkError } = await supabase.from("speakers").update(speakerRow).eq("id", id);
+    if (spkError) throw spkError;
+    
+    // Upsert session
+    const { data: sessData } = await supabase.from("sessions").select("id").eq("speaker_id", id).maybeSingle();
+    if (sessData) {
+        const { error: sessUpdError } = await supabase.from("sessions").update({
+            session_title: mergedRec.sessionTitle || null,
+            day: mergedRec.day || null,
+            time_slot: mergedRec.timeSlot || null,
+            room: mergedRec.room || null
+        }).eq("id", sessData.id);
+        if (sessUpdError) throw sessUpdError;
+    } else if (mergedRec.sessionTitle || mergedRec.day || mergedRec.timeSlot || mergedRec.room) {
+        const { error: sessInsError } = await supabase.from("sessions").insert({
+            speaker_id: id,
+            session_title: mergedRec.sessionTitle || null,
+            day: mergedRec.day || null,
+            time_slot: mergedRec.timeSlot || null,
+            room: mergedRec.room || null
+        });
+        if (sessInsError) throw sessInsError;
+    }
+
+    // Upsert accommodation
+    const { data: accData } = await supabase.from("accommodations").select("id").eq("speaker_id", id).maybeSingle();
+    if (accData) {
+        const { error: accUpdError } = await supabase.from("accommodations").update({
+            checkin_date: mergedRec.checkinDate || null,
+            checkout_date: mergedRec.checkoutDate || null,
+            nights: mergedRec.nights || null
+        }).eq("id", accData.id);
+        if (accUpdError) throw accUpdError;
+    } else if (mergedRec.checkinDate || mergedRec.checkoutDate || mergedRec.nights) {
+        const { error: accInsError } = await supabase.from("accommodations").insert({
+            speaker_id: id,
+            checkin_date: mergedRec.checkinDate || null,
+            checkout_date: mergedRec.checkoutDate || null,
+            nights: mergedRec.nights || null
+        });
+        if (accInsError) throw accInsError;
+    }
+
+    // Upsert attendance
+    const { data: attData } = await supabase.from("attendance").select("id").eq("speaker_id", id).maybeSingle();
+    if (attData) {
+        await supabase.from("attendance").update({
+            checked_in: !!mergedRec.checkedIn,
+            checked_in_at: mergedRec.checkedInAt ? new Date(mergedRec.checkedInAt).toISOString() : null,
+            checked_out: !!mergedRec.checkedOut,
+            checked_out_at: mergedRec.checkedOutAt ? new Date(mergedRec.checkedOutAt).toISOString() : null,
+            checkout_notes: mergedRec.checkoutNotes || null
+        }).eq("id", attData.id);
+    } else {
+        await supabase.from("attendance").insert({
+            speaker_id: id,
+            checked_in: !!mergedRec.checkedIn,
+            checked_in_at: mergedRec.checkedInAt ? new Date(mergedRec.checkedInAt).toISOString() : null,
+            checked_out: !!mergedRec.checkedOut,
+            checked_out_at: mergedRec.checkedOutAt ? new Date(mergedRec.checkedOutAt).toISOString() : null,
+            checkout_notes: mergedRec.checkoutNotes || null
+        });
+    }
+
+    return true;
 }
 
 // Generates the QR badge locally (no external API call — works offline, and

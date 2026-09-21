@@ -3,7 +3,7 @@ import {
     LogOut, Calendar, Clock, Hotel, Utensils, MapPin, 
     BadgeCheck, User, Settings as SettingsIcon, LayoutList, 
     ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, 
-    Sparkles, CheckCircle2 
+    Sparkles, CheckCircle2, Megaphone 
 } from "lucide-react";
 import ChangePasswordModal from "../../components/common/ChangePasswordModal";
 import CheckinPage from "../CheckinPage";
@@ -11,12 +11,15 @@ import DashboardPage from "../DashboardPage";
 import FeedbackPage from "../FeedbackPage";
 import Toast from "../../components/common/Toast";
 import { supabase, isSupabaseConfigured } from "../../supabaseClient";
-import { fetchSpeakers, speakerToRow } from "../../api/speakersApi";
+import { fetchSpeakers, speakerToRow, updateSpeakerRecord } from "../../api/speakersApi";
 import { fetchFeedback, feedbackToRow } from "../../api/feedbackApi";
+import { fetchAnnouncements } from "../../api/announcementsApi";
 import SpeakerCheckoutPage from "./SpeakerCheckoutPage";
+import SpeakerAnnouncementsPage from "./SpeakerAnnouncementsPage";
 
 const TABS = [
     { id: "home", label: "Home", icon: BadgeCheck },
+    { id: "announcements", label: "Announcements", icon: Megaphone },
     { id: "checkin", label: "Scanner", icon: ScanLine },
     { id: "feedback", label: "Feedback", icon: MessageSquare },
     { id: "logistics", label: "Logistics & Travel", mobileLabel: "Logistics", icon: Hotel },
@@ -36,6 +39,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
 
     const [speakers, setSpeakers] = useState([]);
     const [feedback, setFeedback] = useState([]);
+    const [announcements, setAnnouncements] = useState([]);
     const [toastMsg, setToastMsg] = useState("");
     const toastTimer = useRef(null);
 
@@ -78,9 +82,10 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
     const refresh = useCallback(async () => {
         if (!isSupabaseConfigured) return;
         try {
-            const [s, f] = await Promise.all([fetchSpeakers(), fetchFeedback()]);
+            const [s, f, a] = await Promise.all([fetchSpeakers(), fetchFeedback(), fetchAnnouncements()]);
             setSpeakers(s || []);
             setFeedback(f || []);
+            setAnnouncements(a || []);
         } catch (err) {
             console.error("Failed to refresh data", err);
         }
@@ -93,6 +98,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
             .channel("speaker-portal-changes")
             .on("postgres_changes", { event: "*", schema: "public", table: "speakers" }, refresh)
             .on("postgres_changes", { event: "*", schema: "public", table: "feedback" }, refresh)
+            .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, refresh)
             .subscribe();
         return () => supabase.removeChannel(channel);
     }, [refresh]);
@@ -106,20 +112,19 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
         const checkedInAt = Date.now();
         setSpeakers((prev) => prev.map((s) => (s.id === id ? { ...s, checkedIn: true, checkedInAt, concerns: notes } : s)));
         
+        const s = speakers.find((x) => x.id === id) || currentSpeaker;
+        if (!s) return;
+        const merged = { ...s, checkedIn: true, checkedInAt, concerns: notes };
+        
         if (isSupabaseConfigured && supabase) {
-            const { error } = await supabase.from("speakers").update({ 
-                checked_in: true, 
-                checked_in_at: new Date(checkedInAt).toISOString(), 
-                concerns: notes 
-            }).eq("id", id);
-            
-            if (error) { 
+            try {
+                await updateSpeakerRecord(id, merged);
+            } catch (error) {
                 toast("Check-in saved locally but failed to sync."); 
                 return; 
             }
         }
         
-        const s = speakers.find((x) => x.id === id) || currentSpeaker;
         toast((s?.name || "Speaker") + " checked in ✓");
     };
 
@@ -133,14 +138,19 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
             )
         );
 
-        if (isSupabaseConfigured && supabase) {
-            const { error } = await supabase.from("speakers").update({
-                checked_out: true,
-                checked_out_at: new Date(checkedOutAt).toISOString(),
-                ...(checkoutNotes !== undefined ? { checkout_notes: checkoutNotes } : {})
-            }).eq("id", id);
+        const s = speakers.find((x) => x.id === id) || currentSpeaker;
+        if (!s) return;
+        const merged = { 
+            ...s, 
+            checkedOut: true, 
+            checkedOutAt, 
+            checkoutNotes: checkoutNotes !== undefined ? checkoutNotes : s.checkoutNotes 
+        };
 
-            if (error) {
+        if (isSupabaseConfigured && supabase) {
+            try {
+                await updateSpeakerRecord(id, merged);
+            } catch (error) {
                 toast("Check-out saved locally but failed to sync.");
                 return;
             }
@@ -154,13 +164,14 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
             prev.map((s) => (s.id === id ? { ...s, checkedOut: false, checkedOutAt: null } : s))
         );
 
-        if (isSupabaseConfigured && supabase) {
-            const { error } = await supabase.from("speakers").update({
-                checked_out: false,
-                checked_out_at: null
-            }).eq("id", id);
+        const s = speakers.find((x) => x.id === id) || currentSpeaker;
+        if (!s) return;
+        const merged = { ...s, checkedOut: false, checkedOutAt: null };
 
-            if (error) {
+        if (isSupabaseConfigured && supabase) {
+            try {
+                await updateSpeakerRecord(id, merged);
+            } catch (error) {
                 toast("Undo check-out saved locally but failed to sync.");
                 return;
             }
@@ -189,8 +200,9 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
         const merged = { ...existing, ...updatedData };
         
         if (isSupabaseConfigured && supabase) {
-            const { error } = await supabase.from("speakers").update(speakerToRow(merged)).eq("id", id);
-            if (error) { 
+            try {
+                await updateSpeakerRecord(id, merged);
+            } catch (error) {
                 toast("Failed to update speaker."); 
                 return false; 
             }
@@ -389,6 +401,10 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                             forcedSubTab="home"
                             onNavigateTab={handleTabChange}
                         />
+                    )}
+
+                    {tab === "announcements" && (
+                        <SpeakerAnnouncementsPage announcements={announcements} />
                     )}
 
                     {tab === "checkin" && (

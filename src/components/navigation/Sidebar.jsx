@@ -32,14 +32,14 @@ export default function Sidebar({
             <aside
                 className={`
                     fixed md:sticky top-0 inset-y-0 left-0 z-50 md:z-30
-                    h-screen flex flex-col bg-white text-slate-800 border-r border-slate-200 shadow-sm
+                    h-screen flex flex-col bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-100 border-r border-slate-200 dark:border-slate-800 shadow-sm
                     transition-all duration-300 ease-in-out shrink-0 select-none
                     ${mobileOpen ? "w-56 translate-x-0" : "-translate-x-full md:translate-x-0"}
                     ${collapsed ? "md:w-20" : "md:w-56"}
                 `}
             >
                 {/* Brand Header */}
-                <div className="h-16 px-4 flex items-center justify-between border-b border-slate-200">
+                <div className="h-16 px-4 flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
                     {showExpanded ? (
                         <>
                             <div className="flex items-center gap-3 overflow-hidden">
@@ -47,7 +47,7 @@ export default function Sidebar({
                                     WL
                                 </div>
                                 <div className="min-w-0">
-                                    <div className="font-bold text-sm text-slate-800 tracking-tight truncate">
+                                    <div className="font-bold text-sm text-slate-800 dark:text-slate-100 tracking-tight truncate">
                                         Admin Portal
                                     </div>
                                     <div className="text-[10px] text-amber-400 font-semibold tracking-wide uppercase truncate">
@@ -60,7 +60,7 @@ export default function Sidebar({
                             <button
                                 onClick={onToggleCollapse}
                                 type="button"
-                                className="hidden md:flex p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 active:bg-slate-200 transition-colors touch-manipulation"
+                                className="hidden md:flex p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 active:bg-slate-200 dark:active:bg-slate-800 transition-colors touch-manipulation"
                                 title="Collapse sidebar"
                                 aria-label="Collapse sidebar"
                             >
@@ -71,7 +71,7 @@ export default function Sidebar({
                             <button
                                 onClick={onCloseMobile}
                                 type="button"
-                                className="md:hidden p-2 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 active:bg-slate-200 transition-colors touch-manipulation"
+                                className="md:hidden p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 active:bg-slate-200 dark:active:bg-slate-800 transition-colors touch-manipulation"
                                 aria-label="Close menu"
                             >
                                 <X size={20} />
@@ -83,7 +83,7 @@ export default function Sidebar({
                             <button
                                 onClick={onToggleCollapse}
                                 type="button"
-                                className="p-2.5 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-100 active:bg-slate-200 transition-colors touch-manipulation"
+                                className="p-2.5 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 active:bg-slate-200 dark:active:bg-slate-800 transition-colors touch-manipulation"
                                 title="Expand sidebar"
                                 aria-label="Expand sidebar"
                             >
@@ -109,8 +109,8 @@ export default function Sidebar({
                                 type="button"
                                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 ${
                                     active
-                                        ? "bg-amber-100 text-amber-700 shadow-sm"
-                                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                                        ? "bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 shadow-sm"
+                                        : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white"
                                 } ${!showExpanded ? "justify-center px-0" : ""}`}
                                 title={!showExpanded ? t.label : undefined}
                             >

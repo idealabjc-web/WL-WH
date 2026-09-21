@@ -5,12 +5,13 @@ import {
     Calendar, Clock, MapPin, Sparkles, BadgeCheck,
     Users, CheckCircle2, Utensils, Map, LogOut, RotateCcw
 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { StatCard, StatusBadge, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
 import { TIME_SLOTS } from "../api/speakersApi";
 import PhoneField from "../components/common/PhoneField";
 
-function SpeakerDetail({ speaker, onClose, onUpdate, onUndoCheckout, onRefresh, allSpeakers, isSpeaker = false, currentSpeaker = null }) {
+function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, onRefresh, allSpeakers, isSpeaker = false, currentSpeaker = null }) {
     const [isEditing, setIsEditing] = useState(false);
     const [form, setForm] = useState(speaker);
     const [saving, setSaving] = useState(false);
@@ -56,8 +57,15 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onUndoCheckout, onRefresh, 
         if (success) setIsEditing(false);
     };
 
+    const handleDelete = async () => {
+        if (window.confirm("Are you sure you want to delete this speaker? This action cannot be undone.")) {
+            await onDelete(speaker.id);
+            onClose();
+        }
+    };
+
     const row = (label, value) => (
-        <div className="flex justify-between gap-4 py-2 border-b border-slate-100 last:border-0 text-sm">
+        <div className="flex justify-between gap-4 py-2 border-b border-slate-100 dark:border-slate-800 last:border-0 text-sm">
             <div className="text-slate-500 shrink-0">{label}</div>
             <div className="font-semibold text-right">{value || "—"}</div>
         </div>
@@ -66,7 +74,7 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onUndoCheckout, onRefresh, 
     if (isEditing) {
         return (
             <div className="bg-white border border-amber-300/80 rounded-xl p-4 sm:p-5 shadow-xs animate-in fade-in duration-200">
-                <div className="flex items-center justify-between mb-4 pb-2.5 border-b border-slate-100">
+                <div className="flex items-center justify-between mb-4 pb-2.5 border-b border-slate-100 dark:border-slate-800">
                     <div className="font-bold text-base sm:text-lg text-slate-900 flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
                         <span>{isSelf ? "Edit Your Details" : "Edit Details"}</span>
@@ -135,7 +143,7 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onUndoCheckout, onRefresh, 
 
     return (
         <div className="bg-white border border-amber-300/80 rounded-xl p-4 sm:p-5 shadow-xs animate-in fade-in duration-200">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div className="flex items-center gap-3 min-w-0">
                     <SpeakerAvatar src={speaker.photoUrl} size={48} />
                     <div className="min-w-0">
@@ -145,12 +153,20 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onUndoCheckout, onRefresh, 
                 </div>
                 <div className="flex gap-2 items-center self-end sm:self-auto shrink-0">
                     {canEdit && (
-                        <button
-                            onClick={() => setIsEditing(true)}
-                            className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-700 bg-white transition-colors"
-                        >
-                            {isSelf ? "Edit Your Details" : "Edit Details"}
-                        </button>
+                        <>
+                            <button
+                                onClick={handleDelete}
+                                className="px-3 py-1.5 text-xs font-semibold border border-rose-200 rounded-lg hover:bg-rose-50 text-rose-600 bg-white transition-colors"
+                            >
+                                Delete
+                            </button>
+                            <button
+                                onClick={() => setIsEditing(true)}
+                                className="px-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-lg hover:bg-slate-100 text-slate-700 bg-white transition-colors"
+                            >
+                                {isSelf ? "Edit Your Details" : "Edit Details"}
+                            </button>
+                        </>
                     )}
                     <button
                         onClick={onClose}
@@ -233,7 +249,7 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onUndoCheckout, onRefresh, 
     );
 }
 
-export default function DashboardPage({ speakers, onRefresh, onUpdate, onUndoCheckout, isSpeaker = false, currentSpeaker = null }) {
+export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete, onUndoCheckout, isSpeaker = false, currentSpeaker = null }) {
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState("all");
     const [dayFilter, setDayFilter] = useState("all");
@@ -263,6 +279,12 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onUndoChe
     const awaiting = speakers.filter((s) => !s.checkedIn).length;
     const dietary = speakers.filter((s) => s.allergy || (s.diet && s.diet !== "No preference")).length;
     const tour = speakers.filter((s) => s.tour === "yes").length;
+
+    const chartData = [
+        { name: 'Checked In', value: checked, color: '#059669' },
+        { name: 'Awaiting', value: awaiting, color: '#d97706' },
+        { name: 'Checked Out', value: checkedOut, color: '#7c3aed' },
+    ];
 
     const rows = speakers.filter((s) => {
         const q = search.toLowerCase();
@@ -366,6 +388,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onUndoChe
                                 speaker={mySpeaker} 
                                 onClose={() => setShowHeroProfile(false)} 
                                 onUpdate={onUpdate} 
+                                onDelete={onDelete}
                                 allSpeakers={speakers}
                                 isSpeaker={isSpeaker}
                                 currentSpeaker={currentSpeaker}
@@ -378,17 +401,41 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onUndoChe
             {/* Aggregate Stats Cards */}
             <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3 sm:gap-4 mb-6">
                 <StatCard num={total} label="Registered" icon={Users} colorClass="text-blue-600" bgClass="bg-blue-100" />
-                <StatCard num={checked} label="On-site (Checked in)" icon={CheckCircle2} colorClass="text-emerald-600" bgClass="bg-emerald-100" />
+                <StatCard num={checked} label="Checked in" icon={CheckCircle2} colorClass="text-emerald-600" bgClass="bg-emerald-100" />
                 <StatCard num={checkedOut} label="Checked out" icon={LogOut} colorClass="text-purple-600" bgClass="bg-purple-100" />
                 <StatCard num={awaiting} label="Awaiting arrival" icon={Clock} colorClass="text-amber-600" bgClass="bg-amber-100" />
                 <StatCard num={dietary} label="Dietary needs" icon={Utensils} colorClass="text-rose-600" bgClass="bg-rose-100" />
                 <StatCard num={tour} label="Tour interest" icon={Map} colorClass="text-indigo-600" bgClass="bg-indigo-100" />
             </div>
 
+            {/* Analytics Chart */}
+            {!isSpeaker && (
+                <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl p-4 sm:p-6 shadow-sm mb-6 flex flex-col sm:flex-row items-center gap-6">
+                    <div className="w-full sm:w-1/3">
+                        <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-2">Live Check-in Progress</h3>
+                        <p className="text-xs text-slate-500">Real-time tracker of all speaker arrivals and departures.</p>
+                    </div>
+                    <div className="w-full sm:w-2/3 h-48">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                                <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                                <Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                                    {chartData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            )}
+
             {/* Main Table / List Container */}
-            <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-sm">
+            <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl p-4 sm:p-6 shadow-sm">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-                    <h2 className="text-base sm:text-lg font-semibold text-slate-900">
+                    <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100">
                         {isSpeaker ? "Conference Speakers & Schedule" : "All speakers"}{" "}
                         <span className="font-normal text-slate-500 text-xs sm:text-sm block sm:inline mt-0.5 sm:mt-0">
                             — {isSpeaker ? "Live directory for WLWH Dubai 2026" : "live with ops team"}
@@ -417,11 +464,11 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onUndoChe
                 </div>
 
                 {/* Filters and Controls */}
-                <div className="bg-slate-50/70 backdrop-blur-md border border-slate-200 rounded-2xl p-2 sm:p-3 mb-5 flex flex-col xl:flex-row gap-3 items-stretch xl:items-center shadow-xs">
+                <div className="bg-slate-50/70 dark:bg-slate-900/70 backdrop-blur-md border border-slate-200 rounded-2xl p-2 sm:p-3 mb-5 flex flex-col xl:flex-row gap-3 items-stretch xl:items-center shadow-xs">
                     <div className="relative flex-1 min-w-0">
                         <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                         <input
-                            className={`${inputCls} !bg-white !pl-10 mb-0 !border-slate-300/80 shadow-xs rounded-xl focus:!ring-amber-500`}
+                            className={`${inputCls}  !pl-10 mb-0  shadow-xs rounded-xl focus:!ring-amber-500`}
                             placeholder="Search name, session, room..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
@@ -432,7 +479,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onUndoChe
                         <div className="grid grid-cols-2 sm:flex items-center gap-3">
                             <div className="relative sm:w-36">
                                 <select
-                                    className={`${inputCls} !bg-white mb-0 !border-slate-300/80 shadow-xs rounded-xl focus:!ring-amber-500`}
+                                    className={`${inputCls}  mb-0  shadow-xs rounded-xl focus:!ring-amber-500`}
                                     value={dayFilter}
                                     onChange={(e) => setDayFilter(e.target.value)}
                                 >
@@ -447,7 +494,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onUndoChe
                             <div className="relative sm:w-48">
                                 <Filter size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none hidden sm:block" />
                                 <select
-                                    className={`${inputCls} !bg-white sm:!pl-9 mb-0 text-xs sm:text-sm !border-slate-300/80 shadow-xs rounded-xl focus:!ring-amber-500`}
+                                    className={`${inputCls}  sm:!pl-9 mb-0 text-xs sm:text-sm  shadow-xs rounded-xl focus:!ring-amber-500`}
                                     value={filter}
                                     onChange={(e) => setFilter(e.target.value)}
                                 >
@@ -464,14 +511,14 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onUndoChe
                             {!isSpeaker && (
                                 <button
                                     onClick={exportCsv}
-                                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 bg-white border border-slate-300/80 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700 text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs transition-all min-h-[42px]"
+                                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-300/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700 text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs transition-all min-h-[42px]"
                                 >
                                     <Download size={15} /> Export
                                 </button>
                             )}
                             <button
                                 onClick={onRefresh}
-                                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 bg-white border border-slate-300/80 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700 text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs transition-all min-h-[42px]"
+                                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-300/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700 text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs transition-all min-h-[42px]"
                             >
                                 <RefreshCw size={15} /> Refresh
                             </button>
@@ -558,6 +605,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onUndoChe
                                                 speaker={s} 
                                                 onClose={() => setSelectedId(null)} 
                                                 onUpdate={onUpdate} 
+                                                onDelete={onDelete}
                                                 onUndoCheckout={onUndoCheckout}
                                                 onRefresh={onRefresh}
                                                 allSpeakers={speakers}
@@ -576,8 +624,8 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onUndoChe
                 <div className={`overflow-x-auto ${mobileView === "table" ? "block" : "hidden sm:block"}`}>
                     <table className="w-full text-sm border-collapse min-w-[500px]">
                         <thead>
-                            <tr className="text-left text-[11px] uppercase tracking-wider text-slate-500 border-b-2 border-slate-200 bg-slate-50/50">
-                                <th className="py-3 px-4 font-semibold sticky left-0 bg-slate-50/50 z-10 backdrop-blur-sm shadow-xs">Speaker & Session</th>
+                            <tr className="text-left text-[11px] uppercase tracking-wider text-slate-500 border-b-2 border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                                <th className="py-3 px-4 font-semibold sticky left-0 bg-slate-50/50 dark:bg-slate-900/50 z-10 backdrop-blur-sm shadow-xs">Speaker & Session</th>
                                 <th className="py-3 px-4 font-semibold">Schedule</th>
                                 <th className="py-3 px-4 font-semibold">Preferences</th>
                                 <th className="py-3 px-4 font-semibold">Concerns</th>
@@ -598,13 +646,13 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onUndoChe
                                     return (
                                         <React.Fragment key={s.id}>
                                             <tr
-                                                className={`border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-all group ${
+                                                className={`border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 cursor-pointer transition-all group ${
                                                     isSelected ? "bg-amber-50/60 ring-1 ring-amber-200 inset-0 z-10 relative" : ""
                                                 }`}
                                                 onClick={() => setSelectedId(isSelected ? null : s.id)}
                                             >
                                                 <td className={`py-3 px-4 sticky left-0 transition-colors ${
-                                                    isSelected ? "bg-amber-50/90" : "bg-white/95 group-hover:bg-slate-50/95"
+                                                    isSelected ? "bg-amber-50/90" : "bg-white/95 dark:bg-slate-950/95 group-hover:bg-slate-50/95 dark:bg-slate-900/95"
                                                 }`}>
                                                     <div className="flex items-start gap-3 min-w-[200px]">
                                                         <SpeakerAvatar src={s.photoUrl} size={36} />
@@ -658,12 +706,13 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onUndoChe
                                             </tr>
                                             {isSelected && (
                                                 <tr className="bg-amber-50/20 border-b-2 border-amber-300">
-                                                    <td colSpan={6} className="p-3 sm:p-5 bg-slate-50/70">
+                                                    <td colSpan={6} className="p-3 sm:p-5 bg-slate-50/70 dark:bg-slate-900/70">
                                                         <div className="animate-in slide-in-from-top-1 duration-200 max-w-4xl mx-auto">
                                                             <SpeakerDetail 
                                                                 speaker={s} 
                                                                 onClose={() => setSelectedId(null)} 
                                                                 onUpdate={onUpdate} 
+                                                                onDelete={onDelete}
                                                                 onUndoCheckout={onUndoCheckout}
                                                                 onRefresh={onRefresh}
                                                                 allSpeakers={speakers}

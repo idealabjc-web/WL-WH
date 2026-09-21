@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Users, ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, Menu, BadgeCheck, LogOut, Settings } from "lucide-react";
+import { Users, ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, Menu, BadgeCheck, LogOut, Settings, Megaphone } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./supabaseClient";
-import { fetchSpeakers, speakerToRow } from "./api/speakersApi";
+import { fetchSpeakers, speakerToRow, createSpeakerRecord, updateSpeakerRecord } from "./api/speakersApi";
 import { fetchFeedback, feedbackToRow } from "./api/feedbackApi";
+import { logAction } from "./api/auditApi";
 
 import Toast from "./components/common/Toast";
 import SetupNeeded from "./components/SetupNeeded";
@@ -16,8 +17,9 @@ import DashboardPage from "./pages/DashboardPage";
 import IdCardsPage from "./pages/IdCardsPage";
 import FeedbackPage from "./pages/FeedbackPage";
 import SettingsPage from "./pages/SettingsPage";
+import AnnouncementsPage from "./pages/AnnouncementsPage";
 
-const VALID_TABS = ["dashboard", "register", "checkin", "idcards", "feedback", "settings"];
+const VALID_TABS = ["dashboard", "register", "checkin", "idcards", "feedback", "broadcasts", "settings"];
 
 function getInitialTab() {
     const hash = window.location.hash.replace("#", "").toLowerCase();
@@ -121,12 +123,15 @@ export default function EventPortal({ displayName = "", userEmail = "", onLogout
 
     const addSpeaker = async (rec) => {
         setSpeakers((prev) => (prev.find((x) => x.id === rec.id) ? prev : [...prev, rec]));
-        const { error } = await supabase.from("speakers").insert(speakerToRow(rec));
-        if (error) {
+        try {
+            await createSpeakerRecord(rec);
+            logAction(userEmail, 'ADD_SPEAKER', rec.id, { name: rec.name });
+            return true;
+        } catch (error) {
             console.error(error);
+            toast(`Sync failed: ${error.message || error.details || "Unknown error"}`);
             return false;
         }
-        return true;
     };
 
     const updateSpeaker = async (id, updatedData) => {
@@ -136,14 +141,15 @@ export default function EventPortal({ displayName = "", userEmail = "", onLogout
         if (!existing) return false;
         const merged = { ...existing, ...updatedData };
         
-        const { error } = await supabase.from("speakers").update(speakerToRow(merged)).eq("id", id);
-        if (error) {
+        try {
+            await updateSpeakerRecord(id, merged);
+            toast("Speaker updated successfully.");
+            return true;
+        } catch (error) {
             console.error(error);
-            toast("Failed to update speaker.");
+            toast(`Failed to update: ${error.message || error.details || "Unknown error"}`);
             return false;
         }
-        toast("Speaker updated successfully.");
-        return true;
     };
 
     const confirmCheckin = async (id, notes) => {
@@ -151,17 +157,17 @@ export default function EventPortal({ displayName = "", userEmail = "", onLogout
         setSpeakers((prev) =>
             prev.map((s) => (s.id === id ? { ...s, checkedIn: true, checkedInAt, concerns: notes } : s))
         );
-        const { error } = await supabase
-            .from("speakers")
-            .update({ checked_in: true, checked_in_at: new Date(checkedInAt).toISOString(), concerns: notes })
-            .eq("id", id);
-        if (error) {
+        const s = speakers.find((x) => x.id === id);
+        if (!s) return;
+        const merged = { ...s, checkedIn: true, checkedInAt, concerns: notes };
+        try {
+            await updateSpeakerRecord(id, merged);
+            logAction(userEmail, 'CHECK_IN', id);
+            toast((s.name || "Speaker") + " checked in ✓");
+        } catch (error) {
             console.error(error);
             toast("Check-in saved locally but failed to sync — check your connection.");
-            return;
         }
-        const s = speakers.find((x) => x.id === id);
-        toast((s ? s.name : "Speaker") + " checked in ✓");
     };
 
     const confirmCheckout = async (id, checkoutNotes) => {
@@ -173,38 +179,52 @@ export default function EventPortal({ displayName = "", userEmail = "", onLogout
                     : s
             )
         );
-        const { error } = await supabase
-            .from("speakers")
-            .update({
-                checked_out: true,
-                checked_out_at: new Date(checkedOutAt).toISOString(),
-                ...(checkoutNotes !== undefined ? { checkout_notes: checkoutNotes } : {})
-            })
-            .eq("id", id);
-        if (error) {
+        const s = speakers.find((x) => x.id === id);
+        if (!s) return;
+        const merged = { 
+            ...s, 
+            checkedOut: true, 
+            checkedOutAt, 
+            checkoutNotes: checkoutNotes !== undefined ? checkoutNotes : s.checkoutNotes 
+        };
+        try {
+            await updateSpeakerRecord(id, merged);
+            logAction(userEmail, 'CHECK_OUT', id, { checkoutNotes });
+            toast((s.name || "Speaker") + " checked out ✓");
+        } catch (error) {
             console.error(error);
             toast("Check-out saved locally but failed to sync.");
-            return;
         }
-        const s = speakers.find((x) => x.id === id);
-        toast((s ? s.name : "Speaker") + " checked out ✓");
     };
 
     const undoCheckout = async (id) => {
         setSpeakers((prev) =>
             prev.map((s) => (s.id === id ? { ...s, checkedOut: false, checkedOutAt: null } : s))
         );
-        const { error } = await supabase
-            .from("speakers")
-            .update({ checked_out: false, checked_out_at: null })
-            .eq("id", id);
-        if (error) {
+        const s = speakers.find((x) => x.id === id);
+        if (!s) return;
+        const merged = { ...s, checkedOut: false, checkedOutAt: null };
+        try {
+            await updateSpeakerRecord(id, merged);
+            logAction(userEmail, 'UNDO_CHECKOUT', id);
+            toast((s.name || "Speaker") + " status restored to On-Site");
+        } catch (error) {
             console.error(error);
             toast("Undo checkout saved locally but failed to sync.");
-            return;
         }
-        const s = speakers.find((x) => x.id === id);
-        toast((s ? s.name : "Speaker") + " status restored to On-Site");
+    };
+
+    const deleteSpeaker = async (id) => {
+        setSpeakers((prev) => prev.filter((s) => s.id !== id));
+        const { error } = await supabase.from("speakers").delete().eq("id", id);
+        if (error) {
+            console.error(error);
+            toast("Delete failed to sync to database.");
+            return false;
+        }
+        logAction(userEmail, 'DELETE_SPEAKER', id);
+        toast("Speaker deleted successfully.");
+        return true;
     };
 
     const saveNotes = async (id, notes) => {
@@ -231,6 +251,7 @@ export default function EventPortal({ displayName = "", userEmail = "", onLogout
         { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
         { id: "register", label: "Register", icon: Users },
         { id: "checkin", label: "Check-In", icon: ScanLine },
+        { id: "broadcasts", label: "Broadcasts", icon: Megaphone },
         { id: "idcards", label: "ID Cards", icon: BadgeCheck },
         { id: "feedback", label: "Feedback", icon: MessageSquare },
         { id: "settings", label: "Settings", icon: Settings },
@@ -242,7 +263,7 @@ export default function EventPortal({ displayName = "", userEmail = "", onLogout
 
     return (
         <PullToRefresh onRefresh={refresh}>
-            <div className="min-h-screen bg-stone-100 text-slate-900 antialiased flex" style={{ fontFamily: "Inter, sans-serif" }}>
+            <div className="min-h-screen bg-stone-100 dark:bg-slate-900 text-slate-900 dark:text-slate-50 antialiased flex" style={{ fontFamily: "Inter, sans-serif" }}>
             {/* Sidebar Navigation for iPad and Desktop (collapsible) + Mobile Off-Canvas Drawer */}
             <Sidebar
                 tabs={tabs}
@@ -257,14 +278,14 @@ export default function EventPortal({ displayName = "", userEmail = "", onLogout
             {/* Main Fluid Content Area (expands naturally to fill screen) */}
             <div className="flex-1 min-w-0 flex flex-col min-h-screen">
                 {/* Top App Bar Header with Hamburger Menu Button */}
-                <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between shadow-xs">
+                <header className="sticky top-0 z-30 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-slate-200/90 dark:border-slate-800 px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between shadow-xs">
                     <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                         {/* Mobile Only: opens drawer on phone viewports (completely hidden on tablet/desktop) */}
                         <button
                             id="hamburger-btn"
                             onClick={() => setMobileMenuOpen(true)}
                             type="button"
-                            className="md:hidden p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors touch-manipulation shrink-0"
+                            className="md:hidden p-2 rounded-xl text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 dark:active:bg-slate-700 transition-colors touch-manipulation shrink-0"
                             title="Open navigation menu"
                             aria-label="Open navigation menu"
                         >
@@ -344,8 +365,10 @@ export default function EventPortal({ displayName = "", userEmail = "", onLogout
                                     onRefresh={refresh}
                                     onUpdate={updateSpeaker}
                                     onUndoCheckout={undoCheckout}
+                                    onDelete={deleteSpeaker}
                                 />
                             )}
+                            {tab === "broadcasts" && <AnnouncementsPage userEmail={userEmail} toast={toast} />}
                             {tab === "idcards" && (
                                 <IdCardsPage
                                     speakers={speakers}

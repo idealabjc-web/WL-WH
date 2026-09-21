@@ -5,34 +5,46 @@ create table if not exists speakers (
   name text not null,
   email text,
   phone text,
-  session_title text,
-  day text,
-  time_slot text,
-  room text,
-  checkin_date text,
-  checkout_date text,
-  nights text,
   diet text default 'No preference',
   allergy text,
   tour text default 'yes',             -- 'yes' | 'no' | 'undecided'
   concerns text,
-  checked_in boolean default false,
-  checked_in_at timestamptz,
-  checked_out boolean default false,
-  checked_out_at timestamptz,
-  checkout_notes text,
   qr_url text,                         -- public URL of the stored QR badge image
   id_card_url text,                    -- public URL of the full official ID Card JPEG image
   password_hash text,
   created_at timestamptz default now()
 );
 
+create table if not exists sessions (
+  id uuid primary key default gen_random_uuid(),
+  speaker_id text references speakers(id) on delete cascade,
+  session_title text,
+  day text,
+  time_slot text,
+  room text
+);
+
+create table if not exists accommodations (
+  id uuid primary key default gen_random_uuid(),
+  speaker_id text references speakers(id) on delete cascade,
+  checkin_date text,
+  checkout_date text,
+  nights text
+);
+
+create table if not exists attendance (
+  id uuid primary key default gen_random_uuid(),
+  speaker_id text references speakers(id) on delete cascade,
+  checked_in boolean default false,
+  checked_in_at timestamptz,
+  checked_out boolean default false,
+  checked_out_at timestamptz,
+  checkout_notes text
+);
+
 -- In case the table already exists, add the columns if missing:
 alter table speakers add column if not exists id_card_url text;
 alter table speakers add column if not exists password_hash text;
-alter table speakers add column if not exists checked_out boolean default false;
-alter table speakers add column if not exists checked_out_at timestamptz;
-alter table speakers add column if not exists checkout_notes text;
 
 create table if not exists feedback (
   id text primary key,
@@ -52,6 +64,22 @@ alter table feedback enable row level security;
 create policy "public read speakers" on speakers for select using (true);
 create policy "public insert speakers" on speakers for insert with check (true);
 create policy "public update speakers" on speakers for update using (true);
+create policy "public delete speakers" on speakers for delete using (true);
+
+alter table sessions enable row level security;
+create policy "public read sessions" on sessions for select using (true);
+create policy "public insert sessions" on sessions for insert with check (true);
+create policy "public update sessions" on sessions for update using (true);
+
+alter table accommodations enable row level security;
+create policy "public read accommodations" on accommodations for select using (true);
+create policy "public insert accommodations" on accommodations for insert with check (true);
+create policy "public update accommodations" on accommodations for update using (true);
+
+alter table attendance enable row level security;
+create policy "public read attendance" on attendance for select using (true);
+create policy "public insert attendance" on attendance for insert with check (true);
+create policy "public update attendance" on attendance for update using (true);
 
 create policy "public read feedback" on feedback for select using (true);
 create policy "public insert feedback" on feedback for insert with check (true);
@@ -120,4 +148,32 @@ create policy "public update support team" on support_team
 
 
 
+
+
+-- 1. Create Announcements Table
+CREATE TABLE public.announcements (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  message text NOT NULL,
+  created_by text,
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.announcements ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "public read announcements" ON public.announcements FOR SELECT USING (true);
+CREATE POLICY "public insert announcements" ON public.announcements FOR INSERT WITH CHECK (true);
+
+-- 2. Create Audit Logs Table
+CREATE TABLE public.audit_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_email text NOT NULL,
+  action text NOT NULL,
+  target_id text,
+  details jsonb,
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "public insert audit_logs" ON public.audit_logs FOR INSERT WITH CHECK (true);
+CREATE POLICY "public read audit_logs" ON public.audit_logs FOR SELECT USING (true);
 
