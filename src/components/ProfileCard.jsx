@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { AlertTriangle, CheckCircle2, ExternalLink } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ExternalLink, LogOut } from "lucide-react";
 import { Field, StatusBadge, inputCls } from "./common/UIAtoms";
 import SpeakerAvatar from "./common/SpeakerAvatar";
 
 export default function ProfileCard({ 
     speaker, 
     onConfirm, 
+    onCheckout,
+    onUndoCheckout,
     onSaveNotes, 
     isSpeaker = false, 
     currentSpeaker = null 
@@ -64,7 +66,10 @@ export default function ProfileCard({
     );
 
     const isCheckedIn = !!(speaker.checkedIn || speaker.checked_in);
+    const isCheckedOut = !!(speaker.checkedOut || speaker.checked_out);
     const checkedInAt = speaker.checkedInAt || speaker.checked_in_at;
+    const checkedOutAt = speaker.checkedOutAt || speaker.checked_out_at;
+    const checkoutNotes = speaker.checkoutNotes || speaker.checkout_notes;
 
     return (
         <div className="mt-2.5 sm:mt-3.5 animate-in fade-in duration-200">
@@ -76,7 +81,7 @@ export default function ProfileCard({
                     <div className="font-bold text-base sm:text-lg text-slate-900 flex items-center gap-2 flex-wrap">
                         <SpeakerAvatar src={speaker.photoUrl || speaker.photo_url} size={32} />
                         {speaker.name}
-                        <StatusBadge checkedIn={isCheckedIn} />
+                        <StatusBadge checkedIn={isCheckedIn} checkedOut={isCheckedOut} />
                         {!isSpeaker && (speaker.allergy || speaker.concerns) && (
                             <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-700 text-xs font-semibold px-2.5 py-1 rounded-full">
                                 <AlertTriangle size={12} /> Needs Attention
@@ -94,6 +99,8 @@ export default function ProfileCard({
                 {row("Room concerns", speaker.concerns || "None")}
                 {row("Contact", `${speaker.email || "—"} ${speaker.phone ? "· " + speaker.phone : ""}`)}
                 {isCheckedIn && checkedInAt && row("Checked in at", new Date(checkedInAt).toLocaleString())}
+                {isCheckedOut && checkedOutAt && row("Checked out at", new Date(checkedOutAt).toLocaleString())}
+                {isCheckedOut && checkoutNotes && row("Departure remarks", checkoutNotes)}
             </div>
 
             {/* Note update field: Only for staff or self editing own concerns */}
@@ -112,16 +119,35 @@ export default function ProfileCard({
             )}
 
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-2.5 mt-3">
-                {/* Checkin button: ONLY available for staff (!isSpeaker), never from user account */}
-                {!isSpeaker && onConfirm && (
-                    <button
-                        onClick={() => onConfirm(speaker.id, notes)}
-                        disabled={isCheckedIn}
-                        className="flex-1 min-h-[48px] inline-flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-800 disabled:bg-slate-300 disabled:text-slate-500 text-white font-semibold text-sm px-5 py-3 rounded-xl shadow-sm transition-all touch-manipulation active:scale-[0.98]"
-                    >
-                        <CheckCircle2 size={16} />
-                        {isCheckedIn ? "Already checked in" : "Confirm check-in"}
-                    </button>
+                {/* Checkin / Checkout button: ONLY available for staff (!isSpeaker) */}
+                {!isSpeaker && (
+                    <div className="flex-1 flex flex-col sm:flex-row gap-2">
+                        {!isCheckedIn ? (
+                            <button
+                                onClick={() => onConfirm && onConfirm(speaker.id, notes)}
+                                className="flex-1 min-h-[48px] inline-flex items-center justify-center gap-2 bg-teal-700 hover:bg-teal-800 text-white font-semibold text-sm px-5 py-3 rounded-xl shadow-sm transition-all touch-manipulation active:scale-[0.98]"
+                            >
+                                <CheckCircle2 size={16} />
+                                Confirm Check-In
+                            </button>
+                        ) : !isCheckedOut ? (
+                            <button
+                                onClick={() => onCheckout && onCheckout(speaker.id, notes)}
+                                className="flex-1 min-h-[48px] inline-flex items-center justify-center gap-2 bg-purple-700 hover:bg-purple-800 text-white font-semibold text-sm px-5 py-3 rounded-xl shadow-sm transition-all touch-manipulation active:scale-[0.98]"
+                            >
+                                <LogOut size={16} />
+                                Confirm Check-Out
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => onUndoCheckout && onUndoCheckout(speaker.id)}
+                                className="flex-1 min-h-[48px] inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-900 text-white font-semibold text-sm px-5 py-3 rounded-xl shadow-sm transition-all touch-manipulation active:scale-[0.98]"
+                            >
+                                <CheckCircle2 size={16} />
+                                Re-check In (Undo Check-Out)
+                            </button>
+                        )}
+                    </div>
                 )}
                 {(!isSpeaker || isSelf) && onSaveNotes && (
                     <button

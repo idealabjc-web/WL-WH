@@ -164,6 +164,49 @@ export default function EventPortal({ displayName = "", userEmail = "", onLogout
         toast((s ? s.name : "Speaker") + " checked in ✓");
     };
 
+    const confirmCheckout = async (id, checkoutNotes) => {
+        const checkedOutAt = Date.now();
+        setSpeakers((prev) =>
+            prev.map((s) =>
+                s.id === id
+                    ? { ...s, checkedOut: true, checkedOutAt, checkoutNotes: checkoutNotes !== undefined ? checkoutNotes : s.checkoutNotes }
+                    : s
+            )
+        );
+        const { error } = await supabase
+            .from("speakers")
+            .update({
+                checked_out: true,
+                checked_out_at: new Date(checkedOutAt).toISOString(),
+                ...(checkoutNotes !== undefined ? { checkout_notes: checkoutNotes } : {})
+            })
+            .eq("id", id);
+        if (error) {
+            console.error(error);
+            toast("Check-out saved locally but failed to sync.");
+            return;
+        }
+        const s = speakers.find((x) => x.id === id);
+        toast((s ? s.name : "Speaker") + " checked out ✓");
+    };
+
+    const undoCheckout = async (id) => {
+        setSpeakers((prev) =>
+            prev.map((s) => (s.id === id ? { ...s, checkedOut: false, checkedOutAt: null } : s))
+        );
+        const { error } = await supabase
+            .from("speakers")
+            .update({ checked_out: false, checked_out_at: null })
+            .eq("id", id);
+        if (error) {
+            console.error(error);
+            toast("Undo checkout saved locally but failed to sync.");
+            return;
+        }
+        const s = speakers.find((x) => x.id === id);
+        toast((s ? s.name : "Speaker") + " status restored to On-Site");
+    };
+
     const saveNotes = async (id, notes) => {
         setSpeakers((prev) => prev.map((s) => (s.id === id ? { ...s, concerns: notes } : s)));
         const { error } = await supabase.from("speakers").update({ concerns: notes }).eq("id", id);
@@ -289,11 +332,20 @@ export default function EventPortal({ displayName = "", userEmail = "", onLogout
                                 <CheckinPage
                                     speakers={speakers}
                                     onConfirm={confirmCheckin}
+                                    onCheckout={confirmCheckout}
+                                    onUndoCheckout={undoCheckout}
                                     onSaveNotes={saveNotes}
                                     toast={toast}
                                 />
                             )}
-                            {tab === "dashboard" && <DashboardPage speakers={speakers} onRefresh={refresh} onUpdate={updateSpeaker} />}
+                            {tab === "dashboard" && (
+                                <DashboardPage
+                                    speakers={speakers}
+                                    onRefresh={refresh}
+                                    onUpdate={updateSpeaker}
+                                    onUndoCheckout={undoCheckout}
+                                />
+                            )}
                             {tab === "idcards" && (
                                 <IdCardsPage
                                     speakers={speakers}

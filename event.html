@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conclave — On-Site Speaker Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"></script>
+    <style>
+        :root {
+            --bg: #F5F6F3;
+            --surface: #FFFFFF;
+            --ink: #14262F;
+            --ink-soft: #5B6C71;
+            --accent-gold: #B08D2B;
+            --accent-gold-soft: #EFE6CC;
+            --accent-teal: #1F6F63;
+            --accent-teal-soft: #DCEDE9;
+            --accent-rose: #B5533C;
+            --accent-rose-soft: #F3E1DB;
+            --border: #DDE1DA;
+            --radius: 10px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        h1,
+        h2,
+        h3,
+        .display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .app {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px 18px 60px;
+        }
+
+        header.top {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding-bottom: 16px;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        header.top .eyebrow {
+            font-size: 13px;
+            color: var(--accent-gold);
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+
+        header.top h1 {
+            font-size: 26px;
+            margin: 2px 0 4px;
+            font-weight: 700;
+        }
+
+        header.top p {
+            margin: 0;
+            color: var(--ink-soft);
+            font-size: 14px;
+        }
+
+        nav.tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 22px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 4px;
+        }
+
+        nav.tabs button {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 11px 8px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 13.5px;
+            color: var(--ink-soft);
+            border-radius: 7px;
+            cursor: pointer;
+            transition: background .15s, color .15s;
+        }
+
+        nav.tabs button.active {
+            background: var(--ink);
+            color: #fff;
+        }
+
+        nav.tabs button:not(.active):hover {
+            background: var(--accent-gold-soft);
+            color: var(--ink);
+        }
+
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .card h2 {
+            font-size: 17px;
+            margin: 0 0 14px;
+            font-weight: 600;
+        }
+
+        .card h3 {
+            font-size: 14px;
+            margin: 0 0 10px;
+            font-weight: 600;
+            color: var(--ink-soft);
+        }
+
+        .grid2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .grid3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media(max-width:640px) {
+
+            .grid2,
+            .grid3 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        label {
+            display: block;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--ink-soft);
+            margin-bottom: 5px;
+        }
+
+        input[type=text],
+        input[type=email],
+        input[type=tel],
+        input[type=date],
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px 11px;
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14.5px;
+            color: var(--ink);
+            background: #FCFCFB;
+            margin-bottom: 12px;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 56px;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: 2px solid var(--accent-gold);
+            outline-offset: 1px;
+        }
+
+        .radio-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .radio-row label.opt {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            padding: 9px;
+            font-weight: 500;
+            font-size: 13.5px;
+            color: var(--ink-soft);
+            cursor: pointer;
+            margin: 0;
+        }
+
+        .radio-row input {
+            width: auto;
+            margin: 0;
+        }
+
+        .radio-row label.opt.checked {
+            border-color: var(--accent-gold);
+            background: var(--accent-gold-soft);
+            color: var(--ink);
+        }
+
+        button.primary {
+            background: var(--ink);
+            color: #fff;
+            border: none;
+            border-radius: 7px;
+            padding: 12px 20px;
+            font-weight: 600;
+            font-size: 14.5px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+        }
+
+        button.primary:hover {
+            background: #0C1B22;
+        }
+
+        button.secondary {
+            background: transparent;
+            color: var(--ink);
+            border: 1px solid var(--border);
+            border-radius: 7px;
+            padding: 11px 18px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+        }
+
+        button.secondary:hover {
+            background: var(--accent-gold-soft);
+            border-color: var(--accent-gold);
+        }
+
+        button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        .qr-result {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px dashed var(--border);
+        }
+
+        .qr-box {
+            background: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .qr-meta {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .qr-meta .name {
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .qr-meta .id {
+            color: var(--ink-soft);
+            font-size: 12.5px;
+            font-family: monospace;
+        }
+
+        /* Check-in */
+        .scan-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        #video {
+            width: 100%;
+            max-width: 340px;
+            border-radius: 8px;
+            background: #000;
+            display: none;
+        }
+
+        .scan-status {
+            font-size: 13px;
+            color: var(--ink-soft);
+            margin-top: 6px;
+        }
+
+        .profile {
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px;
+            margin-top: 14px;
+            background: #FCFCFB;
+        }
+
+        .profile .row {
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 7px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+
+        .profile .row:last-child {
+            border-bottom: none;
+        }
+
+        .profile .row .k {
+            color: var(--ink-soft);
+        }
+
+        .profile .row .v {
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge.checked {
+            background: var(--accent-teal-soft);
+            color: var(--accent-teal);
+        }
+
+        .badge.pending {
+            background: var(--accent-gold-soft);
+            color: var(--accent-gold);
+        }
+
+        .badge.flag {
+            background: var(--accent-rose-soft);
+            color: var(--accent-rose);
+        }
+
+        /* Dashboard */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        @media(max-width:800px) {
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .stat {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px;
+        }
+
+        .stat .num {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 26px;
+            font-weight: 700;
+        }
+
+        .stat .lbl {
+            font-size: 12px;
+            color: var(--ink-soft);
+            margin-top: 2px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+        }
+
+        th {
+            text-align: left;
+            padding: 9px 10px;
+            border-bottom: 2px solid var(--border);
+            color: var(--ink-soft);
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 9px 10px;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        tr:hover td {
+            background: #FAFAF8;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .toolbar input {
+            margin: 0;
+            max-width: 240px;
+        }
+
+        .toolbar select {
+            margin: 0;
+            max-width: 180px;
+        }
+
+        .empty {
+            color: var(--ink-soft);
+            font-size: 14px;
+            padding: 30px 0;
+            text-align: center;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--ink);
+            color: #fff;
+            padding: 11px 18px;
+            border-radius: 8px;
+            font-size: 13.5px;
+            font-weight: 600;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .25s, transform .25s;
+            z-index: 50;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-4px);
+        }
+
+        .stars {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+
+        .stars button {
+            background: none;
+            border: none;
+            font-size: 26px;
+            cursor: pointer;
+            color: var(--border);
+            padding: 0;
+        }
+
+        .stars button.on {
+            color: var(--accent-gold);
+        }
+
+        .fb-item {
+            border-bottom: 1px solid var(--border);
+            padding: 10px 0;
+            font-size: 14px;
+        }
+
+        .fb-item .top {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <header class="top">
+            <div class="eyebrow">DUBAI · ON-SITE OPERATIONS</div>
+            <h1>Speaker Check-In Portal</h1>
+            <p>Register speakers, scan them in at the front desk, and keep the India ops team synced live.</p>
+        </header>
+
+        <nav class="tabs">
+            <button data-view="register" class="active">Register</button>
+            <button data-view="checkin">Check-In</button>
+            <button data-view="dashboard">Dashboard</button>
+            <button data-view="feedback">Feedback</button>
+        </nav>
+
+        <!-- REGISTER -->
+        <div class="view active" id="view-register">
+            <div class="card">
+                <h2>Add a speaker</h2>
+                <div class="grid2">
+                    <div><label>Full name *</label><input type="text" id="r-name" placeholder="e.g. Fatima Al Suwaidi">
+                    </div>
+                    <div><label>Email</label><input type="email" id="r-email" placeholder="name@example.com"></div>
+                </div>
+                <div class="grid2">
+                    <div><label>Phone</label><input type="tel" id="r-phone" placeholder="+971 5..."></div>
+                    <div><label>Session / talk title</label><input type="text" id="r-session"
+                            placeholder="e.g. The Future of Renewable Energy"></div>
+                </div>
+                <div class="grid3">
+                    <div><label>Day</label><input type="text" id="r-day" placeholder="e.g. Day 1 — 14 Oct"></div>
+                    <div><label>Time slot</label><input type="text" id="r-slot" placeholder="e.g. 10:00 – 10:30"></div>
+                    <div><label>Hotel room no.</label><input type="text" id="r-room" placeholder="e.g. 1204"></div>
+                </div>
+                <div class="grid3">
+                    <div><label>Check-in date</label><input type="date" id="r-checkin"></div>
+                    <div><label>Check-out date</label><input type="date" id="r-checkout"></div>
+                    <div><label>No. of nights</label><input type="text" id="r-nights" placeholder="auto or manual">
+                    </div>
+                </div>
+                <div class="grid2">
+                    <div>
+                        <label>Dietary preference</label>
+                        <select id="r-diet">
+                            <option value="No preference">No preference</option>
+                            <option value="Vegetarian">Vegetarian</option>
+                            <option value="Vegan">Vegan</option>
+                            <option value="Halal">Halal</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div><label>Food allergies / restrictions</label><input type="text" id="r-allergy"
+                            placeholder="e.g. Peanuts, shellfish — leave blank if none"></div>
+                </div>
+                <label>Interested in the speaker tour?</label>
+                <div class="radio-row" id="r-tour-row">
+                    <label class="opt checked"><input type="radio" name="r-tour" value="yes" checked> Yes</label>
+                    <label class="opt"><input type="radio" name="r-tour" value="no"> No</label>
+                    <label class="opt"><input type="radio" name="r-tour" value="undecided"> Undecided</label>
+                </div>
+                <label>Hotel room concerns / special requests</label>
+                <textarea id="r-concerns"
+                    placeholder="e.g. High floor requested, accessibility needs, late arrival..."></textarea>
+                <button class="primary" id="r-submit">Add speaker &amp; generate QR badge</button>
+
+                <div class="qr-result" id="r-qr-result" style="display:none;">
+                    <div class="qr-box" id="r-qr-box"></div>
+                    <div class="qr-meta">
+                        <div class="name" id="r-qr-name"></div>
+                        <div class="id" id="r-qr-id"></div>
+                        <p style="font-size:13px;color:var(--ink-soft);margin:8px 0 10px;">Send this QR code to the
+                            speaker ahead of arrival, or print it for their badge/lanyard. Scanning it at the desk pulls
+                            up their full profile instantly.</p>
+                        <button class="secondary" id="r-qr-download">Download QR (PNG)</button>
+                        <div id="r-sync-msg"
+                            style="display:none;font-size:12.5px;color:var(--accent-rose);margin-top:8px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CHECK-IN -->
+        <div class="view" id="view-checkin">
+            <div class="card">
+                <h2>Front desk check-in</h2>
+                <div class="scan-row">
+                    <button class="primary" id="ci-start-scan">Scan QR with camera</button>
+                    <button class="secondary" id="ci-stop-scan" style="display:none;">Stop camera</button>
+                    <input type="text" id="ci-manual" placeholder="Or type speaker name / badge ID and press Enter"
+                        style="flex:1;min-width:220px;margin:0;">
+                </div>
+                <video id="video" playsinline autoplay muted></video>
+                <canvas id="canvas" style="display:none;"></canvas>
+                <div class="scan-status" id="ci-status"></div>
+                <div id="ci-suggestions"></div>
+                <div id="ci-profile"></div>
+            </div>
+        </div>
+
+        <!-- DASHBOARD -->
+        <div class="view" id="view-dashboard">
+            <div class="stats" id="dash-stats"></div>
+            <div class="card">
+                <h2>All speakers <span style="font-weight:400;color:var(--ink-soft);font-size:13px;">— live, shared with
+                        India ops</span></h2>
+                <div class="toolbar">
+                    <input type="text" id="dash-search" placeholder="Search name, session, room...">
+                    <select id="dash-filter">
+                        <option value="all">All statuses</option>
+                        <option value="checked">Checked in</option>
+                        <option value="pending">Not yet arrived</option>
+                        <option value="flag">Has allergy / concern</option>
+                        <option value="tour">Wants speaker tour</option>
+                    </select>
+                    <button class="secondary" id="dash-export">Export CSV</button>
+                    <button class="secondary" id="dash-refresh">Refresh</button>
+                </div>
+                <div class="table-wrap">
+                    <table id="dash-table">
+                        <thead></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- FEEDBACK -->
+        <div class="view" id="view-feedback">
+            <div class="card">
+                <h2>Log feedback</h2>
+                <div class="grid2">
+                    <div><label>Speaker / attendee name</label><input type="text" id="fb-name" placeholder="Optional">
+                    </div>
+                    <div><label>Category</label>
+                        <select id="fb-cat">
+                            <option>Overall event</option>
+                            <option>Hotel & accommodation</option>
+                            <option>Food & catering</option>
+                            <option>Session logistics</option>
+                            <option>Speaker tour</option>
+                        </select>
+                    </div>
+                </div>
+                <label>Rating</label>
+                <div class="stars" id="fb-stars">
+                    <button data-v="1">★</button><button data-v="2">★</button><button data-v="3">★</button><button
+                        data-v="4">★</button><button data-v="5">★</button>
+                </div>
+                <label>Comment</label>
+                <textarea id="fb-comment" placeholder="What went well? Anything to fix for next time?"></textarea>
+                <button class="primary" id="fb-submit">Save feedback</button>
+            </div>
+            <div class="card">
+                <h2>Feedback log <span id="fb-avg" style="font-weight:400;color:var(--ink-soft);font-size:13px;"></span>
+                </h2>
+                <div id="fb-list">
+                    <div class="empty">No feedback logged yet.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const STORE_SPEAKERS = 'speakers-v1';
+        const STORE_FEEDBACK = 'feedback-v1';
+
+        function uid() { return Math.random().toString(36).slice(2, 6).toUpperCase() + Date.now().toString(36).slice(-4).toUpperCase(); }
+        function toast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg; t.classList.add('show');
+            clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2200);
+        }
+
+        async function loadSpeakers() {
+            try { const r = await window.storage.get(STORE_SPEAKERS, true); return r ? JSON.parse(r.value) : []; }
+            catch (e) { return []; }
+        }
+        async function saveSpeakers(list) {
+            try { await window.storage.set(STORE_SPEAKERS, JSON.stringify(list), true); return true; }
+            catch (e) { console.error(e); toast('Sync error — check connection and retry.'); return false; }
+        }
+        async function loadFeedback() {
+            try { const r = await window.storage.get(STORE_FEEDBACK, true); return r ? JSON.parse(r.value) : []; }
+            catch (e) { return []; }
+        }
+        async function saveFeedback(list) {
+            try { await window.storage.set(STORE_FEEDBACK, JSON.stringify(list), true); return true; }
+            catch (e) { console.error(e); toast('Sync error — check connection and retry.'); return false; }
+        }
+
+        /* ---------- Tabs ---------- */
+        document.querySelectorAll('nav.tabs button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById('view-' + btn.dataset.view).classList.add('active');
+                if (btn.dataset.view === 'dashboard') renderDashboard();
+                if (btn.dataset.view === 'feedback') renderFeedbackList();
+                if (btn.dataset.view !== 'checkin') stopScan();
+            });
+        });
+
+        /* ---------- Register ---------- */
+        document.querySelectorAll('#r-tour-row .opt').forEach(l => {
+            l.addEventListener('click', () => {
+                document.querySelectorAll('#r-tour-row .opt').forEach(x => x.classList.remove('checked'));
+                l.classList.add('checked');
+            });
+        });
+
+        document.getElementById('r-submit').addEventListener('click', async () => {
+            const name = document.getElementById('r-name').value.trim();
+            if (!name) { toast('Speaker name is required.'); return; }
+            const btn = document.getElementById('r-submit');
+            btn.disabled = true; btn.textContent = 'Saving...';
+
+            const id = uid();
+            const rec = {
+                id,
+                name,
+                email: document.getElementById('r-email').value.trim(),
+                phone: document.getElementById('r-phone').value.trim(),
+                sessionTitle: document.getElementById('r-session').value.trim(),
+                day: document.getElementById('r-day').value.trim(),
+                timeSlot: document.getElementById('r-slot').value.trim(),
+                room: document.getElementById('r-room').value.trim(),
+                checkinDate: document.getElementById('r-checkin').value,
+                checkoutDate: document.getElementById('r-checkout').value,
+                nights: document.getElementById('r-nights').value.trim(),
+                diet: document.getElementById('r-diet').value,
+                allergy: document.getElementById('r-allergy').value.trim(),
+                tour: document.querySelector('#r-tour-row input:checked').value,
+                concerns: document.getElementById('r-concerns').value.trim(),
+                checkedIn: false,
+                checkedInAt: null,
+                createdAt: Date.now()
+            };
+
+            // Show the QR badge immediately — it doesn't depend on sync succeeding.
+            document.getElementById('r-qr-result').style.display = 'flex';
+            document.getElementById('r-qr-name').textContent = name;
+            document.getElementById('r-qr-id').textContent = 'Badge ID: ' + id;
+            const box = document.getElementById('r-qr-box');
+            box.innerHTML = '';
+            try {
+                new QRCode(box, { text: id, width: 130, height: 130 });
+            } catch (err) {
+                console.error('QR generation failed:', err);
+                box.innerHTML = '<div style="font-size:12px;color:var(--accent-rose);max-width:150px;">QR library failed to load. Badge ID above still works for manual check-in.</div>';
+            }
+
+            // Now try to sync to shared storage, with a visible retry if it fails.
+            let list = await loadSpeakers();
+            list.push(rec);
+            let ok = await saveSpeakers(list);
+            btn.disabled = false; btn.textContent = 'Add speaker & generate QR badge';
+
+            const syncMsg = document.getElementById('r-sync-msg');
+            if (ok) {
+                syncMsg.style.display = 'none';
+            } else {
+                syncMsg.style.display = 'block';
+                syncMsg.innerHTML = '⚠ Saved locally but did not sync to the shared dashboard yet. <button class="secondary" id="r-retry-sync" style="padding:4px 10px;font-size:12px;margin-left:4px;">Retry sync</button>';
+                document.getElementById('r-retry-sync').addEventListener('click', async () => {
+                    const freshList = await loadSpeakers();
+                    if (!freshList.find(x => x.id === id)) freshList.push(rec);
+                    const retryOk = await saveSpeakers(freshList);
+                    if (retryOk) { syncMsg.style.display = 'none'; toast('Synced.'); }
+                    else toast('Still failing to sync — check your connection.');
+                });
+            }
+
+            ['r-name', 'r-email', 'r-phone', 'r-session', 'r-day', 'r-slot', 'r-room', 'r-checkin', 'r-checkout', 'r-nights', 'r-allergy', 'r-concerns'].forEach(x => document.getElementById(x).value = '');
+            document.getElementById('r-diet').value = 'No preference';
+            document.querySelectorAll('#r-tour-row .opt').forEach(x => x.classList.remove('checked'));
+            document.querySelector('#r-tour-row .opt').classList.add('checked');
+            document.querySelector('#r-tour-row input[value="yes"]').checked = true;
+            toast(ok ? 'Speaker added — QR badge ready.' : 'QR badge ready — sync pending.');
+        });
+
+        document.getElementById('r-qr-download').addEventListener('click', () => {
+            const img = document.querySelector('#r-qr-box img') || document.querySelector('#r-qr-box canvas');
+            if (!img) return;
+            const link = document.createElement('a');
+            link.download = 'badge-' + document.getElementById('r-qr-id').textContent.replace('Badge ID: ', '') + '.png';
+            link.href = img.tagName === 'CANVAS' ? img.toDataURL() : img.src;
+            link.click();
+        });
+
+        /* ---------- Check-in ---------- */
+        let scanning = false, videoStream = null, rafId = null;
+
+        document.getElementById('ci-start-scan').addEventListener('click', startScan);
+        document.getElementById('ci-stop-scan').addEventListener('click', stopScan);
+
+        async function startScan() {
+            const video = document.getElementById('video');
+            try {
+                videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            } catch (e) {
+                document.getElementById('ci-status').textContent = 'Camera unavailable (' + e.name + '). Use the text field to search by name or badge ID instead.';
+                return;
+            }
+            video.srcObject = videoStream;
+            video.style.display = 'block';
+            document.getElementById('ci-start-scan').style.display = 'none';
+            document.getElementById('ci-stop-scan').style.display = 'inline-block';
+            scanning = true;
+            document.getElementById('ci-status').textContent = "Point the camera at the speaker's QR badge...";
+            requestAnimationFrame(scanLoop);
+        }
+        function stopScan() {
+            scanning = false;
+            if (rafId) cancelAnimationFrame(rafId);
+            if (videoStream) { videoStream.getTracks().forEach(t => t.stop()); videoStream = null; }
+            document.getElementById('video').style.display = 'none';
+            document.getElementById('ci-start-scan').style.display = 'inline-block';
+            document.getElementById('ci-stop-scan').style.display = 'none';
+        }
+        function scanLoop() {
+            if (!scanning) return;
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imgData.data, imgData.width, imgData.height);
+                if (code && code.data) {
+                    document.getElementById('ci-status').textContent = 'Badge detected: ' + code.data;
+                    stopScan();
+                    lookupSpeaker(code.data.trim());
+                    return;
+                }
+            }
+            rafId = requestAnimationFrame(scanLoop);
+        }
+
+        document.getElementById('ci-manual').addEventListener('keydown', async (e) => {
+            if (e.key !== 'Enter') return;
+            const q = e.target.value.trim();
+            if (!q) return;
+            const list = await loadSpeakers();
+            const exact = list.find(s => s.id.toLowerCase() === q.toLowerCase());
+            if (exact) { showProfile(exact); document.getElementById('ci-suggestions').innerHTML = ''; return; }
+            const matches = list.filter(s => s.name.toLowerCase().includes(q.toLowerCase()));
+            if (matches.length === 1) { showProfile(matches[0]); document.getElementById('ci-suggestions').innerHTML = ''; }
+            else if (matches.length > 1) {
+                document.getElementById('ci-suggestions').innerHTML = '<div style="margin:10px 0;font-size:13px;color:var(--ink-soft);">' + matches.length + ' matches — tap one:</div>' +
+                    matches.map(m => `<button class="secondary" style="margin:3px 4px 3px 0;" onclick='window.__pick("${m.id}")'>${m.name}</button>`).join('');
+            } else {
+                document.getElementById('ci-suggestions').innerHTML = '';
+                document.getElementById('ci-profile').innerHTML = '<div class="empty">No speaker found for "' + q + '". Check spelling or register them first.</div>';
+            }
+        });
+        window.__pick = async (id) => {
+            const list = await loadSpeakers();
+            const s = list.find(x => x.id === id);
+            if (s) showProfile(s);
+            document.getElementById('ci-suggestions').innerHTML = '';
+        };
+
+        async function lookupSpeaker(id) {
+            const list = await loadSpeakers();
+            const s = list.find(x => x.id.toLowerCase() === id.toLowerCase());
+            if (s) showProfile(s);
+            else document.getElementById('ci-profile').innerHTML = '<div class="empty">No speaker matches badge ID "' + id + '". They may not be registered yet.</div>';
+        }
+
+        function showProfile(s) {
+            const el = document.getElementById('ci-profile');
+            const statusBadge = s.checkedIn ? '<span class="badge checked">Checked in</span>' : '<span class="badge pending">Not yet arrived</span>';
+            const flag = s.allergy || s.concerns ? '<span class="badge flag" style="margin-left:6px;">Needs attention</span>' : '';
+            el.innerHTML = `
+    <div class="profile">
+      <div class="row"><div class="k">Name</div><div class="v">${esc(s.name)} ${statusBadge}${flag}</div></div>
+      <div class="row"><div class="k">Session</div><div class="v">${esc(s.sessionTitle) || '—'}</div></div>
+      <div class="row"><div class="k">Day / time slot</div><div class="v">${esc(s.day) || '—'} · ${esc(s.timeSlot) || '—'}</div></div>
+      <div class="row"><div class="k">Hotel room</div><div class="v">${esc(s.room) || '—'}</div></div>
+      <div class="row"><div class="k">Nights staying</div><div class="v">${esc(s.checkinDate) || '—'} → ${esc(s.checkoutDate) || '—'} (${esc(s.nights) || '—'})</div></div>
+      <div class="row"><div class="k">Dietary</div><div class="v">${esc(s.diet)}</div></div>
+      <div class="row"><div class="k">Allergies</div><div class="v">${esc(s.allergy) || 'None reported'}</div></div>
+      <div class="row"><div class="k">Speaker tour</div><div class="v">${esc(s.tour)}</div></div>
+      <div class="row"><div class="k">Room concerns</div><div class="v">${esc(s.concerns) || 'None'}</div></div>
+      <div class="row"><div class="k">Contact</div><div class="v">${esc(s.email) || '—'} ${s.phone ? ('· ' + esc(s.phone)) : ''}</div></div>
+      ${s.checkedIn ? `<div class="row"><div class="k">Checked in at</div><div class="v">${new Date(s.checkedInAt).toLocaleString()}</div></div>` : ''}
+    </div>
+    <label style="margin-top:14px;">Update room concerns / allergy notes on the spot (optional)</label>
+    <textarea id="ci-edit-notes" placeholder="Add anything the speaker mentions at the desk...">${esc(s.concerns)}</textarea>
+    <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;">
+      <button class="primary" id="ci-confirm" ${s.checkedIn ? 'disabled' : ''}>${s.checkedIn ? 'Already checked in' : 'Confirm check-in'}</button>
+      <button class="secondary" id="ci-save-notes">Save notes</button>
+    </div>
+  `;
+            document.getElementById('ci-confirm')?.addEventListener('click', async () => {
+                const list = await loadSpeakers();
+                const idx = list.findIndex(x => x.id === s.id);
+                if (idx < 0) return;
+                list[idx].checkedIn = true;
+                list[idx].checkedInAt = Date.now();
+                list[idx].concerns = document.getElementById('ci-edit-notes').value.trim();
+                await saveSpeakers(list);
+                toast(s.name + ' checked in ✓');
+                showProfile(list[idx]);
+            });
+            document.getElementById('ci-save-notes')?.addEventListener('click', async () => {
+                const list = await loadSpeakers();
+                const idx = list.findIndex(x => x.id === s.id);
+                if (idx < 0) return;
+                list[idx].concerns = document.getElementById('ci-edit-notes').value.trim();
+                await saveSpeakers(list);
+                toast('Notes saved.');
+                showProfile(list[idx]);
+            });
+        }
+        function esc(str) { return (str === undefined || str === null || str === '') ? '' : String(str).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+        /* ---------- Dashboard ---------- */
+        let dashCache = [];
+        async function renderDashboard() {
+            dashCache = await loadSpeakers();
+            renderStats(dashCache);
+            renderTable();
+        }
+        function renderStats(list) {
+            const total = list.length;
+            const checked = list.filter(s => s.checkedIn).length;
+            const dietary = list.filter(s => s.allergy || (s.diet && s.diet !== 'No preference')).length;
+            const tour = list.filter(s => s.tour === 'yes').length;
+            const concerns = list.filter(s => s.concerns).length;
+            const stats = [
+                ['Registered', total], ['Checked in', checked], ['Awaiting arrival', total - checked],
+                ['Dietary needs', dietary], ['Tour interest', tour]
+            ];
+            document.getElementById('dash-stats').innerHTML = stats.map(([lbl, num]) =>
+                `<div class="stat"><div class="num">${num}</div><div class="lbl">${lbl}</div></div>`).join('');
+        }
+        function renderTable() {
+            const search = document.getElementById('dash-search').value.toLowerCase();
+            const filter = document.getElementById('dash-filter').value;
+            let rows = dashCache.filter(s => {
+                if (search && !(s.name.toLowerCase().includes(search) || (s.sessionTitle || '').toLowerCase().includes(search) || (s.room || '').toLowerCase().includes(search))) return false;
+                if (filter === 'checked' && !s.checkedIn) return false;
+                if (filter === 'pending' && s.checkedIn) return false;
+                if (filter === 'flag' && !(s.allergy || s.concerns)) return false;
+                if (filter === 'tour' && s.tour !== 'yes') return false;
+                return true;
+            });
+            const thead = document.querySelector('#dash-table thead');
+            const tbody = document.querySelector('#dash-table tbody');
+            thead.innerHTML = '<tr><th>Name</th><th>Session</th><th>Day / Slot</th><th>Room</th><th>Nights</th><th>Dietary</th><th>Tour</th><th>Concerns</th><th>Status</th></tr>';
+            if (rows.length === 0) { tbody.innerHTML = '<tr><td colspan="9" class="empty">No speakers match.</td></tr>'; return; }
+            tbody.innerHTML = rows.map(s => `
+    <tr>
+      <td><strong>${esc(s.name)}</strong></td>
+      <td>${esc(s.sessionTitle) || '—'}</td>
+      <td>${esc(s.day) || '—'} ${esc(s.timeSlot) ? ('· ' + esc(s.timeSlot)) : ''}</td>
+      <td>${esc(s.room) || '—'}</td>
+      <td>${esc(s.nights) || '—'}</td>
+      <td>${esc(s.diet)}${s.allergy ? (' ⚠ ' + esc(s.allergy)) : ''}</td>
+      <td>${esc(s.tour)}</td>
+      <td>${esc(s.concerns) || '—'}</td>
+      <td>${s.checkedIn ? '<span class="badge checked">Checked in</span>' : '<span class="badge pending">Pending</span>'}</td>
+    </tr>`).join('');
+        }
+        document.getElementById('dash-search').addEventListener('input', renderTable);
+        document.getElementById('dash-filter').addEventListener('change', renderTable);
+        document.getElementById('dash-refresh').addEventListener('click', renderDashboard);
+        document.getElementById('dash-export').addEventListener('click', () => {
+            const cols = ['name', 'sessionTitle', 'day', 'timeSlot', 'room', 'checkinDate', 'checkoutDate', 'nights', 'diet', 'allergy', 'tour', 'concerns', 'checkedIn', 'checkedInAt', 'email', 'phone'];
+            const csv = [cols.join(',')].concat(dashCache.map(s => cols.map(c => {
+                let v = s[c]; if (c === 'checkedInAt' && v) v = new Date(v).toLocaleString();
+                v = (v === undefined || v === null) ? '' : String(v).replace(/"/g, '""');
+                return '"' + v + '"';
+            }).join(','))).join('\\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'speakers-export.csv';
+            link.click();
+        });
+
+        /* ---------- Feedback ---------- */
+        let fbRating = 0;
+        document.querySelectorAll('#fb-stars button').forEach(b => {
+            b.addEventListener('click', () => {
+                fbRating = parseInt(b.dataset.v);
+                document.querySelectorAll('#fb-stars button').forEach(x => x.classList.toggle('on', parseInt(x.dataset.v) <= fbRating));
+            });
+        });
+        document.getElementById('fb-submit').addEventListener('click', async () => {
+            if (fbRating === 0) { toast('Pick a star rating first.'); return; }
+            const entry = {
+                id: uid(),
+                name: document.getElementById('fb-name').value.trim() || 'Anonymous',
+                category: document.getElementById('fb-cat').value,
+                rating: fbRating,
+                comment: document.getElementById('fb-comment').value.trim(),
+                ts: Date.now()
+            };
+            const list = await loadFeedback();
+            list.push(entry);
+            await saveFeedback(list);
+            document.getElementById('fb-name').value = ''; document.getElementById('fb-comment').value = '';
+            fbRating = 0; document.querySelectorAll('#fb-stars button').forEach(x => x.classList.remove('on'));
+            toast('Feedback saved.');
+            renderFeedbackList();
+        });
+        async function renderFeedbackList() {
+            const list = await loadFeedback();
+            const wrap = document.getElementById('fb-list');
+            if (list.length === 0) { wrap.innerHTML = '<div class="empty">No feedback logged yet.</div>'; document.getElementById('fb-avg').textContent = ''; return; }
+            const avg = (list.reduce((a, b) => a + b.rating, 0) / list.length).toFixed(1);
+            document.getElementById('fb-avg').textContent = '— average ' + avg + ' / 5 across ' + list.length + ' entries';
+            wrap.innerHTML = list.slice().reverse().map(f => `
+    <div class="fb-item">
+      <div class="top"><span>${esc(f.name)} · ${esc(f.category)}</span><span>${'★'.repeat(f.rating)}${'☆'.repeat(5 - f.rating)}</span></div>
+      ${f.comment ? ('<div style="color:var(--ink-soft);margin-top:3px;">' + esc(f.comment) + '</div>') : ''}
+      <div style="color:var(--ink-soft);font-size:12px;margin-top:2px;">${new Date(f.ts).toLocaleString()}</div>
+    </div>`).join('');
+        }
+
+        /* init */
+        renderDashboard();
+    </script>
+</body>
+
+</html>

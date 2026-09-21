@@ -18,15 +18,21 @@ create table if not exists speakers (
   concerns text,
   checked_in boolean default false,
   checked_in_at timestamptz,
+  checked_out boolean default false,
+  checked_out_at timestamptz,
+  checkout_notes text,
   qr_url text,                         -- public URL of the stored QR badge image
   id_card_url text,                    -- public URL of the full official ID Card JPEG image
   password_hash text,
   created_at timestamptz default now()
 );
 
--- In case the table already exists, add the column if missing:
+-- In case the table already exists, add the columns if missing:
 alter table speakers add column if not exists id_card_url text;
 alter table speakers add column if not exists password_hash text;
+alter table speakers add column if not exists checked_out boolean default false;
+alter table speakers add column if not exists checked_out_at timestamptz;
+alter table speakers add column if not exists checkout_notes text;
 
 create table if not exists feedback (
   id text primary key,

@@ -4,7 +4,8 @@ import {
     CheckCircle2, Clock, Calendar, MapPin, Hotel, Utensils, 
     QrCode as QrIcon, ChevronDown, ChevronUp, Sparkles, Send,
     Home, UserCheck, X, Users, Eye, ArrowRight, ShieldCheck,
-    SlidersHorizontal, Check, AlertTriangle, Smartphone, ListFilter
+    SlidersHorizontal, Check, AlertTriangle, Smartphone, ListFilter,
+    LogOut, MessageSquare, RotateCcw
 } from "lucide-react";
 import jsQR from "jsqr";
 import QRCode from "qrcode";
@@ -12,7 +13,18 @@ import { inputCls } from "../components/common/UIAtoms";
 import ProfileCard from "../components/ProfileCard";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
 
-export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, isSpeaker = false, currentSpeaker = null, forcedSubTab = null }) {
+export default function CheckinPage({ 
+    speakers, 
+    onConfirm, 
+    onCheckout,
+    onUndoCheckout,
+    onSaveNotes, 
+    toast, 
+    isSpeaker = false, 
+    currentSpeaker = null, 
+    forcedSubTab = null,
+    onNavigateTab = null
+}) {
     // Top subnav bar state: "home" | "qr"
     const [activeSubTabState, setActiveSubTabState] = useState("home");
     const activeSubTab = forcedSubTab || activeSubTabState;
@@ -42,6 +54,11 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
 
     const [qrDataUrl, setQrDataUrl] = useState(mySpeaker?.qrUrl || "");
     const [noteInput, setNoteInput] = useState(mySpeaker?.concerns || "");
+
+    const isMySpeakerCheckedIn = Boolean(mySpeaker?.checkedIn || mySpeaker?.checked_in);
+    const isMySpeakerCheckedOut = Boolean(mySpeaker?.checkedOut || mySpeaker?.checked_out);
+    const mySpeakerCheckedInAt = mySpeaker?.checkedInAt || mySpeaker?.checked_in_at;
+    const mySpeakerCheckedOutAt = mySpeaker?.checkedOutAt || mySpeaker?.checked_out_at;
 
     useEffect(() => {
         if (mySpeaker?.id) {
@@ -261,17 +278,20 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                 (s.room && s.room.toLowerCase().includes(q));
 
             const isChecked = Boolean(s.checkedIn || s.checked_in);
+            const isDeparted = Boolean(s.checkedOut || s.checked_out);
             const matchesStatus = 
                 filterStatus === "all" ? true :
-                filterStatus === "checkedin" ? isChecked :
+                filterStatus === "onsite" || filterStatus === "checkedin" ? (isChecked && !isDeparted) :
+                filterStatus === "checkedout" ? isDeparted :
                 filterStatus === "pending" ? !isChecked : true;
 
             return matchesQuery && matchesStatus;
         });
     }, [speakers, query, filterStatus]);
 
-    const checkedInCount = (speakers || []).filter(s => !!(s.checkedIn || s.checked_in)).length;
-    const pendingCount = (speakers || []).length - checkedInCount;
+    const checkedOutCount = (speakers || []).filter(s => !!(s.checkedOut || s.checked_out)).length;
+    const checkedInCount = (speakers || []).filter(s => !!(s.checkedIn || s.checked_in) && !(s.checkedOut || s.checked_out)).length;
+    const pendingCount = (speakers || []).filter(s => !(s.checkedIn || s.checked_in)).length;
 
     return (
         <div className="space-y-4 sm:space-y-6">
@@ -358,14 +378,24 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                                 </div>
 
                                 <div className={`inline-flex items-center gap-2 px-3 py-1.5 sm:px-3.5 rounded-full text-xs font-semibold self-start sm:self-center shrink-0 ${
-                                    mySpeaker.checkedIn || mySpeaker.checked_in
+                                    isMySpeakerCheckedOut
+                                        ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                        : isMySpeakerCheckedIn
                                         ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                         : "bg-amber-50 text-amber-700 border border-amber-200"
                                 }`}>
                                     <span className={`w-2 h-2 rounded-full ${
-                                        mySpeaker.checkedIn || mySpeaker.checked_in ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
+                                        isMySpeakerCheckedOut
+                                            ? "bg-purple-500"
+                                            : isMySpeakerCheckedIn
+                                            ? "bg-emerald-500 animate-pulse"
+                                            : "bg-amber-500"
                                     }`} />
-                                    {mySpeaker.checkedIn || mySpeaker.checked_in ? "Officially Checked In" : "Awaiting Arrival Check-In"}
+                                    {isMySpeakerCheckedOut 
+                                        ? "Officially Checked Out" 
+                                        : isMySpeakerCheckedIn 
+                                        ? "Officially Checked In · On-Site" 
+                                        : "Awaiting Arrival Check-In"}
                                 </div>
                             </div>
 
@@ -433,20 +463,125 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                                         </div>
                                     </div>
 
-                                    {/* Self Check-in Action / Status Message */}
+                                    {/* Self Check-in / Check-out Action Card */}
                                     <div className="pt-2">
-                                        {mySpeaker.checkedIn || mySpeaker.checked_in ? (
-                                            <div className="p-3.5 sm:p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex items-start sm:items-center gap-3">
-                                                <CheckCircle2 size={22} className="text-emerald-600 shrink-0 mt-0.5 sm:mt-0" />
-                                                <div>
-                                                    <div className="text-xs sm:text-sm font-bold text-emerald-900">
-                                                        Welcome, you are checked in!
+                                        {isMySpeakerCheckedOut ? (
+                                            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-purple-50 via-indigo-50/60 to-purple-100/40 border border-purple-200/80 shadow-xs space-y-3">
+                                                <div className="flex items-start gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-purple-600/20">
+                                                        <CheckCircle2 size={22} />
                                                     </div>
-                                                    <div className="text-[11px] sm:text-xs text-emerald-700 mt-0.5 leading-relaxed">
-                                                        {mySpeaker.checkedInAt || mySpeaker.checked_in_at
-                                                            ? `Recorded on ${new Date(mySpeaker.checkedInAt || mySpeaker.checked_in_at).toLocaleString()}`
-                                                            : "Your presence has been confirmed with on-site event operations."}
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs sm:text-sm font-bold text-purple-950">
+                                                                You are officially checked out
+                                                            </span>
+                                                            <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-200/60 px-2 py-0.5 rounded-full">
+                                                                Departed
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-[11px] sm:text-xs text-purple-800 mt-0.5 leading-relaxed">
+                                                            {mySpeakerCheckedOutAt 
+                                                                ? `Departure recorded on ${new Date(mySpeakerCheckedOutAt).toLocaleString()}`
+                                                                : "Departure recorded with conference operations."}
+                                                        </div>
+                                                        {mySpeaker?.checkoutNotes && (
+                                                            <div className="mt-2 text-xs bg-white/90 p-3 rounded-xl border border-purple-200 text-purple-950 shadow-xs">
+                                                                <div className="flex items-center gap-1.5 font-semibold text-[10px] uppercase tracking-wider text-purple-700 mb-1">
+                                                                    <Sparkles size={12} className="text-amber-500" />
+                                                                    <span>Your Event Testimonial:</span>
+                                                                </div>
+                                                                <p className="italic text-slate-700 leading-relaxed">
+                                                                    "{mySpeaker.checkoutNotes}"
+                                                                </p>
+                                                            </div>
+                                                        )}
                                                     </div>
+                                                </div>
+
+                                                <p className="text-xs text-slate-600 leading-relaxed pt-1 border-t border-purple-200/60">
+                                                    Thank you for your valuable session and insights at WL-WH Dubai 2026. We hope you had an extraordinary conference experience!
+                                                </p>
+
+                                                <div className="flex flex-wrap items-center gap-2.5 pt-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (onNavigateTab) onNavigateTab("checkout");
+                                                            else window.location.hash = "checkout";
+                                                        }}
+                                                        className="px-3.5 py-2 text-xs font-semibold text-purple-800 hover:bg-purple-100 rounded-xl border border-purple-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+                                                    >
+                                                        <LogOut size={13} />
+                                                        <span>View Departure Reflections</span>
+                                                    </button>
+                                                    {onNavigateTab && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => onNavigateTab("feedback")}
+                                                            className="px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold rounded-xl shadow-xs transition-colors flex items-center gap-1.5 touch-manipulation cursor-pointer"
+                                                        >
+                                                            <MessageSquare size={14} />
+                                                            <span>Share Speaker Feedback</span>
+                                                        </button>
+                                                    )}
+                                                    {onUndoCheckout && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => onUndoCheckout(mySpeaker.id)}
+                                                            className="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-white/80 rounded-xl border border-slate-200 transition-colors flex items-center gap-1 cursor-pointer"
+                                                            title="Re-open on-site check-in if you are still at the venue"
+                                                        >
+                                                            <RotateCcw size={13} />
+                                                            <span>Undo Check-Out</span>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ) : isMySpeakerCheckedIn ? (
+                                            <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50 border border-emerald-200/90 shadow-xs space-y-3">
+                                                <div className="flex items-start gap-3">
+                                                    <CheckCircle2 size={22} className="text-emerald-600 shrink-0 mt-0.5" />
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="text-xs sm:text-sm font-bold text-emerald-950">
+                                                            Welcome, you are checked in!
+                                                        </div>
+                                                        <div className="text-[11px] sm:text-xs text-emerald-800 mt-0.5 leading-relaxed">
+                                                            {mySpeakerCheckedInAt
+                                                                ? `Arrival recorded on ${new Date(mySpeakerCheckedInAt).toLocaleString()} · Currently On-Site`
+                                                                : "Your presence has been confirmed on-site at the venue."}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Check-Out trigger for the speaker */}
+                                                <div className="pt-3 border-t border-emerald-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white/70 p-3 rounded-xl">
+                                                    <div>
+                                                        <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                                            <LogOut size={14} className="text-purple-600" />
+                                                            <span>Departing the conference?</span>
+                                                        </div>
+                                                        <div className="text-[11px] text-slate-500 mt-0.5">
+                                                            Click here when concluding your session or leaving the venue to log your departure.
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+                                                            if (document.documentElement) document.documentElement.scrollTop = 0;
+                                                            if (document.body) document.body.scrollTop = 0;
+                                                            if (onNavigateTab) {
+                                                                onNavigateTab("checkout");
+                                                            } else {
+                                                                window.location.hash = "checkout";
+                                                            }
+                                                        }}
+                                                        className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 active:scale-[0.98] text-white text-xs sm:text-sm font-bold rounded-xl shadow-md shadow-purple-500/20 transition-all flex items-center justify-center gap-2 min-h-[42px] touch-manipulation shrink-0 cursor-pointer"
+                                                    >
+                                                        <LogOut size={16} />
+                                                        <span>Check Out of Event</span>
+                                                    </button>
                                                 </div>
                                             </div>
                                         ) : (
@@ -516,10 +651,10 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                     {!isSpeaker && (
                         <div className="space-y-4 sm:space-y-5">
                             {/* Summary metrics header */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                                 <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
                                     <div className="flex items-center justify-between text-slate-500 mb-1.5">
-                                        <span className="text-xs font-bold uppercase tracking-wider">Total Speakers</span>
+                                        <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Total Speakers</span>
                                         <Users size={18} className="text-slate-400" />
                                     </div>
                                     <div className="text-2xl sm:text-3xl font-black text-slate-900">{(speakers || []).length}</div>
@@ -528,16 +663,25 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
 
                                 <div className="p-4 sm:p-5 rounded-2xl bg-emerald-50/60 border border-emerald-200/80 shadow-xs">
                                     <div className="flex items-center justify-between text-emerald-800 mb-1.5">
-                                        <span className="text-xs font-bold uppercase tracking-wider">Checked In</span>
+                                        <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">On-Site Now</span>
                                         <CheckCircle2 size={18} className="text-emerald-600" />
                                     </div>
                                     <div className="text-2xl sm:text-3xl font-black text-emerald-950">{checkedInCount}</div>
-                                    <div className="text-[11px] text-emerald-700 mt-1">Confirmed on-site at venue</div>
+                                    <div className="text-[11px] text-emerald-700 mt-1">Currently at venue</div>
+                                </div>
+
+                                <div className="p-4 sm:p-5 rounded-2xl bg-purple-50/60 border border-purple-200/80 shadow-xs">
+                                    <div className="flex items-center justify-between text-purple-800 mb-1.5">
+                                        <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Checked Out</span>
+                                        <LogOut size={18} className="text-purple-600" />
+                                    </div>
+                                    <div className="text-2xl sm:text-3xl font-black text-purple-950">{checkedOutCount}</div>
+                                    <div className="text-[11px] text-purple-700 mt-1">Departed conference</div>
                                 </div>
 
                                 <div className="p-4 sm:p-5 rounded-2xl bg-amber-50/60 border border-amber-200/80 shadow-xs">
                                     <div className="flex items-center justify-between text-amber-800 mb-1.5">
-                                        <span className="text-xs font-bold uppercase tracking-wider">Pending Arrival</span>
+                                        <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider">Pending Arrival</span>
                                         <Clock size={18} className="text-amber-600" />
                                     </div>
                                     <div className="text-2xl sm:text-3xl font-black text-amber-950">{pendingCount}</div>
@@ -753,6 +897,8 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                                     <ProfileCard 
                                         speaker={selected} 
                                         onConfirm={onConfirm} 
+                                        onCheckout={onCheckout}
+                                        onUndoCheckout={onUndoCheckout}
                                         onSaveNotes={onSaveNotes} 
                                         isSpeaker={isSpeaker} 
                                         currentSpeaker={currentSpeaker} 
@@ -779,12 +925,10 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
 
                             {/* Search input field (prevents mobile zoom with text-base sm:text-sm) */}
                             <div className="relative mb-3">
-                                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-                                    <Search size={16} />
-                                </div>
+                                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                                 <input
-                                    className={`${inputCls} !pl-10 !pr-20 min-h-[46px] mb-0 text-base sm:text-sm`}
-                                    placeholder="Search speaker name or badge ID..."
+                                    className={`${inputCls} !pl-10 !pr-20 mb-0 !bg-white shadow-xs rounded-xl focus:!ring-amber-500 text-base sm:text-sm`}
+                                    placeholder="Search by name, session title, room, or short ID..."
                                     value={query}
                                     onChange={(e) => setQuery(e.target.value)}
                                     onKeyDown={handleKeyDown}
@@ -826,6 +970,28 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                                 </button>
                                 <button
                                     type="button"
+                                    onClick={() => setFilterStatus("onsite")}
+                                    className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-all shrink-0 whitespace-nowrap min-h-[32px] touch-manipulation ${
+                                        filterStatus === "onsite" || filterStatus === "checkedin"
+                                            ? "bg-emerald-100 text-emerald-800 font-semibold shadow-xs" 
+                                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                    }`}
+                                >
+                                    On-Site ({checkedInCount})
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setFilterStatus("checkedout")}
+                                    className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-all shrink-0 whitespace-nowrap min-h-[32px] touch-manipulation ${
+                                        filterStatus === "checkedout" 
+                                            ? "bg-purple-100 text-purple-800 font-semibold shadow-xs" 
+                                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                    }`}
+                                >
+                                    Checked Out ({checkedOutCount})
+                                </button>
+                                <button
+                                    type="button"
                                     onClick={() => setFilterStatus("pending")}
                                     className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-all shrink-0 whitespace-nowrap min-h-[32px] touch-manipulation ${
                                         filterStatus === "pending" 
@@ -834,17 +1000,6 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                                     }`}
                                 >
                                     Pending ({pendingCount})
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setFilterStatus("checkedin")}
-                                    className={`text-xs px-2.5 py-1.5 rounded-lg font-medium transition-all shrink-0 whitespace-nowrap min-h-[32px] touch-manipulation ${
-                                        filterStatus === "checkedin" 
-                                            ? "bg-emerald-100 text-emerald-800 font-semibold shadow-xs" 
-                                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                                    }`}
-                                >
-                                    Checked In ({checkedInCount})
                                 </button>
                             </div>
 
@@ -918,12 +1073,20 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                                                             </div>
                                                             <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
                                                                 <span className={`inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
-                                                                    isChecked 
+                                                                    Boolean(s.checkedOut || s.checked_out)
+                                                                        ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                                                        : isChecked 
                                                                         ? "bg-emerald-50 text-emerald-700 border border-emerald-200" 
                                                                         : "bg-amber-50 text-amber-700 border border-amber-200"
                                                                 }`}>
-                                                                    <span className={`w-1.5 h-1.5 rounded-full ${isChecked ? "bg-emerald-500" : "bg-amber-500"}`} />
-                                                                    {isChecked ? "Checked In" : "Pending"}
+                                                                    <span className={`w-1.5 h-1.5 rounded-full ${
+                                                                        Boolean(s.checkedOut || s.checked_out)
+                                                                            ? "bg-purple-500"
+                                                                            : isChecked 
+                                                                            ? "bg-emerald-500" 
+                                                                            : "bg-amber-500"
+                                                                    }`} />
+                                                                    {Boolean(s.checkedOut || s.checked_out) ? "Checked Out" : isChecked ? "On-Site" : "Pending"}
                                                                 </span>
                                                                 <span className="text-[11px] text-slate-500 truncate">
                                                                     {s.sessionTitle || s.session_title || (s.room ? `Room ${s.room}` : "")}
@@ -932,28 +1095,45 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                                                         </div>
                                                     </div>
 
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (isSelected) {
-                                                                setSelected(null);
-                                                                setSelectedSource(null);
-                                                            } else {
-                                                                setSelected(s);
-                                                                setSelectedSource("directory");
-                                                                toast(`Selected: ${s.name}`);
-                                                            }
-                                                        }}
-                                                        className={`shrink-0 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-all min-h-[32px] flex items-center gap-1 touch-manipulation ${
-                                                            isSelected 
-                                                                ? "bg-amber-500 text-white font-bold shadow-xs" 
-                                                                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                                                        }`}
-                                                    >
-                                                        <span>{isSelected ? "Close" : "Details"}</span>
-                                                        {isSelected ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                                                    </button>
+                                                    <div className="flex items-center gap-1.5 shrink-0">
+                                                        {Boolean(s.checkedOut || s.checked_out) && onUndoCheckout && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    onUndoCheckout(s.id);
+                                                                }}
+                                                                className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200/90 transition-all min-h-[32px] flex items-center gap-1 touch-manipulation cursor-pointer active:scale-95"
+                                                                title="Revert check-out and restore speaker to On-Site"
+                                                            >
+                                                                <RotateCcw size={12} />
+                                                                <span className="hidden sm:inline">Undo Check-Out</span>
+                                                                <span className="sm:hidden">Undo</span>
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (isSelected) {
+                                                                    setSelected(null);
+                                                                    setSelectedSource(null);
+                                                                } else {
+                                                                    setSelected(s);
+                                                                    setSelectedSource("directory");
+                                                                    toast(`Selected: ${s.name}`);
+                                                                }
+                                                            }}
+                                                            className={`shrink-0 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-all min-h-[32px] flex items-center gap-1 touch-manipulation ${
+                                                                isSelected 
+                                                                    ? "bg-amber-500 text-white font-bold shadow-xs" 
+                                                                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                                                            }`}
+                                                        >
+                                                            <span>{isSelected ? "Close" : "Details"}</span>
+                                                            {isSelected ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                                                        </button>
+                                                    </div>
                                                 </div>
 
                                                 {/* Inline Dropdown Drawer: Expands right below this speaker in place */}
@@ -983,6 +1163,8 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                                                         <ProfileCard 
                                                             speaker={s} 
                                                             onConfirm={onConfirm} 
+                                                            onCheckout={onCheckout}
+                                                            onUndoCheckout={onUndoCheckout}
                                                             onSaveNotes={onSaveNotes}
                                                             isSpeaker={isSpeaker}
                                                             currentSpeaker={currentSpeaker}
@@ -1014,6 +1196,7 @@ export default function CheckinPage({ speakers, onConfirm, onSaveNotes, toast, i
                     </div>
                 </div>
             )}
+
         </div>
     );
 }

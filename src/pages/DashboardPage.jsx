@@ -3,14 +3,14 @@ import {
     Download, RefreshCw, Search, Filter, AlertTriangle, 
     LayoutList, Table as TableIcon, X, ChevronDown, ChevronUp,
     Calendar, Clock, MapPin, Sparkles, BadgeCheck,
-    Users, CheckCircle2, Utensils, Map
+    Users, CheckCircle2, Utensils, Map, LogOut, RotateCcw
 } from "lucide-react";
 import { StatCard, StatusBadge, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
 import { TIME_SLOTS } from "../api/speakersApi";
 import PhoneField from "../components/common/PhoneField";
 
-function SpeakerDetail({ speaker, onClose, onUpdate, allSpeakers, isSpeaker = false, currentSpeaker = null }) {
+function SpeakerDetail({ speaker, onClose, onUpdate, onUndoCheckout, onRefresh, allSpeakers, isSpeaker = false, currentSpeaker = null }) {
     const [isEditing, setIsEditing] = useState(false);
     const [form, setForm] = useState(speaker);
     const [saving, setSaving] = useState(false);
@@ -168,8 +168,10 @@ function SpeakerDetail({ speaker, onClose, onUpdate, allSpeakers, isSpeaker = fa
                     {row("Session / Talk", speaker.sessionTitle)}
                     {row("Day", speaker.day)}
                     {row("Time Slot", speaker.timeSlot)}
-                    {row("Status", speaker.checkedIn ? "✅ Checked in" : "⏳ Pending")}
+                    {row("Status", speaker.checkedOut ? "🟣 Checked out" : speaker.checkedIn ? "✅ Checked in (On-Site)" : "⏳ Pending")}
                     {speaker.checkedIn && row("Checked in at", new Date(speaker.checkedInAt).toLocaleString())}
+                    {speaker.checkedOut && row("Checked out at", new Date(speaker.checkedOutAt).toLocaleString())}
+                    {speaker.checkedOut && speaker.checkoutNotes && row("Departure note", speaker.checkoutNotes)}
                 </div>
                 <div>
                     <div className="text-xs font-semibold text-amber-600 tracking-wide mb-1.5">CONTACT</div>
@@ -194,6 +196,20 @@ function SpeakerDetail({ speaker, onClose, onUpdate, allSpeakers, isSpeaker = fa
                 </div>
             </div>
             <div className="mt-4 pt-3 border-t border-slate-200 flex flex-wrap items-center gap-2.5">
+                {!isSpeaker && (speaker.checkedOut || speaker.checked_out) && onUndoCheckout && (
+                    <button
+                        type="button"
+                        onClick={async () => {
+                            await onUndoCheckout(speaker.id);
+                            if (onRefresh) onRefresh();
+                        }}
+                        className="inline-flex items-center gap-1.5 bg-purple-700 hover:bg-purple-800 text-white text-xs sm:text-sm font-bold px-3.5 py-2 rounded-lg transition-colors shadow-xs cursor-pointer active:scale-98"
+                        title="Revert check-out and restore speaker to On-Site"
+                    >
+                        <RotateCcw size={14} />
+                        <span>Undo Check-Out (Restore to On-Site)</span>
+                    </button>
+                )}
                 {(!isSpeaker || isSelf) && speaker.qrUrl && (
                     <a
                         href={speaker.qrUrl}
@@ -217,7 +233,7 @@ function SpeakerDetail({ speaker, onClose, onUpdate, allSpeakers, isSpeaker = fa
     );
 }
 
-export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker = false, currentSpeaker = null }) {
+export default function DashboardPage({ speakers, onRefresh, onUpdate, onUndoCheckout, isSpeaker = false, currentSpeaker = null }) {
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState("all");
     const [dayFilter, setDayFilter] = useState("all");
@@ -242,7 +258,9 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker
         : null;
 
     const total = speakers.length;
-    const checked = speakers.filter((s) => s.checkedIn).length;
+    const checkedOut = speakers.filter((s) => s.checkedOut).length;
+    const checked = speakers.filter((s) => s.checkedIn && !s.checkedOut).length;
+    const awaiting = speakers.filter((s) => !s.checkedIn).length;
     const dietary = speakers.filter((s) => s.allergy || (s.diet && s.diet !== "No preference")).length;
     const tour = speakers.filter((s) => s.tour === "yes").length;
 
@@ -258,7 +276,8 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker
         )
             return false;
         if (dayFilter !== "all" && s.day !== dayFilter) return false;
-        if (filter === "checked" && !s.checkedIn) return false;
+        if (filter === "checked" && (!s.checkedIn || s.checkedOut)) return false;
+        if (filter === "checkedout" && !s.checkedOut) return false;
         if (filter === "pending" && s.checkedIn) return false;
         if (filter === "flag" && !(s.allergy || s.concerns)) return false;
         if (filter === "tour" && s.tour !== "yes") return false;
@@ -269,7 +288,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker
         const cols = [
             "name", "sessionTitle", "day", "timeSlot", "room",
             "checkinDate", "checkoutDate", "nights", "diet",
-            "allergy", "tour", "concerns", "checkedIn", "checkedInAt", "email", "phone"
+            "allergy", "tour", "concerns", "checkedIn", "checkedInAt", "checkedOut", "checkedOutAt", "checkoutNotes", "email", "phone"
         ];
         const csv = [cols.join(",")]
             .concat(
@@ -277,7 +296,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker
                     cols
                         .map((c) => {
                             let v = s[c];
-                            if (c === "checkedInAt" && v) v = new Date(v).toLocaleString();
+                            if ((c === "checkedInAt" || c === "checkedOutAt") && v) v = new Date(v).toLocaleString();
                             v = v === undefined || v === null ? "" : String(v).replace(/"/g, '""');
                             return `"${v}"`;
                         })
@@ -357,10 +376,11 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker
             )}
 
             {/* Aggregate Stats Cards */}
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3 sm:gap-4 mb-6">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3 sm:gap-4 mb-6">
                 <StatCard num={total} label="Registered" icon={Users} colorClass="text-blue-600" bgClass="bg-blue-100" />
-                <StatCard num={checked} label="Checked in" icon={CheckCircle2} colorClass="text-emerald-600" bgClass="bg-emerald-100" />
-                <StatCard num={total - checked} label="Awaiting arrival" icon={Clock} colorClass="text-amber-600" bgClass="bg-amber-100" />
+                <StatCard num={checked} label="On-site (Checked in)" icon={CheckCircle2} colorClass="text-emerald-600" bgClass="bg-emerald-100" />
+                <StatCard num={checkedOut} label="Checked out" icon={LogOut} colorClass="text-purple-600" bgClass="bg-purple-100" />
+                <StatCard num={awaiting} label="Awaiting arrival" icon={Clock} colorClass="text-amber-600" bgClass="bg-amber-100" />
                 <StatCard num={dietary} label="Dietary needs" icon={Utensils} colorClass="text-rose-600" bgClass="bg-rose-100" />
                 <StatCard num={tour} label="Tour interest" icon={Map} colorClass="text-indigo-600" bgClass="bg-indigo-100" />
             </div>
@@ -432,7 +452,8 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker
                                     onChange={(e) => setFilter(e.target.value)}
                                 >
                                     <option value="all">All statuses</option>
-                                    <option value="checked">Checked in</option>
+                                    <option value="checked">Checked in (On-Site)</option>
+                                    <option value="checkedout">Checked out</option>
                                     <option value="pending">Not yet arrived</option>
                                     <option value="flag">Allergy / Concern</option>
                                     <option value="tour">Wants tour</option>
@@ -495,7 +516,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker
                                                     <div className="text-xs text-slate-500 truncate max-w-[200px]">{s.sessionTitle || "Confirmed Speaker"}</div>
                                                 </div>
                                             </div>
-                                            <StatusBadge checkedIn={s.checkedIn} />
+                                            <StatusBadge checkedIn={s.checkedIn} checkedOut={s.checkedOut} />
                                         </div>
                                         
                                         {/* Responsive metadata grid */}
@@ -537,6 +558,8 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker
                                                 speaker={s} 
                                                 onClose={() => setSelectedId(null)} 
                                                 onUpdate={onUpdate} 
+                                                onUndoCheckout={onUndoCheckout}
+                                                onRefresh={onRefresh}
                                                 allSpeakers={speakers}
                                                 isSpeaker={isSpeaker}
                                                 currentSpeaker={currentSpeaker}
@@ -630,7 +653,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker
                                                     {s.nights ? `${s.nights} N` : "—"}
                                                 </td>
                                                 <td className="py-3 px-4 text-right whitespace-nowrap">
-                                                    <StatusBadge checkedIn={s.checkedIn} />
+                                                    <StatusBadge checkedIn={s.checkedIn} checkedOut={s.checkedOut} />
                                                 </td>
                                             </tr>
                                             {isSelected && (
@@ -641,6 +664,8 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, isSpeaker
                                                                 speaker={s} 
                                                                 onClose={() => setSelectedId(null)} 
                                                                 onUpdate={onUpdate} 
+                                                                onUndoCheckout={onUndoCheckout}
+                                                                onRefresh={onRefresh}
                                                                 allSpeakers={speakers}
                                                                 isSpeaker={isSpeaker}
                                                                 currentSpeaker={currentSpeaker}

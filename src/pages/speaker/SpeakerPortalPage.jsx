@@ -13,6 +13,7 @@ import Toast from "../../components/common/Toast";
 import { supabase, isSupabaseConfigured } from "../../supabaseClient";
 import { fetchSpeakers, speakerToRow } from "../../api/speakersApi";
 import { fetchFeedback, feedbackToRow } from "../../api/feedbackApi";
+import SpeakerCheckoutPage from "./SpeakerCheckoutPage";
 
 const TABS = [
     { id: "home", label: "Home", icon: BadgeCheck },
@@ -22,7 +23,7 @@ const TABS = [
     { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
 
-const VALID_TABS = TABS.map(t => t.id);
+const VALID_TABS = [...TABS.map(t => t.id), "checkout"];
 
 function getInitialTab() {
     const hash = window.location.hash.replace("#", "").toLowerCase();
@@ -44,15 +45,28 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
             const currentHash = window.location.hash.replace("#", "").toLowerCase();
             if (VALID_TABS.includes(currentHash)) {
                 setTab(currentHash);
+                window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+                if (document.documentElement) document.documentElement.scrollTop = 0;
+                if (document.body) document.body.scrollTop = 0;
             }
         };
         window.addEventListener("hashchange", onHashChange);
         return () => window.removeEventListener("hashchange", onHashChange);
     }, []);
 
+    // Always scroll to top when active tab changes
+    useEffect(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+        if (document.body) document.body.scrollTop = 0;
+    }, [tab]);
+
     const handleTabChange = (nextTab) => {
         setTab(nextTab);
         window.location.hash = nextTab;
+        window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+        if (document.body) document.body.scrollTop = 0;
     };
 
     const toast = (msg) => {
@@ -107,6 +121,52 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
         
         const s = speakers.find((x) => x.id === id) || currentSpeaker;
         toast((s?.name || "Speaker") + " checked in ✓");
+    };
+
+    const confirmCheckout = async (id, checkoutNotes) => {
+        const checkedOutAt = Date.now();
+        setSpeakers((prev) =>
+            prev.map((s) =>
+                s.id === id
+                    ? { ...s, checkedOut: true, checkedOutAt, checkoutNotes: checkoutNotes !== undefined ? checkoutNotes : s.checkoutNotes }
+                    : s
+            )
+        );
+
+        if (isSupabaseConfigured && supabase) {
+            const { error } = await supabase.from("speakers").update({
+                checked_out: true,
+                checked_out_at: new Date(checkedOutAt).toISOString(),
+                ...(checkoutNotes !== undefined ? { checkout_notes: checkoutNotes } : {})
+            }).eq("id", id);
+
+            if (error) {
+                toast("Check-out saved locally but failed to sync.");
+                return;
+            }
+        }
+
+        toast("You have successfully checked out. Thank you for speaking! ✓");
+    };
+
+    const undoCheckout = async (id) => {
+        setSpeakers((prev) =>
+            prev.map((s) => (s.id === id ? { ...s, checkedOut: false, checkedOutAt: null } : s))
+        );
+
+        if (isSupabaseConfigured && supabase) {
+            const { error } = await supabase.from("speakers").update({
+                checked_out: false,
+                checked_out_at: null
+            }).eq("id", id);
+
+            if (error) {
+                toast("Undo check-out saved locally but failed to sync.");
+                return;
+            }
+        }
+
+        toast("Check-out cancelled. You are marked as On-Site.");
     };
 
     const saveNotes = async (id, notes) => {
@@ -167,6 +227,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
     };
 
     const isCheckedIn = !!(currentSpeaker.checkedIn || currentSpeaker.checked_in);
+    const isCheckedOut = !!(currentSpeaker.checkedOut || currentSpeaker.checked_out);
 
     return (
         <div
@@ -288,15 +349,23 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                             </p>
                         </div>
                         
-                        {/* Check-in status badge inside banner */}
+                        {/* Check-in / Check-out status badge inside banner */}
                         <div className={`flex items-center gap-2 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 backdrop-blur-md self-start sm:self-center shrink-0 border ${
-                            isCheckedIn
+                            isCheckedOut
+                                ? "bg-purple-500/20 border-purple-400/40 text-purple-200"
+                                : isCheckedIn
                                 ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300"
                                 : "bg-amber-500/15 border-amber-500/30 text-amber-300"
                         }`}>
-                            <div className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full shrink-0 ${isCheckedIn ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" : "bg-amber-400"}`} />
+                            <div className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full shrink-0 ${
+                                isCheckedOut
+                                    ? "bg-purple-400 shadow-[0_0_8px_rgba(192,132,252,0.8)]"
+                                    : isCheckedIn
+                                    ? "bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"
+                                    : "bg-amber-400"
+                            }`} />
                             <div className="text-[11px] sm:text-xs font-bold tracking-wide uppercase">
-                                {isCheckedIn ? "Checked In" : "Pending Check-In"}
+                                {isCheckedOut ? "Checked Out" : isCheckedIn ? "Checked In · On-Site" : "Pending Check-In"}
                             </div>
                         </div>
                     </div>
@@ -311,11 +380,14 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                         <CheckinPage 
                             speakers={speakers} 
                             onConfirm={confirmCheckin} 
+                            onCheckout={confirmCheckout}
+                            onUndoCheckout={undoCheckout}
                             onSaveNotes={saveNotes} 
                             toast={toast} 
                             isSpeaker={true}
                             currentSpeaker={currentSpeaker}
                             forcedSubTab="home"
+                            onNavigateTab={handleTabChange}
                         />
                     )}
 
@@ -323,11 +395,14 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                         <CheckinPage 
                             speakers={speakers} 
                             onConfirm={confirmCheckin} 
+                            onCheckout={confirmCheckout}
+                            onUndoCheckout={undoCheckout}
                             onSaveNotes={saveNotes} 
                             toast={toast} 
                             isSpeaker={true}
                             currentSpeaker={currentSpeaker}
                             forcedSubTab="qr"
+                            onNavigateTab={handleTabChange}
                         />
                     )}
 
@@ -407,6 +482,16 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                                 </button>
                             </div>
                         </div>
+                    )}
+
+                    {tab === "checkout" && (
+                        <SpeakerCheckoutPage
+                            speaker={currentSpeaker}
+                            onCheckout={confirmCheckout}
+                            onUndoCheckout={undoCheckout}
+                            onBack={() => handleTabChange("home")}
+                            onNavigateTab={handleTabChange}
+                        />
                     )}
                 </div>
             </main>
