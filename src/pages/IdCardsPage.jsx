@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import JSZip from "jszip";`nimport { jsPDF } from "jspdf";
+import JSZip from "jszip";
+import { jsPDF } from "jspdf";
 import {
     Download, RefreshCw, FileArchive, Search, Sparkles, CheckCircle2,
     Eye, X, AlertTriangle, ExternalLink, Cloud

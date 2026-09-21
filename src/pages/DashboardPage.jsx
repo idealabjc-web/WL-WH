@@ -3,7 +3,7 @@ import {
     Download, RefreshCw, Search, Filter, AlertTriangle, 
     LayoutList, Table as TableIcon, X, ChevronDown, ChevronUp,
     Calendar, Clock, MapPin, Sparkles, BadgeCheck,
-    Users, CheckCircle2, Utensils, Map, LogOut, RotateCcw
+    Users, CheckCircle2, Utensils, Map, LogOut, RotateCcw, Link
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { StatCard, StatusBadge, inputCls } from "../components/common/UIAtoms";
@@ -62,6 +62,13 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
             await onDelete(speaker.id);
             onClose();
         }
+    };
+
+    const copyLink = () => {
+        const link = `${window.location.origin}/?s=${speaker.id}`;
+        navigator.clipboard.writeText(link).then(() => {
+            alert("Portal link copied to clipboard!");
+        });
     };
 
     const row = (label, value) => (
@@ -235,6 +242,17 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                     >
                         View QR Badge
                     </a>
+                )}
+                {(!isSpeaker) && (
+                    <button
+                        type="button"
+                        onClick={copyLink}
+                        className="inline-flex items-center gap-1.5 border border-slate-200 hover:border-blue-400 hover:bg-blue-50 text-xs sm:text-sm font-semibold px-3.5 py-2 rounded-lg text-blue-700 bg-white transition-colors"
+                        title="Copy direct portal link for this speaker"
+                    >
+                        <Link size={14} />
+                        <span>Copy Portal Link</span>
+                    </button>
                 )}
                 <button
                     type="button"

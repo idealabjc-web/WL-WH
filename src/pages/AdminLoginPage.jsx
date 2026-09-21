@@ -5,7 +5,6 @@ import { Mail, Lock, LogIn, AlertCircle, Loader2, Eye, EyeOff } from "lucide-rea
 import bcrypt from "bcryptjs";
 
 const STAFF_PASSWORD = import.meta.env.VITE_STAFF_PASSWORD || "staff2026";
-const SPEAKER_PASSWORD = import.meta.env.VITE_SPEAKER_PASSWORD || "speaker2026";
 
 export default function AdminLoginPage({ onLogin }) {
     const [email, setEmail] = useState("");
@@ -50,25 +49,6 @@ export default function AdminLoginPage({ onLogin }) {
             }
             localStorage.setItem("portal_session", JSON.stringify({ type: "admin", user: supportData }));
             onLogin({ type: "admin", user: supportData });
-            setLoading(false);
-            return;
-        }
-
-        // Check 2: Is this a registered speaker?
-        const { data: speakerData } = await supabase
-            .from("speakers")
-            .select("*")
-            .ilike("email", trimmedEmail)
-            .maybeSingle();
-
-        if (speakerData) {
-            if (!verifyPassword(password, speakerData.password_hash, SPEAKER_PASSWORD)) {
-                setError("Incorrect password for speaker access.");
-                setLoading(false);
-                return;
-            }
-            localStorage.setItem("portal_session", JSON.stringify({ type: "speaker", user: speakerData }));
-            onLogin({ type: "speaker", user: speakerData });
             setLoading(false);
             return;
         }
@@ -183,7 +163,7 @@ export default function AdminLoginPage({ onLogin }) {
                 </div>
 
                 <p className="text-center text-xs text-slate-600 mt-6">
-                    Staff and speakers use separate passwords.
+                    Authorized staff access only.
                 </p>
             </div>
         </div>
