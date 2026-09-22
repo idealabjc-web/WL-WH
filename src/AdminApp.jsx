@@ -23,39 +23,48 @@ export default function AdminApp() {
             const speakerId = params.get("s");
             const token = params.get("t");
 
-            if (!speakerId || !token) return;
+            // If ?s= is in the URL at all, treat it as a login attempt.
+            // Clear any existing session so localStorage can't silently bypass the check.
+            if (speakerId) {
+                localStorage.removeItem("portal_session");
+                setSession(null);
 
-            // Clean URL immediately
-            const url = new URL(window.location);
-            url.searchParams.delete("s");
-            url.searchParams.delete("t");
-            window.history.replaceState({}, "", url.toString());
+                // Clean URL immediately
+                const url = new URL(window.location);
+                url.searchParams.delete("s");
+                url.searchParams.delete("t");
+                window.history.replaceState({}, "", url.toString());
 
-            setLoadingLink(true);
-            try {
-                // Both the badge ID and the secret token must match.
-                const { data, error } = await supabase
-                    .from("speakers")
-                    .select("*, sessions(*), accommodations(*), attendance(*)")
-                    .eq("id", speakerId.toUpperCase())
-                    .eq("portal_token", token.toUpperCase())
-                    .maybeSingle();
+                // Both ID and token are required — if either is missing, stop here (shows login).
+                if (!token) return;
 
-                if (data && !error) {
-                    const newSession = { type: "speaker", user: rowToSpeaker(data) };
-                    localStorage.setItem("portal_session", JSON.stringify(newSession));
-                    setSession(newSession);
+                setLoadingLink(true);
+                try {
+                    // Both the badge ID and the secret token must match.
+                    const { data, error } = await supabase
+                        .from("speakers")
+                        .select("*, sessions(*), accommodations(*), attendance(*)")
+                        .eq("id", speakerId.toUpperCase())
+                        .eq("portal_token", token.toUpperCase())
+                        .maybeSingle();
+
+                    if (data && !error) {
+                        const newSession = { type: "speaker", user: rowToSpeaker(data) };
+                        localStorage.setItem("portal_session", JSON.stringify(newSession));
+                        setSession(newSession);
+                    }
+                    // If no match → session stays null → login page shows
+                } catch (err) {
+                    console.error("Failed to load speaker portal:", err);
+                } finally {
+                    setLoadingLink(false);
                 }
-            } catch (err) {
-                console.error("Failed to load speaker portal:", err);
-            } finally {
-                setLoadingLink(false);
             }
         };
 
-
         checkMagicLink();
     }, []);
+
 
     const handleLogin = (sessionData) => {
         setSession(sessionData);
