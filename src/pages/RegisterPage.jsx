@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from "react";
 import { CheckCircle2, AlertTriangle, ExternalLink, ImagePlus, Camera } from "lucide-react";
 import { Field, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
-import { uid, emptyForm, generateAndStoreQrBadge, uploadSpeakerPhoto, uploadSpeakerAbstract, TIME_SLOTS } from "../api/speakersApi";
+import { uid, generatePortalToken, emptyForm, generateAndStoreQrBadge, uploadSpeakerPhoto, uploadSpeakerAbstract, TIME_SLOTS } from "../api/speakersApi";
+
 import PhoneField from "../components/common/PhoneField";
 
 export default function RegisterPage({ speakers = [], onAdd, toast }) {
@@ -64,7 +65,9 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
         }
         setSaving(true);
         const id = uid();
-        const rec = { id, ...form, name: form.name.trim(), checkedIn: false, checkedInAt: null, createdAt: Date.now() };
+        const portalToken = generatePortalToken();
+        const rec = { id, portalToken, ...form, name: form.name.trim(), checkedIn: false, checkedInAt: null, createdAt: Date.now() };
+
 
         const uploadTasks = [];
 

@@ -5,7 +5,7 @@ import {
     ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, 
     Sparkles, CheckCircle2, Megaphone 
 } from "lucide-react";
-import ChangePasswordModal from "../../components/common/ChangePasswordModal";
+
 import CheckinPage from "../CheckinPage";
 import DashboardPage from "../DashboardPage";
 import FeedbackPage from "../FeedbackPage";
@@ -23,7 +23,6 @@ const TABS = [
     { id: "checkin", label: "Scanner", icon: ScanLine },
     { id: "feedback", label: "Feedback", icon: MessageSquare },
     { id: "logistics", label: "Logistics & Travel", mobileLabel: "Logistics", icon: Hotel },
-    { id: "settings", label: "Settings", icon: SettingsIcon },
 ];
 
 const VALID_TABS = [...TABS.map(t => t.id), "checkout"];
@@ -35,7 +34,7 @@ function getInitialTab() {
 
 export default function SpeakerPortalPage({ speaker, onLogout }) {
     const [tab, setTab] = useState(getInitialTab);
-    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     const [speakers, setSpeakers] = useState([]);
     const [feedback, setFeedback] = useState([]);
@@ -246,14 +245,6 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
             className="min-h-screen pb-28 sm:pb-12 bg-stone-100 text-slate-900"
             style={{ fontFamily: "Inter, sans-serif" }}
         >
-            {showPasswordModal && (
-                <ChangePasswordModal 
-                    user={currentSpeaker} 
-                    type="speaker" 
-                    onClose={() => setShowPasswordModal(false)} 
-                />
-            )}
-
             {/* Header / Navbar styled like the Hero Section */}
             <header className="sticky top-0 z-30 bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950 text-white border-b border-slate-800 shadow-xl relative overflow-hidden">
                 {/* Ambient warm amber glow matching the hero section */}
@@ -304,16 +295,28 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                             })}
                         </nav>
 
-                        {/* Right: Logout */}
+                        {/* Right: Logout button */}
                         <div className="relative z-10 flex items-center gap-2.5 shrink-0">
-                            {onLogout && (
+                            {showLogoutConfirm ? (
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-xs text-white/70 hidden sm:inline">Sign out?</span>
+                                    <button
+                                        onClick={() => { setShowLogoutConfirm(false); onLogout && onLogout(); }}
+                                        className="px-2.5 py-1.5 rounded-lg bg-red-500/80 hover:bg-red-500 text-white text-xs font-bold transition-all"
+                                    >Yes</button>
+                                    <button
+                                        onClick={() => setShowLogoutConfirm(false)}
+                                        className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-all"
+                                    >No</button>
+                                </div>
+                            ) : (
                                 <button
-                                    onClick={onLogout}
-                                    className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-white/90 hover:text-rose-300 hover:bg-rose-500/15 transition-all px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl border border-white/15 hover:border-rose-400/40 shadow-xs"
-                                    title="Sign out of speaker portal"
+                                    onClick={() => setShowLogoutConfirm(true)}
+                                    title="Sign out"
+                                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-white/70 hover:text-white hover:bg-white/10 border border-transparent hover:border-white/20 transition-all text-xs font-semibold"
                                 >
                                     <LogOut size={15} />
-                                    <span>Sign out</span>
+                                    <span className="hidden sm:inline">Sign out</span>
                                 </button>
                             )}
                         </div>
@@ -458,47 +461,6 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                         </div>
                     )}
 
-                    {tab === "settings" && (
-                        <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-7 shadow-sm space-y-6">
-                            <div>
-                                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                                    <SettingsIcon size={20} className="text-amber-600" /> Speaker Account Settings
-                                </h2>
-                                <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                                    Manage your account credentials and security preferences.
-                                </p>
-                            </div>
-
-                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                                <div>
-                                    <h3 className="text-sm font-bold text-slate-900">Password & Portal Security</h3>
-                                    <p className="text-xs text-slate-500 mt-0.5">
-                                        Update your personal portal password to ensure account security.
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={() => setShowPasswordModal(true)}
-                                    className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold rounded-xl transition-colors shadow-xs shrink-0 w-full sm:w-auto"
-                                >
-                                    Change Password
-                                </button>
-                            </div>
-
-                            <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                                <div>
-                                    <div className="text-xs font-semibold text-slate-700">Logged in as:</div>
-                                    <div className="text-sm font-bold text-slate-900">{currentSpeaker.email || currentSpeaker.name}</div>
-                                </div>
-                                <button
-                                    onClick={onLogout}
-                                    className="flex items-center justify-center gap-2 px-4 py-2 text-rose-600 hover:bg-rose-50 border border-rose-200 text-xs font-semibold rounded-xl transition-colors"
-                                >
-                                    <LogOut size={14} />
-                                    Sign out of portal
-                                </button>
-                            </div>
-                        </div>
-                    )}
 
                     {tab === "checkout" && (
                         <SpeakerCheckoutPage

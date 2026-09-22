@@ -9,7 +9,6 @@ import Toast from "./components/common/Toast";
 import SetupNeeded from "./components/SetupNeeded";
 import Sidebar from "./components/navigation/Sidebar";
 import PullToRefresh from "./components/common/PullToRefresh";
-import ChangePasswordModal from "./components/common/ChangePasswordModal";
 
 import RegisterPage from "./pages/RegisterPage";
 import CheckinPage from "./pages/CheckinPage";
@@ -28,7 +27,6 @@ function getInitialTab() {
 
 export default function EventPortal({ displayName = "", userEmail = "", onLogout }) {
     const [tab, setTab] = useState(getInitialTab);
-    const [showPasswordModal, setShowPasswordModal] = useState(false);
     const [speakers, setSpeakers] = useState([]);
     const [feedback, setFeedback] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -378,7 +376,7 @@ export default function EventPortal({ displayName = "", userEmail = "", onLogout
                                 />
                             )}
                             {tab === "feedback" && <FeedbackPage feedback={feedback} onAdd={addFeedback} toast={toast} />}
-                            {tab === "settings" && <SettingsPage userEmail={userEmail} onOpenPasswordModal={() => setShowPasswordModal(true)} />}
+                            {tab === "settings" && <SettingsPage userEmail={userEmail} />}
                         </>
                     )}
                 </main>

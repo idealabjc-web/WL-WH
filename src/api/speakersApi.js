@@ -37,6 +37,12 @@ export function uid() {
     );
 }
 
+// Generates a short random access token for portal links (e.g. "X7K2P9").
+// Different from the badge ID — this is the secret part of the link.
+export function generatePortalToken() {
+    return Math.random().toString(36).slice(2, 8).toUpperCase();
+}
+
 export const TIME_SLOTS = [
     "09:00 - 09:30", "09:30 - 10:00", "10:00 - 10:30", "10:30 - 11:00",
     "11:00 - 11:30", "11:30 - 12:00", "12:00 - 12:30", "12:30 - 13:00",
@@ -68,6 +74,7 @@ export function speakerToRow(s) {
         abstract_status: s.abstractStatus || null,
         abstract_url: s.abstractUrl || null,
         whose_speaker: s.whoseSpeaker || null,
+        portal_token: s.portalToken || null,
     };
 }
 
@@ -105,6 +112,7 @@ export function rowToSpeaker(r) {
         abstractStatus: r.abstract_status || null,
         abstractUrl: r.abstract_url || null,
         whoseSpeaker: r.whose_speaker || null,
+        portalToken: r.portal_token || null,
     };
 }
 

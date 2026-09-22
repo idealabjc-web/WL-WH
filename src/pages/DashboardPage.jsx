@@ -5,10 +5,11 @@ import {
     Calendar, Clock, MapPin, Sparkles, BadgeCheck,
     Users, CheckCircle2, Utensils, Map, LogOut, RotateCcw, Link
 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { StatCard, StatusBadge, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
-import { TIME_SLOTS } from "../api/speakersApi";
+import { TIME_SLOTS, generatePortalToken } from "../api/speakersApi";
+import { supabase } from "../supabaseClient";
+
 import PhoneField from "../components/common/PhoneField";
 
 function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, onRefresh, allSpeakers, isSpeaker = false, currentSpeaker = null }) {
@@ -64,12 +65,24 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
         }
     };
 
-    const copyLink = () => {
-        const link = `${window.location.origin}/?s=${speaker.id}`;
+    const copyLink = async () => {
+        let token = speaker.portalToken;
+
+        // Existing speaker with no token yet — generate one and save it now.
+        if (!token) {
+            token = generatePortalToken();
+            await supabase
+                .from("speakers")
+                .update({ portal_token: token })
+                .eq("id", speaker.id);
+        }
+
+        const link = `${window.location.origin}/?s=${speaker.id}&t=${token}`;
         navigator.clipboard.writeText(link).then(() => {
             alert("Portal link copied to clipboard!");
         });
     };
+
 
     const row = (label, value) => (
         <div className="flex justify-between gap-4 py-2 border-b border-slate-100 dark:border-slate-800 last:border-0 text-sm">
@@ -298,11 +311,6 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
     const dietary = speakers.filter((s) => s.allergy || (s.diet && s.diet !== "No preference")).length;
     const tour = speakers.filter((s) => s.tour === "yes").length;
 
-    const chartData = [
-        { name: 'Checked In', value: checked, color: '#059669' },
-        { name: 'Awaiting', value: awaiting, color: '#d97706' },
-        { name: 'Checked Out', value: checkedOut, color: '#7c3aed' },
-    ];
 
     const rows = speakers.filter((s) => {
         const q = search.toLowerCase();
@@ -426,29 +434,6 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                 <StatCard num={tour} label="Tour interest" icon={Map} colorClass="text-indigo-600" bgClass="bg-indigo-100" />
             </div>
 
-            {/* Analytics Chart */}
-            {!isSpeaker && (
-                <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl p-4 sm:p-6 shadow-sm mb-6 flex flex-col sm:flex-row items-center gap-6">
-                    <div className="w-full sm:w-1/3">
-                        <h3 className="text-base font-bold text-slate-900 dark:text-slate-100 mb-2">Live Check-in Progress</h3>
-                        <p className="text-xs text-slate-500">Real-time tracker of all speaker arrivals and departures.</p>
-                    </div>
-                    <div className="w-full sm:w-2/3 h-48">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                                <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
-                                <Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                                    {chartData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.color} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </div>
-                </div>
-            )}
 
             {/* Main Table / List Container */}
             <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl p-4 sm:p-6 shadow-sm">

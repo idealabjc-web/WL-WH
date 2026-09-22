@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "./supabaseClient";
+import { rowToSpeaker } from "./api/speakersApi";
+
 import AdminLoginPage from "./pages/AdminLoginPage";
 import EventPortal from "./EventPortal";
 import SpeakerPortalPage from "./pages/speaker/SpeakerPortalPage";
@@ -13,39 +15,44 @@ export default function AdminApp() {
             return null;
         }
     });
-    const [verifyingLink, setVerifyingLink] = useState(false);
+    const [loadingLink, setLoadingLink] = useState(false);
 
     useEffect(() => {
         const checkMagicLink = async () => {
             const params = new URLSearchParams(window.location.search);
             const speakerId = params.get("s");
+            const token = params.get("t");
 
-            if (speakerId) {
-                setVerifyingLink(true);
-                try {
-                    // Try to fetch speaker with this ID
-                    const { data: speakerData, error } = await supabase
-                        .from("speakers")
-                        .select("*")
-                        .eq("id", speakerId)
-                        .maybeSingle();
+            if (!speakerId || !token) return;
 
-                    if (speakerData && !error) {
-                        const newSession = { type: "speaker", user: speakerData };
-                        localStorage.setItem("portal_session", JSON.stringify(newSession));
-                        setSession(newSession);
-                    }
-                } catch (err) {
-                    console.error("Failed to verify speaker link:", err);
-                } finally {
-                    // Clean URL
-                    const url = new URL(window.location);
-                    url.searchParams.delete("s");
-                    window.history.replaceState({}, "", url.toString());
-                    setVerifyingLink(false);
+            // Clean URL immediately
+            const url = new URL(window.location);
+            url.searchParams.delete("s");
+            url.searchParams.delete("t");
+            window.history.replaceState({}, "", url.toString());
+
+            setLoadingLink(true);
+            try {
+                // Both the badge ID and the secret token must match.
+                const { data, error } = await supabase
+                    .from("speakers")
+                    .select("*, sessions(*), accommodations(*), attendance(*)")
+                    .eq("id", speakerId.toUpperCase())
+                    .eq("portal_token", token.toUpperCase())
+                    .maybeSingle();
+
+                if (data && !error) {
+                    const newSession = { type: "speaker", user: rowToSpeaker(data) };
+                    localStorage.setItem("portal_session", JSON.stringify(newSession));
+                    setSession(newSession);
                 }
+            } catch (err) {
+                console.error("Failed to load speaker portal:", err);
+            } finally {
+                setLoadingLink(false);
             }
         };
+
 
         checkMagicLink();
     }, []);
@@ -59,12 +66,12 @@ export default function AdminApp() {
         setSession(null);
     };
 
-    if (verifyingLink) {
+    if (loadingLink) {
         return (
             <div className="min-h-screen flex items-center justify-center p-4 bg-slate-900">
                 <div className="text-white text-sm font-medium flex items-center gap-2">
                     <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-                    Verifying secure link...
+                    Opening your portal...
                 </div>
             </div>
         );
@@ -87,3 +94,4 @@ export default function AdminApp() {
         />
     );
 }
+
