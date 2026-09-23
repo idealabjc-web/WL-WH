@@ -59,9 +59,9 @@ export const TIME_SLOTS = [
 
 export const emptyForm = {
     name: "", email: "", phone: "", sessionTitle: "", day: "", timeSlot: "",
-    conferenceRoom: "", hotelRoom: "", checkinDate: "", checkoutDate: "", nights: "", diet: "No preference",
+    conferenceRoom: "", accommodationStatus: "", hotelRoom: "", checkinDate: "", checkoutDate: "", nights: "", diet: "No preference",
     allergy: "", tour: "yes", concerns: "", photoUrl: "",
-    abstractProvided: "no", abstractUrl: "", whoseSpeaker: ""
+    abstractProvided: "no", abstractUrl: "", whoseSpeaker: "", speakerTag: ""
 };
 
 // Supabase <-> app-state mapping
@@ -102,6 +102,7 @@ export function rowToSpeaker(r) {
         day: session.day || r.day || null,
         timeSlot: session.time_slot || r.time_slot || null,
         conferenceRoom: session.conference_room || r.conference_room || r.room || null,
+        accommodationStatus: accomm.accommodation_status || r.accommodation_status || null,
         hotelRoom: accomm.hotel_room || r.hotel_room || null,
         checkinDate: accomm.checkin_date || r.checkin_date || null,
         checkoutDate: accomm.checkout_date || r.checkout_date || null,
@@ -156,9 +157,10 @@ export async function createSpeakerRecord(rec, skipQueue = false) {
         if (sessError) throw sessError;
     }
     
-    if (rec.checkinDate || rec.checkoutDate || rec.nights || rec.hotelRoom) {
+    if (rec.accommodationStatus || rec.checkinDate || rec.checkoutDate || rec.nights || rec.hotelRoom) {
         const { error: accError } = await supabase.from("accommodations").insert({
             speaker_id: rec.id,
+            accommodation_status: rec.accommodationStatus || null,
             checkin_date: rec.checkinDate || null,
             checkout_date: rec.checkoutDate || null,
             nights: rec.nights || null,
@@ -216,15 +218,17 @@ export async function updateSpeakerRecord(id, mergedRec, skipQueue = false) {
     const { data: accData } = await supabase.from("accommodations").select("id").eq("speaker_id", id).maybeSingle();
     if (accData) {
         const { error: accUpdError } = await supabase.from("accommodations").update({
+            accommodation_status: mergedRec.accommodationStatus || null,
             checkin_date: mergedRec.checkinDate || null,
             checkout_date: mergedRec.checkoutDate || null,
             nights: mergedRec.nights || null,
             hotel_room: mergedRec.hotelRoom || null
         }).eq("id", accData.id);
         if (accUpdError) throw accUpdError;
-    } else if (mergedRec.checkinDate || mergedRec.checkoutDate || mergedRec.nights || mergedRec.hotelRoom) {
+    } else if (mergedRec.accommodationStatus || mergedRec.checkinDate || mergedRec.checkoutDate || mergedRec.nights || mergedRec.hotelRoom) {
         const { error: accInsError } = await supabase.from("accommodations").insert({
             speaker_id: id,
+            accommodation_status: mergedRec.accommodationStatus || null,
             checkin_date: mergedRec.checkinDate || null,
             checkout_date: mergedRec.checkoutDate || null,
             nights: mergedRec.nights || null,

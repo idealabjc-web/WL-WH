@@ -305,23 +305,49 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                         <option value="Room 2">Room 2</option>
                     </select>
                 </Field>
+                <Field label="Accommodation Status">
+                    <select className={inputCls} value={form.accommodationStatus} onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "Without Accommodation") {
+                            setForm(f => ({ ...f, accommodationStatus: val, hotelRoom: "", checkinDate: "", checkoutDate: "", nights: "" }));
+                        } else {
+                            setForm(f => ({ ...f, accommodationStatus: val }));
+                        }
+                    }}>
+                        <option value="">Select...</option>
+                        <option value="With Accommodation">With Accommodation</option>
+                        <option value="Without Accommodation">Without Accommodation</option>
+                    </select>
+                </Field>
+                <Field label="Speaker Tag">
+                    <select className={inputCls} value={form.speakerTag} onChange={set("speakerTag")}>
+                        <option value="">Select Tag...</option>
+                        <option value="Keynote Speaker">Keynote Speaker</option>
+                        <option value="Exhibitor">Exhibitor</option>
+                        <option value="Speaker">Speaker</option>
+                        <option value="Delegate">Delegate</option>
+                    </select>
+                </Field>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-3">
-                <Field label="Check-in date">
-                    <input type="date" className={inputCls} value={form.checkinDate} onChange={set("checkinDate")} />
-                </Field>
-                <Field label="Check-out date">
-                    <input type="date" className={inputCls} value={form.checkoutDate} onChange={set("checkoutDate")} />
-                </Field>
-                <Field label="No. of nights">
-                    <input className={inputCls} value={form.nights} onChange={set("nights")} placeholder="auto or manual" />
-                </Field>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-3">
-                <Field label="Hotel Room No.">
-                    <input className={inputCls} value={form.hotelRoom} onChange={set("hotelRoom")} placeholder="e.g. 1204" />
-                </Field>
-            </div>
+
+
+            {form.accommodationStatus === "With Accommodation" && (
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-x-3 mb-6">
+                    <Field label="Hotel Room No.">
+                        <input className={inputCls} value={form.hotelRoom} onChange={set("hotelRoom")} placeholder="e.g. 1204" />
+                    </Field>
+                    <Field label="Check-in date">
+                        <input type="date" className={inputCls} value={form.checkinDate} onChange={set("checkinDate")} />
+                    </Field>
+                    <Field label="Check-out date">
+                        <input type="date" className={inputCls} value={form.checkoutDate} onChange={set("checkoutDate")} />
+                    </Field>
+                    <Field label="No. of nights">
+                        <input className={inputCls} value={form.nights} onChange={set("nights")} placeholder="auto or manual" />
+                    </Field>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3">
                 <Field label="Dietary preference">
                     <select className={inputCls} value={form.diet} onChange={set("diet")}>

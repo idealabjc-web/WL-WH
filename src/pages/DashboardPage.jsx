@@ -167,18 +167,48 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-semibold text-slate-700">Check-in</label>
-                        <input type="date" className={inputCls} value={form.checkinDate} onChange={set("checkinDate")} />
+                        <label className="text-xs font-semibold text-slate-700">Accommodation Status</label>
+                        <select className={inputCls} value={form.accommodationStatus} onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === "Without Accommodation") {
+                                setForm(f => ({ ...f, accommodationStatus: val, hotelRoom: "", checkinDate: "", checkoutDate: "", nights: "" }));
+                            } else {
+                                setForm(f => ({ ...f, accommodationStatus: val }));
+                            }
+                        }}>
+                            <option value="">Select...</option>
+                            <option value="With Accommodation">With Accommodation</option>
+                            <option value="Without Accommodation">Without Accommodation</option>
+                        </select>
                     </div>
                     <div>
-                        <label className="text-xs font-semibold text-slate-700">Check-out</label>
-                        <input type="date" className={inputCls} value={form.checkoutDate} onChange={set("checkoutDate")} />
+                        <label className="text-xs font-semibold text-slate-700">Speaker Tag</label>
+                        <select className={inputCls} value={form.speakerTag} onChange={set("speakerTag")}>
+                            <option value="">Select Tag...</option>
+                            <option value="Keynote Speaker">Keynote Speaker</option>
+                            <option value="Exhibitor">Exhibitor</option>
+                            <option value="Speaker">Speaker</option>
+                            <option value="Delegate">Delegate</option>
+                        </select>
                     </div>
-                    <div>
-                        <label className="text-xs font-semibold text-slate-700">Hotel Room</label>
-                        <input className={inputCls} value={form.hotelRoom} onChange={set("hotelRoom")} placeholder="e.g. 1204" />
-                    </div>
-                    <div><label className="text-xs font-semibold text-slate-700">Nights</label><input className={inputCls} value={form.nights} onChange={set("nights")} /></div>
+
+                    {form.accommodationStatus === "With Accommodation" && (
+                        <>
+                            <div>
+                                <label className="text-xs font-semibold text-slate-700">Hotel Room</label>
+                                <input className={inputCls} value={form.hotelRoom} onChange={set("hotelRoom")} placeholder="e.g. 1204" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-semibold text-slate-700">Check-in</label>
+                                <input type="date" className={inputCls} value={form.checkinDate} onChange={set("checkinDate")} />
+                            </div>
+                            <div>
+                                <label className="text-xs font-semibold text-slate-700">Check-out</label>
+                                <input type="date" className={inputCls} value={form.checkoutDate} onChange={set("checkoutDate")} />
+                            </div>
+                            <div><label className="text-xs font-semibold text-slate-700">Nights</label><input className={inputCls} value={form.nights} onChange={set("nights")} /></div>
+                        </>
+                    )}
                     
                     <div>
                         <label className="text-xs font-semibold text-slate-700">Dietary</label>
@@ -321,11 +351,20 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
             <div className="grid sm:grid-cols-2 gap-x-6 mt-3">
                 <div>
                     <div className="text-xs font-semibold text-amber-600 tracking-wide mb-1.5">ACCOMMODATION</div>
-                    {row("Hotel Room", isSpeaker && !isSelf ? "Assigned" : speaker.room)}
-                    {row("Check-in Date", isSpeaker && !isSelf ? "—" : speaker.checkinDate)}
-                    {row("Check-out Date", isSpeaker && !isSelf ? "—" : speaker.checkoutDate)}
-                    {row("No. of Nights", isSpeaker && !isSelf ? "—" : speaker.nights)}
-                    {row("Room Concerns", isSpeaker && !isSelf ? "—" : (speaker.concerns || "None"))}
+                    {speaker.accommodationStatus === "Without Accommodation" || speaker.accommodation_status === "Without Accommodation" ? (
+                        <div className="flex justify-between gap-4 py-2 border-b border-slate-100 dark:border-slate-800 text-sm">
+                            <div className="text-slate-500 shrink-0 font-medium">Status</div>
+                            <div className="font-semibold text-slate-800 text-right truncate">No accommodation</div>
+                        </div>
+                    ) : (
+                        <>
+                            {row("Hotel Room", isSpeaker && !isSelf ? "Assigned" : (speaker.hotelRoom || speaker.hotel_room || speaker.room))}
+                            {row("Check-in Date", isSpeaker && !isSelf ? "—" : speaker.checkinDate)}
+                            {row("Check-out Date", isSpeaker && !isSelf ? "—" : speaker.checkoutDate)}
+                            {row("No. of Nights", isSpeaker && !isSelf ? "—" : speaker.nights)}
+                            {row("Room Concerns", isSpeaker && !isSelf ? "—" : (speaker.concerns || "None"))}
+                        </>
+                    )}
                 </div>
                 <div>
                     <div className="text-xs font-semibold text-amber-600 tracking-wide mb-1.5">PREFERENCES</div>

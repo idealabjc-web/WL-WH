@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Users, ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, Menu, BadgeCheck, LogOut, Settings, Megaphone, Activity } from "lucide-react";
+import { Users, ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, Menu, BadgeCheck, LogOut, Settings, Megaphone, Activity, Calendar } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./supabaseClient";
 import { fetchSpeakers, speakerToRow, createSpeakerRecord, updateSpeakerRecord } from "./api/speakersApi";
 import { fetchFeedback, feedbackToRow } from "./api/feedbackApi";
@@ -18,8 +18,9 @@ import FeedbackPage from "./pages/FeedbackPage";
 import SettingsPage from "./pages/SettingsPage";
 import AnnouncementsPage from "./pages/AnnouncementsPage";
 import AuditLogsPage from "./pages/AuditLogsPage";
+import AgendaPage from "./pages/AgendaPage";
 
-const VALID_TABS = ["dashboard", "register", "checkin", "idcards", "feedback", "broadcasts", "settings", "audit"];
+const VALID_TABS = ["dashboard", "register", "checkin", "idcards", "feedback", "broadcasts", "agenda", "settings", "audit"];
 
 function getInitialTab() {
     const hash = window.location.hash.replace("#", "").toLowerCase();
@@ -266,6 +267,7 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
     ];
 
     if (userRole === "admin") {
+        tabs.push({ id: "agenda", label: "Agenda", icon: Calendar });
         tabs.push({ id: "audit", label: "Audit Logs", icon: Activity });
     }
 
@@ -390,6 +392,7 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
                                 />
                             )}
                             {tab === "feedback" && <FeedbackPage feedback={feedback} onAdd={addFeedback} toast={toast} />}
+                            {tab === "agenda" && userRole === "admin" && <AgendaPage speakers={speakers} onUpdate={updateSpeaker} toast={toast} />}
                             {tab === "audit" && userRole === "admin" && <AuditLogsPage />}
                             {tab === "settings" && <SettingsPage userEmail={userEmail} />}
                         </>

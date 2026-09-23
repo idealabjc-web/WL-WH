@@ -92,8 +92,15 @@ export default function ProfileCard({
                 {row("Session", speaker.sessionTitle || speaker.session_title)}
                 {row("Day / time slot", `${speaker.day || "—"} · ${speaker.timeSlot || speaker.time_slot || "—"}`)}
                 {row("Conference Room", speaker.conferenceRoom || speaker.conference_room || speaker.room)}
-                {row("Hotel room", speaker.hotelRoom || speaker.hotel_room)}
-                {row("Nights staying", `${speaker.checkinDate || speaker.checkin_date || "—"} → ${speaker.checkoutDate || speaker.checkout_date || "—"} (${speaker.nights || "—"})`)}
+                {speaker.accommodationStatus === "Without Accommodation" || speaker.accommodation_status === "Without Accommodation"
+                    ? row("Accommodation", "Without Accommodation")
+                    : (
+                        <>
+                            {row("Hotel room", speaker.hotelRoom || speaker.hotel_room)}
+                            {row("Nights staying", `${speaker.checkinDate || speaker.checkin_date || "—"} → ${speaker.checkoutDate || speaker.checkout_date || "—"} (${speaker.nights || "—"})`)}
+                        </>
+                    )
+                }
                 {row("Dietary", speaker.diet)}
                 {row("Allergies", speaker.allergy || "None reported")}
                 {row("Speaker tour", speaker.tour)}
