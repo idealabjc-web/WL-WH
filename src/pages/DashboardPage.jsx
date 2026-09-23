@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { StatCard, StatusBadge, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
-import { TIME_SLOTS, generatePortalToken, uploadSpeakerAbstract } from "../api/speakersApi";
+import { TIME_SLOTS, EVENT_DAYS, generatePortalToken, uploadSpeakerAbstract } from "../api/speakersApi";
 import { supabase } from "../supabaseClient";
 import * as XLSX from "xlsx-js-style";
 
@@ -51,7 +51,11 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
         if (!form.name.trim()) return;
 
         if (form.day && form.timeSlot) {
-            const isBlocked = allSpeakers.some(s => s.id !== form.id && s.day === form.day && s.timeSlot === form.timeSlot);
+            const isBlocked = allSpeakers.some(s => 
+                s.id !== form.id && 
+                (s.day === form.day || (form.day === "November 25" && s.day === "Day 1") || (form.day === "November 26" && s.day === "Day 2")) && 
+                s.timeSlot === form.timeSlot
+            );
             if (isBlocked) {
                 alert(`Time slot ${form.timeSlot} on ${form.day} is already booked by another speaker.`);
                 return;
@@ -141,8 +145,9 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                         <label className="text-xs font-semibold text-slate-700">Day</label>
                         <select className={inputCls} value={form.day} onChange={set("day")}>
                             <option value="">Select...</option>
-                            <option value="Day 1">Day 1</option><option value="Day 2">Day 2</option><option value="Day 3">Day 3</option>
-                            <option value="Day 4">Day 4</option><option value="Day 5">Day 5</option>
+                            {EVENT_DAYS.map(d => (
+                                <option key={d} value={d}>{d}</option>
+                            ))}
                         </select>
                     </div>
                     <div>
@@ -429,7 +434,12 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
             )
         )
             return false;
-        if (dayFilter !== "all" && s.day !== dayFilter) return false;
+        if (dayFilter !== "all") {
+            const matchesDay = s.day === dayFilter || 
+                (dayFilter === "November 25" && s.day === "Day 1") || 
+                (dayFilter === "November 26" && s.day === "Day 2");
+            if (!matchesDay) return false;
+        }
         if (filter === "checked" && (!s.checkedIn || s.checkedOut)) return false;
         if (filter === "checkedout" && !s.checkedOut) return false;
         if (filter === "pending" && s.checkedIn) return false;
@@ -717,11 +727,9 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                     onChange={(e) => setDayFilter(e.target.value)}
                                 >
                                     <option value="all">All Days</option>
-                                    <option value="Day 1">Day 1</option>
-                                    <option value="Day 2">Day 2</option>
-                                    <option value="Day 3">Day 3</option>
-                                    <option value="Day 4">Day 4</option>
-                                    <option value="Day 5">Day 5</option>
+                                    {EVENT_DAYS.map(d => (
+                                        <option key={d} value={d}>{d}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="relative sm:w-48">

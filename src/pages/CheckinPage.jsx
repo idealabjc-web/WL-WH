@@ -434,8 +434,9 @@ export default function CheckinPage({
                                             </div>
                                             <div className="min-w-0 flex-1">
                                                 <div className="text-[10px] uppercase font-bold text-slate-400">Venue / Room</div>
-                                                <div className="text-xs font-semibold text-slate-800 truncate">
-                                                    {mySpeaker.conferenceRoom || mySpeaker.room || "Main Conference Hall"}
+                                                <div className="text-xs font-semibold text-slate-800 break-words leading-relaxed">
+                                                    {mySpeaker.conferenceRoom || mySpeaker.room ? <span className="font-bold">{mySpeaker.conferenceRoom || mySpeaker.room} &middot; </span> : null}
+                                                    Holiday Inn Express Dubai Airport, Opp. Terminal 3, Dubai, UAE
                                                 </div>
                                             </div>
                                         </div>
@@ -445,9 +446,9 @@ export default function CheckinPage({
                                                 <Hotel size={16} />
                                             </div>
                                             <div className="min-w-0 flex-1">
-                                                <div className="text-[10px] uppercase font-bold text-slate-400">Accommodation</div>
+                                                <div className="text-[10px] uppercase font-bold text-slate-400">Accommodation / Room Number</div>
                                                 <div className="text-xs font-semibold text-slate-800 truncate">
-                                                    {mySpeaker.nights ? `Stay: ${mySpeaker.nights}` : "No details / self-arranged"}
+                                                    {mySpeaker.hotelRoom ? (mySpeaker.hotelRoom.toLowerCase().startsWith("room") ? mySpeaker.hotelRoom : `Room ${mySpeaker.hotelRoom}`) : (mySpeaker.nights ? `Stay: ${mySpeaker.nights}` : "Assigned upon arrival")}
                                                 </div>
                                             </div>
                                         </div>
