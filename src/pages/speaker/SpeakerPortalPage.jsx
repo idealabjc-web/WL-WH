@@ -20,7 +20,6 @@ import SpeakerAnnouncementsPage from "./SpeakerAnnouncementsPage";
 const TABS = [
     { id: "home", label: "Home", icon: BadgeCheck },
     { id: "announcements", label: "Announcements", icon: Megaphone },
-    { id: "checkin", label: "Scanner", icon: ScanLine },
     { id: "feedback", label: "Feedback", icon: MessageSquare },
     { id: "logistics", label: "Logistics & Travel", mobileLabel: "Logistics", icon: Hotel },
 ];
@@ -444,20 +443,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                         <SpeakerAnnouncementsPage announcements={announcements} />
                     )}
 
-                    {tab === "checkin" && (
-                        <CheckinPage 
-                            speakers={speakers} 
-                            onConfirm={confirmCheckin} 
-                            onCheckout={confirmCheckout}
-                            onUndoCheckout={undoCheckout}
-                            onSaveNotes={saveNotes} 
-                            toast={toast} 
-                            isSpeaker={true}
-                            currentSpeaker={currentSpeaker}
-                            forcedSubTab="qr"
-                            onNavigateTab={handleTabChange}
-                        />
-                    )}
+
 
                     {tab === "feedback" && (
                         <FeedbackPage 
