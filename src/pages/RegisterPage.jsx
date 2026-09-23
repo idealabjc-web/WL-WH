@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { CheckCircle2, AlertTriangle, ExternalLink, ImagePlus, Camera } from "lucide-react";
 import { Field, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
-import { uid, generatePortalToken, emptyForm, generateAndStoreQrBadge, uploadSpeakerPhoto, uploadSpeakerAbstract, TIME_SLOTS } from "../api/speakersApi";
+import { uid, generatePortalToken, emptyForm, generateAndStoreQrBadge, uploadSpeakerPhoto, uploadSpeakerAbstract, TIME_SLOTS, EVENT_DAYS } from "../api/speakersApi";
 
 import PhoneField from "../components/common/PhoneField";
 
@@ -57,7 +57,10 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
         }
 
         if (form.day && form.timeSlot) {
-            const isBlocked = speakers.some(s => s.day === form.day && s.timeSlot === form.timeSlot);
+            const isBlocked = speakers.some(s => 
+                (s.day === form.day || (form.day === "November 25" && s.day === "Day 1") || (form.day === "November 26" && s.day === "Day 2")) && 
+                s.timeSlot === form.timeSlot
+            );
             if (isBlocked) {
                 toast(`Time slot ${form.timeSlot} on ${form.day} is already booked.`);
                 return;
@@ -256,11 +259,9 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                 <Field label="Day">
                     <select className={inputCls} value={form.day} onChange={set("day")}>
                         <option value="">Select a day...</option>
-                        <option value="Day 1">Day 1</option>
-                        <option value="Day 2">Day 2</option>
-                        <option value="Day 3">Day 3</option>
-                        <option value="Day 4">Day 4</option>
-                        <option value="Day 5">Day 5</option>
+                        {EVENT_DAYS.map(d => (
+                            <option key={d} value={d}>{d}</option>
+                        ))}
                     </select>
                 </Field>
             </div>
@@ -268,7 +269,10 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                 <Field label="Time slot (requires Day selection first)">
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
                         {TIME_SLOTS.map(slot => {
-                            const isBooked = form.day ? speakers.some(s => s.day === form.day && s.timeSlot === slot) : false;
+                            const isBooked = form.day ? speakers.some(s => 
+                                (s.day === form.day || (form.day === "November 25" && s.day === "Day 1") || (form.day === "November 26" && s.day === "Day 2")) && 
+                                s.timeSlot === slot
+                            ) : false;
                             const isSelected = form.timeSlot === slot;
                             return (
                                 <button

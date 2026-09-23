@@ -43,6 +43,11 @@ export function generatePortalToken() {
     return Math.random().toString(36).slice(2, 8).toUpperCase();
 }
 
+export const EVENT_DAYS = [
+    "November 25",
+    "November 26"
+];
+
 export const TIME_SLOTS = [
     "09:00 - 09:30", "09:30 - 10:00", "10:00 - 10:30", "10:30 - 11:00",
     "11:00 - 11:30", "11:30 - 12:00", "12:00 - 12:30", "12:30 - 13:00",

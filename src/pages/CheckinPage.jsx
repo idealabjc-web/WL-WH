@@ -433,9 +433,9 @@ export default function CheckinPage({
                                                 <MapPin size={16} />
                                             </div>
                                             <div className="min-w-0 flex-1">
-                                                <div className="text-[10px] uppercase font-bold text-slate-400">Venue / Room</div>
-                                                <div className="text-xs font-semibold text-slate-800 truncate">
-                                                    {mySpeaker.room || "Main Conference Hall"}
+                                                <div className="text-[10px] uppercase font-bold text-slate-400">Venue</div>
+                                                <div className="text-xs font-semibold text-slate-800 break-words leading-relaxed">
+                                                    Holiday Inn Express Dubai Airport, Opp. Terminal 3, Dubai, UAE
                                                 </div>
                                             </div>
                                         </div>
@@ -445,9 +445,9 @@ export default function CheckinPage({
                                                 <Hotel size={16} />
                                             </div>
                                             <div className="min-w-0 flex-1">
-                                                <div className="text-[10px] uppercase font-bold text-slate-400">Accommodation</div>
+                                                <div className="text-[10px] uppercase font-bold text-slate-400">Accommodation / Room Number</div>
                                                 <div className="text-xs font-semibold text-slate-800 truncate">
-                                                    {mySpeaker.room ? `Room ${mySpeaker.room}` : "Assigned upon arrival"}
+                                                    {mySpeaker.room ? (mySpeaker.room.toLowerCase().startsWith("room") ? mySpeaker.room : `Room ${mySpeaker.room}`) : "Assigned upon arrival"}
                                                 </div>
                                             </div>
                                         </div>
