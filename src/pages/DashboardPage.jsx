@@ -51,11 +51,13 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
         if (!form.name.trim()) return;
 
         if (form.day && form.timeSlot) {
-            const isBlocked = allSpeakers.some(s => 
-                s.id !== form.id && 
+            const isBlocked = allSpeakers.some(s => {
+                const normRoom = (r) => (r || "Room TBA").trim();
+                return s.id !== form.id && 
                 (s.day === form.day || (form.day === "November 25" && s.day === "Day 1") || (form.day === "November 26" && s.day === "Day 2")) && 
+                normRoom(s.conferenceRoom) === normRoom(form.conferenceRoom) &&
                 s.timeSlot === form.timeSlot
-            );
+            });
             if (isBlocked) {
                 alert(`Time slot ${form.timeSlot} on ${form.day} is already booked by another speaker.`);
                 return;
@@ -154,7 +156,32 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                         <label className="text-xs font-semibold text-slate-700">Time Slot</label>
                         <select className={inputCls} value={form.timeSlot} onChange={set("timeSlot")}>
                             <option value="">Select...</option>
-                            {TIME_SLOTS.map(t => <option key={t} value={t}>{t}</option>)}
+                            {TIME_SLOTS.map(t => {
+                                const isLunch = t.toLowerCase().includes("lunch");
+                                let isBooked = false;
+                                
+                                const normRoom = (r) => (r || "Room TBA").trim();
+                                
+                                if (!isLunch && form.day) {
+                                    isBooked = allSpeakers.some(s => 
+                                        s.id !== form.id && 
+                                        (s.day === form.day || (form.day === "November 25" && s.day === "Day 1") || (form.day === "November 26" && s.day === "Day 2")) && 
+                                        normRoom(s.conferenceRoom) === normRoom(form.conferenceRoom) &&
+                                        s.timeSlot === t
+                                    );
+                                }
+                                const showStatus = !isLunch && form.day;
+                                return (
+                                    <option 
+                                        key={t} 
+                                        value={t}
+                                        disabled={isBooked}
+                                        style={showStatus ? { color: isBooked ? "#e11d48" : "#059669", fontWeight: "600" } : {}}
+                                    >
+                                        {t} {showStatus ? (isBooked ? "(Booked)" : "(Available)") : ""}
+                                    </option>
+                                );
+                            })}
                         </select>
                     </div>
                     

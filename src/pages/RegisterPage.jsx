@@ -51,10 +51,14 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
     };
 
     const submit = async () => {
-        if (!form.name.trim()) {
-            toast("Speaker name is required.");
-            return;
-        }
+        if (!form.name.trim()) return toast("Speaker name is required.");
+        if (!form.email.trim()) return toast("Email address is required.");
+        if (!form.phone.trim()) return toast("Phone number is required.");
+        if (!form.speakerTag) return toast("Speaker Tag is required.");
+        if (!form.day) return toast("Event Day is required.");
+        if (!form.timeSlot) return toast("Time Slot is required.");
+        if (!form.conferenceRoom) return toast("Conference Room is required.");
+        if (!form.accommodationStatus) return toast("Accommodation Status is required.");
 
         if (form.day && form.timeSlot) {
             const isBlocked = speakers.some(s => 
@@ -269,10 +273,12 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                 <Field label="Time slot (requires Day selection first)">
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
                         {TIME_SLOTS.map(slot => {
-                            const isBooked = form.day ? speakers.some(s => 
-                                (s.day === form.day || (form.day === "November 25" && s.day === "Day 1") || (form.day === "November 26" && s.day === "Day 2")) && 
+                            const isBooked = form.day ? speakers.some(s => {
+                                const normRoom = (r) => (r || "Room TBA").trim();
+                                return (s.day === form.day || (form.day === "November 25" && s.day === "Day 1") || (form.day === "November 26" && s.day === "Day 2")) && 
+                                normRoom(s.conferenceRoom) === normRoom(form.conferenceRoom) &&
                                 s.timeSlot === slot
-                            ) : false;
+                            }) : false;
                             const isSelected = form.timeSlot === slot;
                             return (
                                 <button
