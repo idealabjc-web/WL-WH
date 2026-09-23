@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Users, ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, Menu, BadgeCheck, LogOut, Settings, Megaphone } from "lucide-react";
+import { Users, ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, Menu, BadgeCheck, LogOut, Settings, Megaphone, Activity } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./supabaseClient";
 import { fetchSpeakers, speakerToRow, createSpeakerRecord, updateSpeakerRecord } from "./api/speakersApi";
 import { fetchFeedback, feedbackToRow } from "./api/feedbackApi";
@@ -17,15 +17,16 @@ import IdCardsPage from "./pages/IdCardsPage";
 import FeedbackPage from "./pages/FeedbackPage";
 import SettingsPage from "./pages/SettingsPage";
 import AnnouncementsPage from "./pages/AnnouncementsPage";
+import AuditLogsPage from "./pages/AuditLogsPage";
 
-const VALID_TABS = ["dashboard", "register", "checkin", "idcards", "feedback", "broadcasts", "settings"];
+const VALID_TABS = ["dashboard", "register", "checkin", "idcards", "feedback", "broadcasts", "settings", "audit"];
 
 function getInitialTab() {
     const hash = window.location.hash.replace("#", "").toLowerCase();
     return VALID_TABS.includes(hash) ? hash : "dashboard";
 }
 
-export default function EventPortal({ displayName = "", userEmail = "", onLogout }) {
+export default function EventPortal({ displayName = "", userEmail = "", userRole = "", onLogout }) {
     const [tab, setTab] = useState(getInitialTab);
     const [speakers, setSpeakers] = useState([]);
     const [feedback, setFeedback] = useState([]);
@@ -137,10 +138,15 @@ export default function EventPortal({ displayName = "", userEmail = "", onLogout
         
         const existing = speakers.find(s => s.id === id);
         if (!existing) return false;
+        
+        const changedFields = Object.keys(updatedData).filter(key => updatedData[key] !== existing[key]);
         const merged = { ...existing, ...updatedData };
         
         try {
             await updateSpeakerRecord(id, merged);
+            if (changedFields.length > 0) {
+                logAction(userEmail, 'EDIT_SPEAKER_DETAILS', id, { updatedFields: changedFields });
+            }
             toast("Speaker updated successfully.");
             return true;
         } catch (error) {
@@ -213,6 +219,7 @@ export default function EventPortal({ displayName = "", userEmail = "", onLogout
     };
 
     const deleteSpeaker = async (id) => {
+        const speakerToDelete = speakers.find(s => s.id === id);
         setSpeakers((prev) => prev.filter((s) => s.id !== id));
         const { error } = await supabase.from("speakers").delete().eq("id", id);
         if (error) {
@@ -220,7 +227,7 @@ export default function EventPortal({ displayName = "", userEmail = "", onLogout
             toast("Delete failed to sync to database.");
             return false;
         }
-        logAction(userEmail, 'DELETE_SPEAKER', id);
+        logAction(userEmail, 'DELETE_SPEAKER', id, { name: speakerToDelete?.name });
         toast("Speaker deleted successfully.");
         return true;
     };
@@ -233,6 +240,7 @@ export default function EventPortal({ displayName = "", userEmail = "", onLogout
             toast("Notes saved locally but failed to sync.");
             return;
         }
+        logAction(userEmail, 'UPDATE_SPEAKER_NOTES', id, { notes });
         toast("Notes saved.");
     };
 
@@ -242,6 +250,8 @@ export default function EventPortal({ displayName = "", userEmail = "", onLogout
         if (error) {
             console.error(error);
             toast("Feedback saved locally but failed to sync.");
+        } else {
+            logAction(userEmail, 'ADD_FEEDBACK', entry.id, { category: entry.category });
         }
     };
 
@@ -254,6 +264,10 @@ export default function EventPortal({ displayName = "", userEmail = "", onLogout
         { id: "feedback", label: "Feedback", icon: MessageSquare },
         { id: "settings", label: "Settings", icon: Settings },
     ];
+
+    if (userRole === "admin") {
+        tabs.push({ id: "audit", label: "Audit Logs", icon: Activity });
+    }
 
     if (!isSupabaseConfigured) return <SetupNeeded />;
 
@@ -376,6 +390,7 @@ export default function EventPortal({ displayName = "", userEmail = "", onLogout
                                 />
                             )}
                             {tab === "feedback" && <FeedbackPage feedback={feedback} onAdd={addFeedback} toast={toast} />}
+                            {tab === "audit" && userRole === "admin" && <AuditLogsPage />}
                             {tab === "settings" && <SettingsPage userEmail={userEmail} />}
                         </>
                     )}

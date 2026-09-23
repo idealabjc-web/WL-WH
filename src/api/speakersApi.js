@@ -79,32 +79,33 @@ export function speakerToRow(s) {
 }
 
 export function rowToSpeaker(r) {
-    // Flatten the joined data into the single speaker object so UI doesn't break
-    const session = r.sessions?.[0] || {};
-    const accomm = r.accommodations?.[0] || {};
-    const att = r.attendance?.[0] || {};
+    // Flatten the joined data into the single speaker object so UI doesn't break.
+    // Supabase can return arrays or objects depending on foreign key setup (one-to-many vs one-to-one).
+    const session = Array.isArray(r.sessions) ? (r.sessions[0] || {}) : (r.sessions || {});
+    const accomm = Array.isArray(r.accommodations) ? (r.accommodations[0] || {}) : (r.accommodations || {});
+    const att = Array.isArray(r.attendance) ? (r.attendance[0] || {}) : (r.attendance || {});
     
     return {
         id: r.id,
         name: r.name,
         email: r.email,
         phone: r.phone,
-        sessionTitle: session.session_title || null,
-        day: session.day || null,
-        timeSlot: session.time_slot || null,
-        room: session.room || null,
-        checkinDate: accomm.checkin_date || null,
-        checkoutDate: accomm.checkout_date || null,
-        nights: accomm.nights || null,
+        sessionTitle: session.session_title || r.session_title || null,
+        day: session.day || r.day || null,
+        timeSlot: session.time_slot || r.time_slot || null,
+        room: session.room || r.room || null,
+        checkinDate: accomm.checkin_date || r.checkin_date || null,
+        checkoutDate: accomm.checkout_date || r.checkout_date || null,
+        nights: accomm.nights || r.nights || null,
         diet: r.diet,
         allergy: r.allergy,
         tour: r.tour,
         concerns: r.concerns,
-        checkedIn: att.checked_in || false,
-        checkedInAt: att.checked_in_at ? new Date(att.checked_in_at).getTime() : null,
-        checkedOut: att.checked_out || false,
-        checkedOutAt: att.checked_out_at ? new Date(att.checked_out_at).getTime() : null,
-        checkoutNotes: att.checkout_notes || null,
+        checkedIn: att.checked_in || r.checked_in || false,
+        checkedInAt: att.checked_in_at ? new Date(att.checked_in_at).getTime() : (r.checked_in_at ? new Date(r.checked_in_at).getTime() : null),
+        checkedOut: att.checked_out || r.checked_out || false,
+        checkedOutAt: att.checked_out_at ? new Date(att.checked_out_at).getTime() : (r.checked_out_at ? new Date(r.checked_out_at).getTime() : null),
+        checkoutNotes: att.checkout_notes || r.checkout_notes || null,
         createdAt: r.created_at ? new Date(r.created_at).getTime() : null,
         qrUrl: r.qr_url || null,
         photoUrl: r.photo_url || null,

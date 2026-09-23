@@ -176,4 +176,21 @@ CREATE TABLE public.audit_logs (
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "public insert audit_logs" ON public.audit_logs FOR INSERT WITH CHECK (true);
 CREATE POLICY "public read audit_logs" ON public.audit_logs FOR SELECT USING (true);
+CREATE POLICY "public delete audit_logs" ON public.audit_logs FOR DELETE USING (true);
 
+
+-- ─────────────────────────────────────────────────────────────
+-- SPEAKER ABSTRACTS BUCKET
+-- ─────────────────────────────────────────────────────────────
+insert into storage.buckets (id, name, public)
+values ('speaker-abstracts', 'speaker-abstracts', true)
+on conflict (id) do nothing;
+
+create policy "public read abstracts" on storage.objects
+  for select using (bucket_id = 'speaker-abstracts');
+
+create policy "public upload abstracts" on storage.objects
+  for insert with check (bucket_id = 'speaker-abstracts');
+
+create policy "public overwrite abstracts" on storage.objects
+  for update using (bucket_id = 'speaker-abstracts');

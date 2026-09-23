@@ -99,6 +99,7 @@ export default function AdminApp() {
         <EventPortal
             displayName={session.user?.name || session.user?.email}
             userEmail={session.user?.email}
+            userRole={session.user?.role}
             onLogout={handleLogout}
         />
     );

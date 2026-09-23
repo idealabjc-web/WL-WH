@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { 
     Download, RefreshCw, Search, Filter, AlertTriangle, 
     LayoutList, Table as TableIcon, X, ChevronDown, ChevronUp,
@@ -7,8 +7,11 @@ import {
 } from "lucide-react";
 import { StatCard, StatusBadge, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
-import { TIME_SLOTS, generatePortalToken } from "../api/speakersApi";
+import { TIME_SLOTS, generatePortalToken, uploadSpeakerAbstract } from "../api/speakersApi";
 import { supabase } from "../supabaseClient";
+import * as XLSX from "xlsx-js-style";
+
+
 
 import PhoneField from "../components/common/PhoneField";
 
@@ -16,6 +19,9 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
     const [isEditing, setIsEditing] = useState(false);
     const [form, setForm] = useState(speaker);
     const [saving, setSaving] = useState(false);
+    const [abstractFile, setAbstractFile] = useState(null);
+    const [abstractUploading, setAbstractUploading] = useState(false);
+    const abstractInputRef = useRef(null);
 
     const isSelf = currentSpeaker && (
         speaker.id === currentSpeaker.id || 
@@ -52,10 +58,26 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
             }
         }
 
+        let updatedForm = { ...form };
+
+        // Upload abstract file if one was selected
+        if (abstractFile) {
+            setAbstractUploading(true);
+            const url = await uploadSpeakerAbstract(speaker.id, abstractFile);
+            setAbstractUploading(false);
+            if (url) {
+                updatedForm = { ...updatedForm, abstractUrl: url, abstractStatus: "submitted" };
+            }
+        }
+
         setSaving(true);
-        const success = await onUpdate(speaker.id, form);
+        const success = await onUpdate(speaker.id, updatedForm);
         setSaving(false);
-        if (success) setIsEditing(false);
+        if (success) {
+            setAbstractFile(null);
+            if (abstractInputRef.current) abstractInputRef.current.value = "";
+            setIsEditing(false);
+        }
     };
 
     const handleDelete = async () => {
@@ -150,11 +172,76 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                         </select>
                     </div>
                     <div><label className="text-xs font-semibold text-slate-700">Allergies</label><input className={inputCls} value={form.allergy} onChange={set("allergy")} /></div>
+                    <div>
+                        <label className="text-xs font-semibold text-slate-700">Tour Interest</label>
+                        <select className={inputCls} value={form.tour} onChange={set("tour")}>
+                            <option value="yes">Yes</option>
+                            <option value="no">No</option>
+                        </select>
+                    </div>
+                    <div><label className="text-xs font-semibold text-slate-700">Concerns</label><input className={inputCls} value={form.concerns || ""} onChange={set("concerns")} /></div>
+
+                    {/* Abstract */}
+                    <div className="sm:col-span-2">
+                        <label className="text-xs font-semibold text-slate-700 block mb-1.5">
+                            Abstract File
+                        </label>
+                        <input
+                            ref={abstractInputRef}
+                            type="file"
+                            accept=".pdf,.doc,.docx,.ppt,.pptx"
+                            className="hidden"
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) setAbstractFile(file);
+                            }}
+                        />
+                        {abstractFile ? (
+                            <div className="flex items-center gap-2">
+                                <div className="text-xs text-emerald-600 font-medium bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-100 truncate flex-1">
+                                    Selected: {abstractFile.name}
+                                </div>
+                                <button
+                                    type="button"
+                                    className="text-xs text-rose-500 hover:text-rose-700 hover:bg-rose-50 font-semibold px-3 py-2 rounded-lg transition-colors"
+                                    onClick={() => {
+                                        setAbstractFile(null);
+                                        if (abstractInputRef.current) abstractInputRef.current.value = "";
+                                    }}
+                                >Remove</button>
+                            </div>
+                        ) : form.abstractUrl ? (
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                                <div className="text-xs text-blue-700 font-medium bg-blue-50 px-3 py-2 rounded-lg border border-blue-100 flex-1 flex items-center justify-between">
+                                    <span className="truncate mr-2">Current abstract uploaded</span>
+                                    <a href={form.abstractUrl} target="_blank" rel="noreferrer" className="underline hover:text-blue-900 shrink-0">
+                                        View ↗
+                                    </a>
+                                </div>
+                                <button
+                                    type="button"
+                                    className="text-xs text-slate-700 hover:text-slate-900 font-semibold border border-slate-200 hover:bg-slate-50 px-3 py-2 rounded-lg bg-white transition-colors shrink-0"
+                                    onClick={() => abstractInputRef.current?.click()}
+                                >
+                                    Change File
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                className="text-xs text-slate-600 hover:text-slate-800 font-semibold border-2 border-dashed border-slate-200 hover:border-amber-300 hover:bg-amber-50 px-3 py-2.5 rounded-lg bg-slate-50 transition-colors w-full flex items-center justify-center gap-2"
+                                onClick={() => abstractInputRef.current?.click()}
+                            >
+                                <span className="text-amber-500 font-bold text-lg leading-none">+</span>
+                                Submit Abstract File
+                            </button>
+                        )}
+                    </div>
                 </div>
                 <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end pt-2 border-t border-slate-200">
                     <button onClick={() => setIsEditing(false)} className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg hover:bg-slate-200 text-slate-700 min-h-[42px] transition-colors">Cancel</button>
-                    <button onClick={save} disabled={saving} className="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm disabled:opacity-50 min-h-[42px] transition-colors">
-                        {saving ? "Saving..." : "Save Changes"}
+                    <button onClick={save} disabled={saving || abstractUploading} className="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm disabled:opacity-50 min-h-[42px] transition-colors">
+                        {abstractUploading ? "Uploading..." : saving ? "Saving..." : "Save Changes"}
                     </button>
                 </div>
             </div>
@@ -229,6 +316,14 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                     {row("Dietary Preference", isSpeaker && !isSelf ? "Confidential" : speaker.diet)}
                     {row("Allergies", isSpeaker && !isSelf ? "Confidential" : (speaker.allergy || "None reported"))}
                     {row("Speaker Tour", isSpeaker && !isSelf ? "Confidential" : speaker.tour)}
+                    <div className="text-xs font-semibold text-amber-600 tracking-wide mt-3 mb-1.5">ABSTRACT</div>
+                    {row("Abstract Status", speaker.abstractStatus ? speaker.abstractStatus.charAt(0).toUpperCase() + speaker.abstractStatus.slice(1) : "—")}
+                    {speaker.abstractUrl && (
+                        <div className="flex justify-between gap-4 py-2 border-b border-slate-100 dark:border-slate-800 last:border-0 text-sm">
+                            <div className="text-slate-500 shrink-0">Abstract File</div>
+                            <a href={speaker.abstractUrl} target="_blank" rel="noreferrer" className="font-semibold text-blue-600 underline text-right truncate">View ↗</a>
+                        </div>
+                    )}
                 </div>
             </div>
             <div className="mt-4 pt-3 border-t border-slate-200 flex flex-wrap items-center gap-2.5">
@@ -332,32 +427,156 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
         return true;
     });
 
-    const exportCsv = () => {
+    const exportExcel = () => {
+        // Status is a computed first column; rest are data fields
         const cols = [
-            "name", "sessionTitle", "day", "timeSlot", "room",
-            "checkinDate", "checkoutDate", "nights", "diet",
-            "allergy", "tour", "concerns", "checkedIn", "checkedInAt", "checkedOut", "checkedOutAt", "checkoutNotes", "email", "phone"
+            { key: "_status",      label: "Status" },
+            { key: "id",           label: "Badge ID" },
+            { key: "name",         label: "Name" },
+            { key: "email",        label: "Email" },
+            { key: "phone",        label: "Phone" },
+            { key: "sessionTitle", label: "Session Title" },
+            { key: "day",          label: "Day" },
+            { key: "timeSlot",     label: "Time Slot" },
+            { key: "room",         label: "Room" },
+            { key: "checkinDate",  label: "Hotel Check-in" },
+            { key: "checkoutDate", label: "Hotel Check-out" },
+            { key: "nights",       label: "Nights" },
+            { key: "diet",         label: "Diet" },
+            { key: "allergy",      label: "Allergy" },
+            { key: "tour",         label: "Tour" },
+            { key: "concerns",     label: "Concerns" },
+            { key: "checkedInAt",  label: "Check-in Time" },
+            { key: "checkedOutAt", label: "Check-out Time" },
+            { key: "checkoutNotes",label: "Checkout Notes" },
         ];
-        const csv = [cols.join(",")]
-            .concat(
-                speakers.map((s) =>
-                    cols
-                        .map((c) => {
-                            let v = s[c];
-                            if ((c === "checkedInAt" || c === "checkedOutAt") && v) v = new Date(v).toLocaleString();
-                            v = v === undefined || v === null ? "" : String(v).replace(/"/g, '""');
-                            return `"${v}"`;
-                        })
-                        .join(",")
-                )
-            )
-            .join("\n");
-        const blob = new Blob([csv], { type: "text/csv" });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = "speakers-export.csv";
-        link.click();
+
+        // ── Styles ────────────────────────────────────────────────
+        const border = {
+            top:    { style: "thin", color: { rgb: "E2E8F0" } },
+            bottom: { style: "thin", color: { rgb: "E2E8F0" } },
+            left:   { style: "thin", color: { rgb: "E2E8F0" } },
+            right:  { style: "thin", color: { rgb: "E2E8F0" } },
+        };
+
+        const headerStyle = {
+            font:      { bold: true, color: { rgb: "FFFFFF" }, sz: 10, name: "Calibri" },
+            fill:      { fgColor: { rgb: "1E293B" } },   // slate-900
+            alignment: { horizontal: "center", vertical: "center" },
+            border,
+        };
+
+        const getStatus = (s) => {
+            if (s.checkedOut)               return "Checked Out";
+            if (s.checkedIn)                return "On-Site";
+            if (s.allergy || s.concerns)    return "Flagged";
+            return "Pending";
+        };
+
+        const cellStyle = (s, isAltRow) => ({
+            font:      { sz: 10, color: { rgb: "334155" }, name: "Calibri" },
+            fill:      { fgColor: { rgb: isAltRow ? "F8FAFC" : "FFFFFF" } },  // alternating
+            alignment: { vertical: "center" },
+            border,
+        });
+
+        const statusCellStyle = (s, isAltRow) => {
+            const status = getStatus(s);
+            const colors = {
+                "On-Site":     { font: "166534", fill: isAltRow ? "DCFCE7" : "F0FDF4" },
+                "Checked Out": { font: "6B21A8", fill: isAltRow ? "EDE9FE" : "F5F3FF" },
+                "Flagged":     { font: "92400E", fill: isAltRow ? "FEF3C7" : "FFFBEB" },
+                "Pending":     { font: "475569", fill: isAltRow ? "F8FAFC" : "FFFFFF" },
+            };
+            const c = colors[status];
+            return {
+                font:      { sz: 10, bold: true, color: { rgb: c.font }, name: "Calibri" },
+                fill:      { fgColor: { rgb: c.fill } },
+                alignment: { horizontal: "center", vertical: "center" },
+                border,
+            };
+        };
+
+        // ── Build worksheet ────────────────────────────────────────
+        const wsData = [];
+
+        // Header row
+        wsData.push(cols.map(c => ({ v: c.label, t: "s", s: headerStyle })));
+
+        // Data rows with alternating background
+        speakers.forEach((s, i) => {
+            const isAlt = i % 2 === 1;
+            wsData.push(cols.map(({ key }) => {
+                if (key === "_status") {
+                    return { v: getStatus(s), t: "s", s: statusCellStyle(s, isAlt) };
+                }
+                let v = s[key];
+                if ((key === "checkedInAt" || key === "checkedOutAt") && v)
+                    v = new Date(v).toLocaleString();
+                return { v: v ?? "", t: "s", s: cellStyle(s, isAlt) };
+            }));
+        });
+
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+        // Column widths
+        ws["!cols"] = [
+            { wch: 13 }, { wch: 11 }, { wch: 24 }, { wch: 26 }, { wch: 16 },
+            { wch: 34 }, { wch: 8  }, { wch: 16 }, { wch: 10 },
+            { wch: 14 }, { wch: 14 }, { wch: 8  }, { wch: 18 },
+            { wch: 18 }, { wch: 8  }, { wch: 30 },
+            { wch: 20 }, { wch: 20 }, { wch: 30 },
+        ];
+
+        // Header row height + data row heights
+        ws["!rows"] = [{ hpt: 24 }, ...speakers.map(() => ({ hpt: 18 }))];
+
+        // Freeze the header row so it stays visible when scrolling
+        ws["!freeze"] = { xSplit: 0, ySplit: 1 };
+
+
+        // ── Summary sheet ─────────────────────────────────────────
+        const smHeaderStyle = {
+            font:  { bold: true, sz: 10, color: { rgb: "FFFFFF" }, name: "Calibri" },
+            fill:  { fgColor: { rgb: "1E293B" } },
+            alignment: { horizontal: "left", vertical: "center" },
+            border: { top: { style: "thin", color: { rgb: "E2E8F0" } }, bottom: { style: "thin", color: { rgb: "E2E8F0" } }, left: { style: "thin", color: { rgb: "E2E8F0" } }, right: { style: "thin", color: { rgb: "E2E8F0" } } },
+        };
+        const smValueStyle = {
+            font:  { sz: 10, bold: true, color: { rgb: "92400E" }, name: "Calibri" },
+            fill:  { fgColor: { rgb: "FEF3C7" } },   // warm mustard / amber-100
+            alignment: { horizontal: "right", vertical: "center" },
+            border: { top: { style: "thin", color: { rgb: "FCD34D" } }, bottom: { style: "thin", color: { rgb: "FCD34D" } }, left: { style: "thin", color: { rgb: "FCD34D" } }, right: { style: "thin", color: { rgb: "FCD34D" } } },
+        };
+
+        const summaryRows = [
+            ["Total Speakers",        speakers.length],
+            ["On-Site (Checked In)",  speakers.filter(s => s.checkedIn && !s.checkedOut).length],
+            ["Checked Out",           speakers.filter(s => s.checkedOut).length],
+            ["Awaiting Arrival",      speakers.filter(s => !s.checkedIn).length],
+            ["Dietary / Allergy",     speakers.filter(s => s.allergy || (s.diet && s.diet !== "No preference")).length],
+            ["Tour Interest",         speakers.filter(s => s.tour === "yes").length],
+            ["Exported At",           new Date().toLocaleString()],
+        ];
+
+        const summaryWsData = summaryRows.map(([metric, value]) => [
+            { v: metric, t: "s", s: smHeaderStyle },
+            { v: value,  t: typeof value === "number" ? "n" : "s", s: smValueStyle },
+        ]);
+
+        const summaryWs = XLSX.utils.aoa_to_sheet(summaryWsData);
+        summaryWs["!cols"] = [{ wch: 24 }, { wch: 20 }];
+        summaryWs["!rows"] = summaryRows.map(() => ({ hpt: 20 }));
+
+        // ── Workbook ──────────────────────────────────────────────
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Speakers");
+        XLSX.utils.book_append_sheet(wb, summaryWs, "Summary");
+
+        const date = new Date().toISOString().slice(0, 10);
+        XLSX.writeFile(wb, `speakers-export-${date}.xlsx`);
     };
+
 
     return (
         <div>
@@ -512,11 +731,11 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                         </div>
                         <div className="flex gap-2 shrink-0">
                             {!isSpeaker && (
-                                <button
-                                    onClick={exportCsv}
-                                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-300/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700 text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs transition-all min-h-[42px]"
+                                    <button
+                                    onClick={exportExcel}
+                                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs transition-all min-h-[42px]"
                                 >
-                                    <Download size={15} /> Export
+                                    <Download size={15} /> Excel
                                 </button>
                             )}
                             <button
@@ -684,7 +903,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700" title={`Allergy: ${s.allergy}`}>⚠ Allergy</span>
                                                         )}
                                                         {s.tour === "yes" && (
-                                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700" title="Tour Requested">Map</span>
+                                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700" title="Tour Requested">Tour</span>
                                                         )}
                                                         {(!s.diet || s.diet === "No preference") && !s.allergy && s.tour !== "yes" && (
                                                             <span className="text-[11px] text-slate-400 font-medium">—</span>
@@ -697,7 +916,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                                             {s.concerns}
                                                         </div>
                                                     ) : (
-                                                        <span className="text-[11px] text-slate-400 font-medium">—</span>
+                                                        <span className="text-[11px] text-slate-400 font-medium tracking-wide">NOCONCERNS</span>
                                                     )}
                                                 </td>
                                                 <td className="py-3 px-4 text-xs font-semibold text-slate-700 whitespace-nowrap">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Send, Trash2, Megaphone } from "lucide-react";
 import { fetchAnnouncements, createAnnouncement, deleteAnnouncement } from "../api/announcementsApi";
+import { logAction } from "../api/auditApi";
 
 export default function AnnouncementsPage({ userEmail, toast }) {
     const [announcements, setAnnouncements] = useState([]);
@@ -28,6 +29,7 @@ export default function AnnouncementsPage({ userEmail, toast }) {
             setAnnouncements([newAnn, ...announcements]);
             setTitle("");
             setMessage("");
+            logAction(userEmail, 'CREATE_BROADCAST', newAnn.id, { title });
             toast("Broadcast sent successfully to all speakers.");
         } catch (e) {
             toast("Failed to send broadcast.");
@@ -39,6 +41,7 @@ export default function AnnouncementsPage({ userEmail, toast }) {
         try {
             await deleteAnnouncement(id);
             setAnnouncements(announcements.filter(a => a.id !== id));
+            logAction(userEmail, 'DELETE_BROADCAST', id);
             toast("Broadcast deleted.");
         } catch (e) {
             toast("Failed to delete broadcast.");

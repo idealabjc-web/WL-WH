@@ -392,18 +392,52 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                 {/* Tab Content Views */}
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-200">
                     {tab === "home" && (
-                        <CheckinPage 
-                            speakers={speakers} 
-                            onConfirm={confirmCheckin} 
-                            onCheckout={confirmCheckout}
-                            onUndoCheckout={undoCheckout}
-                            onSaveNotes={saveNotes} 
-                            toast={toast} 
-                            isSpeaker={true}
-                            currentSpeaker={currentSpeaker}
-                            forcedSubTab="home"
-                            onNavigateTab={handleTabChange}
-                        />
+                        <div className="space-y-4 sm:space-y-6">
+                            <CheckinPage 
+                                speakers={speakers} 
+                                onConfirm={confirmCheckin} 
+                                onCheckout={confirmCheckout}
+                                onUndoCheckout={undoCheckout}
+                                onSaveNotes={saveNotes} 
+                                toast={toast} 
+                                isSpeaker={true}
+                                currentSpeaker={currentSpeaker}
+                                forcedSubTab="home"
+                                onNavigateTab={handleTabChange}
+                            />
+
+                            <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-7 shadow-sm">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+                                    <div>
+                                        <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                            <MapPin size={20} className="text-amber-600" /> Venue Location
+                                        </h2>
+                                        <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                                            Holiday Inn Express Dubai Airport by IHG
+                                        </p>
+                                    </div>
+                                    <a 
+                                        href="https://www.google.com/maps/dir/Dubai+International+Airport/Holiday+Inn+Express+Dubai+Airport+by+IHG"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold rounded-xl transition-all shadow-sm active:scale-[0.98]"
+                                    >
+                                        <MapPin size={16} /> Get Directions from Airport
+                                    </a>
+                                </div>
+                                <div className="w-full h-64 sm:h-96 rounded-xl overflow-hidden border border-slate-200 shadow-inner relative">
+                                    <iframe 
+                                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d720.915840596978!2d55.360557209372416!3d25.242778564800638!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3e5f5cf8c26f4ab3%3A0x285ae6aa75f7e0d2!2sHoliday%20Inn%20Express%20Dubai%20Airport%20by%20IHG!5e0!3m2!1sen!2sin!4v1790060837841!5m2!1sen!2sin" 
+                                        width="100%" 
+                                        height="100%" 
+                                        style={{ border: 0 }} 
+                                        allowFullScreen="" 
+                                        loading="lazy" 
+                                        referrerPolicy="no-referrer-when-downgrade"
+                                    ></iframe>
+                                </div>
+                            </div>
+                        </div>
                     )}
 
                     {tab === "announcements" && (

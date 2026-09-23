@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { supabase } from "../supabaseClient";
 import bcrypt from "bcryptjs";
 import { Lock, Eye, EyeOff, Loader2, AlertCircle, CheckCircle2, Shield, Moon, Sun } from "lucide-react";
+import { logAction } from "../api/auditApi";
 
 export default function SettingsPage({ userEmail }) {
     const [currentPassword, setCurrentPassword] = useState("");
@@ -86,6 +87,8 @@ export default function SettingsPage({ userEmail }) {
         if (updateError || !updateData || updateData.length === 0) {
             return setError("Failed to update password. Please try again.");
         }
+
+        logAction(userEmail, 'UPDATE_STAFF_PASSWORD', userEmail);
 
         setSuccess(true);
         setCurrentPassword("");
