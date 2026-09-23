@@ -294,8 +294,12 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                 </Field>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-3">
-                <Field label="Hotel room no.">
-                    <input className={inputCls} value={form.room} onChange={set("room")} placeholder="e.g. 1204" />
+                <Field label="Conference Room">
+                    <select className={inputCls} value={form.conferenceRoom} onChange={set("conferenceRoom")}>
+                        <option value="">Select Room...</option>
+                        <option value="Room 1">Room 1</option>
+                        <option value="Room 2">Room 2</option>
+                    </select>
                 </Field>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-3">
@@ -307,6 +311,11 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                 </Field>
                 <Field label="No. of nights">
                     <input className={inputCls} value={form.nights} onChange={set("nights")} placeholder="auto or manual" />
+                </Field>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-3">
+                <Field label="Hotel Room No.">
+                    <input className={inputCls} value={form.hotelRoom} onChange={set("hotelRoom")} placeholder="e.g. 1204" />
                 </Field>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3">

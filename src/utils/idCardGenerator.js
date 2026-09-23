@@ -105,12 +105,12 @@ export async function generateIdCardJpeg(speaker) {
     ctx.font = "bold 20px Inter, -apple-system, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText("WOMEN LEADERSHIP - WOMEN", width / 2, 200);
-    ctx.fillText("HEALTH (WL - WH 2025)", width / 2, 235);
+    ctx.fillText("HEALTH (WL - WH 2026)", width / 2, 235);
 
     // Subtitle / Date & Location
     ctx.fillStyle = "#0f172a";
     ctx.font = "600 13px Inter, -apple-system, sans-serif";
-    ctx.fillText("September 08-09, 2025 | Miami, Florida.", width / 2, 280);
+    ctx.fillText("Nov 25-26, 2026 | Dubai, UAE", width / 2, 280);
 
     // 5. Flowing Cyan Accent Waves behind avatar
     ctx.save();

@@ -153,7 +153,14 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                         </select>
                     </div>
                     
-                    <div><label className="text-xs font-semibold text-slate-700">Room</label><input className={inputCls} value={form.room} onChange={set("room")} /></div>
+                    <div>
+                        <label className="text-xs font-semibold text-slate-700">Conference Room</label>
+                        <select className={inputCls} value={form.conferenceRoom} onChange={set("conferenceRoom")}>
+                            <option value="">Select...</option>
+                            <option value="Room 1">Room 1</option>
+                            <option value="Room 2">Room 2</option>
+                        </select>
+                    </div>
                     <div>
                         <label className="text-xs font-semibold text-slate-700">Check-in</label>
                         <input type="date" className={inputCls} value={form.checkinDate} onChange={set("checkinDate")} />
@@ -161,6 +168,10 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                     <div>
                         <label className="text-xs font-semibold text-slate-700">Check-out</label>
                         <input type="date" className={inputCls} value={form.checkoutDate} onChange={set("checkoutDate")} />
+                    </div>
+                    <div>
+                        <label className="text-xs font-semibold text-slate-700">Hotel Room</label>
+                        <input className={inputCls} value={form.hotelRoom} onChange={set("hotelRoom")} placeholder="e.g. 1204" />
                     </div>
                     <div><label className="text-xs font-semibold text-slate-700">Nights</label><input className={inputCls} value={form.nights} onChange={set("nights")} /></div>
                     

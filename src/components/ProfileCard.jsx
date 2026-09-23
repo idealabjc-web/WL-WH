@@ -91,7 +91,8 @@ export default function ProfileCard({
                 </div>
                 {row("Session", speaker.sessionTitle || speaker.session_title)}
                 {row("Day / time slot", `${speaker.day || "—"} · ${speaker.timeSlot || speaker.time_slot || "—"}`)}
-                {row("Hotel room", speaker.room)}
+                {row("Conference Room", speaker.conferenceRoom || speaker.conference_room || speaker.room)}
+                {row("Hotel room", speaker.hotelRoom || speaker.hotel_room)}
                 {row("Nights staying", `${speaker.checkinDate || speaker.checkin_date || "—"} → ${speaker.checkoutDate || speaker.checkout_date || "—"} (${speaker.nights || "—"})`)}
                 {row("Dietary", speaker.diet)}
                 {row("Allergies", speaker.allergy || "None reported")}

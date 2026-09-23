@@ -44,15 +44,17 @@ export function generatePortalToken() {
 }
 
 export const TIME_SLOTS = [
-    "09:00 - 09:30", "09:30 - 10:00", "10:00 - 10:30", "10:30 - 11:00",
-    "11:00 - 11:30", "11:30 - 12:00", "12:00 - 12:30", "12:30 - 13:00",
-    "13:00 - 13:30", "13:30 - 14:00", "14:00 - 14:30", "14:30 - 15:00",
-    "15:00 - 15:30", "15:30 - 16:00", "16:00 - 16:30", "16:30 - 17:00"
+    "08:00 - 08:25", "08:25 - 08:50", "08:50 - 09:15", "09:15 - 09:40",
+    "09:40 - 10:05", "10:05 - 10:30", "10:30 - 10:55", "10:55 - 11:20",
+    "11:20 - 11:45", "11:45 - 12:10", "12:10 - 12:35", "12:35 - 13:00",
+    "13:00 - 13:25", "13:25 - 14:10 (Lunch)", "14:10 - 14:35", "14:35 - 15:00",
+    "15:00 - 15:25", "15:25 - 15:50", "15:50 - 16:15", "16:15 - 16:40",
+    "16:40 - 17:05", "17:05 - 17:30", "17:30 - 17:55", "17:55 - 18:20"
 ];
 
 export const emptyForm = {
     name: "", email: "", phone: "", sessionTitle: "", day: "", timeSlot: "",
-    room: "", checkinDate: "", checkoutDate: "", nights: "", diet: "No preference",
+    conferenceRoom: "", hotelRoom: "", checkinDate: "", checkoutDate: "", nights: "", diet: "No preference",
     allergy: "", tour: "yes", concerns: "", photoUrl: "",
     abstractProvided: "no", abstractUrl: "", whoseSpeaker: ""
 };
@@ -75,6 +77,7 @@ export function speakerToRow(s) {
         abstract_url: s.abstractUrl || null,
         whose_speaker: s.whoseSpeaker || null,
         portal_token: s.portalToken || null,
+        speaker_tag: s.speakerTag || null,
     };
 }
 
@@ -93,7 +96,8 @@ export function rowToSpeaker(r) {
         sessionTitle: session.session_title || r.session_title || null,
         day: session.day || r.day || null,
         timeSlot: session.time_slot || r.time_slot || null,
-        room: session.room || r.room || null,
+        conferenceRoom: session.conference_room || r.conference_room || r.room || null,
+        hotelRoom: accomm.hotel_room || r.hotel_room || null,
         checkinDate: accomm.checkin_date || r.checkin_date || null,
         checkoutDate: accomm.checkout_date || r.checkout_date || null,
         nights: accomm.nights || r.nights || null,
@@ -114,6 +118,7 @@ export function rowToSpeaker(r) {
         abstractUrl: r.abstract_url || null,
         whoseSpeaker: r.whose_speaker || null,
         portalToken: r.portal_token || null,
+        speakerTag: r.speaker_tag || null,
     };
 }
 
@@ -135,23 +140,24 @@ export async function createSpeakerRecord(rec, skipQueue = false) {
     const { error: spkError } = await supabase.from("speakers").insert(speakerRow);
     if (spkError) throw spkError;
     
-    if (rec.sessionTitle || rec.day || rec.timeSlot || rec.room) {
+    if (rec.sessionTitle || rec.day || rec.timeSlot || rec.conferenceRoom) {
         const { error: sessError } = await supabase.from("sessions").insert({
             speaker_id: rec.id,
             session_title: rec.sessionTitle || null,
             day: rec.day || null,
             time_slot: rec.timeSlot || null,
-            room: rec.room || null
+            conference_room: rec.conferenceRoom || null
         });
         if (sessError) throw sessError;
     }
     
-    if (rec.checkinDate || rec.checkoutDate || rec.nights) {
+    if (rec.checkinDate || rec.checkoutDate || rec.nights || rec.hotelRoom) {
         const { error: accError } = await supabase.from("accommodations").insert({
             speaker_id: rec.id,
             checkin_date: rec.checkinDate || null,
             checkout_date: rec.checkoutDate || null,
-            nights: rec.nights || null
+            nights: rec.nights || null,
+            hotel_room: rec.hotelRoom || null
         });
         if (accError) throw accError;
     }
@@ -187,16 +193,16 @@ export async function updateSpeakerRecord(id, mergedRec, skipQueue = false) {
             session_title: mergedRec.sessionTitle || null,
             day: mergedRec.day || null,
             time_slot: mergedRec.timeSlot || null,
-            room: mergedRec.room || null
+            conference_room: mergedRec.conferenceRoom || null
         }).eq("id", sessData.id);
         if (sessUpdError) throw sessUpdError;
-    } else if (mergedRec.sessionTitle || mergedRec.day || mergedRec.timeSlot || mergedRec.room) {
+    } else if (mergedRec.sessionTitle || mergedRec.day || mergedRec.timeSlot || mergedRec.conferenceRoom) {
         const { error: sessInsError } = await supabase.from("sessions").insert({
             speaker_id: id,
             session_title: mergedRec.sessionTitle || null,
             day: mergedRec.day || null,
             time_slot: mergedRec.timeSlot || null,
-            room: mergedRec.room || null
+            conference_room: mergedRec.conferenceRoom || null
         });
         if (sessInsError) throw sessInsError;
     }
@@ -207,15 +213,17 @@ export async function updateSpeakerRecord(id, mergedRec, skipQueue = false) {
         const { error: accUpdError } = await supabase.from("accommodations").update({
             checkin_date: mergedRec.checkinDate || null,
             checkout_date: mergedRec.checkoutDate || null,
-            nights: mergedRec.nights || null
+            nights: mergedRec.nights || null,
+            hotel_room: mergedRec.hotelRoom || null
         }).eq("id", accData.id);
         if (accUpdError) throw accUpdError;
-    } else if (mergedRec.checkinDate || mergedRec.checkoutDate || mergedRec.nights) {
+    } else if (mergedRec.checkinDate || mergedRec.checkoutDate || mergedRec.nights || mergedRec.hotelRoom) {
         const { error: accInsError } = await supabase.from("accommodations").insert({
             speaker_id: id,
             checkin_date: mergedRec.checkinDate || null,
             checkout_date: mergedRec.checkoutDate || null,
-            nights: mergedRec.nights || null
+            nights: mergedRec.nights || null,
+            hotel_room: mergedRec.hotelRoom || null
         });
         if (accInsError) throw accInsError;
     }

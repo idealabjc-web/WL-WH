@@ -435,7 +435,7 @@ export default function CheckinPage({
                                             <div className="min-w-0 flex-1">
                                                 <div className="text-[10px] uppercase font-bold text-slate-400">Venue / Room</div>
                                                 <div className="text-xs font-semibold text-slate-800 truncate">
-                                                    {mySpeaker.room || "Main Conference Hall"}
+                                                    {mySpeaker.conferenceRoom || mySpeaker.room || "Main Conference Hall"}
                                                 </div>
                                             </div>
                                         </div>
@@ -447,7 +447,7 @@ export default function CheckinPage({
                                             <div className="min-w-0 flex-1">
                                                 <div className="text-[10px] uppercase font-bold text-slate-400">Accommodation</div>
                                                 <div className="text-xs font-semibold text-slate-800 truncate">
-                                                    {mySpeaker.room ? `Room ${mySpeaker.room}` : "Assigned upon arrival"}
+                                                    {mySpeaker.nights ? `Stay: ${mySpeaker.nights}` : "No details / self-arranged"}
                                                 </div>
                                             </div>
                                         </div>
