@@ -279,7 +279,7 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
             <div className="mb-4">
                 <Field label="Time slot (requires Day selection first)">
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
-                        {TIME_SLOTS.map(slot => {
+                        {TIME_SLOTS.filter(s => !s.toLowerCase().includes("lunch")).map(slot => {
                             const isBooked = form.day ? speakers.some(s => {
                                 const normRoom = (r) => (r || "Room TBA").trim();
                                 return (s.day === form.day || (form.day === "November 25" && s.day === "Day 1") || (form.day === "November 26" && s.day === "Day 2")) && 

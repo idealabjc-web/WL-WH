@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from "react";
-import { Calendar, UserPlus, X, ArrowRightLeft, UserMinus, Clock, LayoutList, Table as TableIcon } from "lucide-react";
+import { Calendar, UserPlus, X, ArrowRightLeft, UserMinus, Clock, LayoutList, Table as TableIcon, Download } from "lucide-react";
 import { TIME_SLOTS, EVENT_DAYS } from "../api/speakersApi";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
+import AgendaPoster from "../components/AgendaPoster";
 
 export default function AgendaPage({ speakers, onUpdate, toast }) {
     const [selectedRoom, setSelectedRoom] = useState("Room 1");
-    const [selectedCalendarDay, setSelectedCalendarDay] = useState(EVENT_DAYS[0] || "November 25");
     const [viewMode, setViewMode] = useState("calendar"); // "list" | "calendar"
 
     // Modal state
@@ -66,7 +66,7 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
     };
 
     const handleMoveClick = () => {
-        setMoveState({ room: selectedRoom, day: selectedDay, timeSlot: "" });
+        setMoveState({ room: slotAction.room || selectedRoom, day: slotAction.day, timeSlot: "" });
         setSlotAction({ ...slotAction, type: "move" });
     };
 
@@ -114,44 +114,23 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
                 <p className="text-slate-500 text-sm mt-1">Manage and assign speakers to available time slots.</p>
             </div>
 
-            {/* Controls (Room & Day) */}
+            {/* Controls (Room Filter) */}
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                {/* Room Selector (List View Only) */}
-                {viewMode === "list" && (
-                    <div className="flex bg-slate-100 p-1 rounded-xl">
-                        {rooms.map(room => (
-                            <button
-                                key={room}
-                                onClick={() => setSelectedRoom(room)}
-                                className={`flex-1 px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
-                                    selectedRoom === room 
-                                        ? "bg-white text-slate-900 shadow-sm" 
-                                        : "text-slate-500 hover:text-slate-700"
-                                }`}
-                            >
-                                {room}
-                            </button>
-                        ))}
-                    </div>
-                )}
-                {/* Day Selector (Calendar View Only) */}
-                {viewMode === "calendar" && (
-                    <div className="flex bg-slate-100 p-1 rounded-xl">
-                        {EVENT_DAYS.map(day => (
-                            <button
-                                key={day}
-                                onClick={() => setSelectedCalendarDay(day)}
-                                className={`flex-1 px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
-                                    selectedCalendarDay === day 
-                                        ? "bg-white text-slate-900 shadow-sm" 
-                                        : "text-slate-500 hover:text-slate-700"
-                                }`}
-                            >
-                                {day}
-                            </button>
-                        ))}
-                    </div>
-                )}
+                <div className="flex bg-slate-100 p-1 rounded-xl">
+                    {rooms.map(room => (
+                        <button
+                            key={room}
+                            onClick={() => setSelectedRoom(room)}
+                            className={`flex-1 px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
+                                selectedRoom === room 
+                                    ? "bg-white text-slate-900 shadow-sm" 
+                                    : "text-slate-500 hover:text-slate-700"
+                            }`}
+                        >
+                            {room}
+                        </button>
+                    ))}
+                </div>
                 
                 {/* View Toggle */}
                 <div className="flex bg-slate-100 p-1 rounded-xl ml-auto">
@@ -171,11 +150,21 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
                     >
                         <TableIcon size={16} /> Calendar
                     </button>
+                    <button
+                        onClick={() => setViewMode("poster")}
+                        className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
+                            viewMode === "poster" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                        }`}
+                    >
+                        <Download size={16} /> Poster Export
+                    </button>
                 </div>
             </div>
 
             {/* Agenda Grid */}
-            {viewMode === "list" ? (
+            {viewMode === "poster" ? (
+                <AgendaPoster speakers={speakers} room={selectedRoom} />
+            ) : viewMode === "list" ? (
                 <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                     <div className="divide-y divide-slate-100">
                         {EVENT_DAYS.flatMap(day => TIME_SLOTS.map(slot => ({ day, slot }))).map(item => {
@@ -245,81 +234,78 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
             </div>
             ) : (
                 <div className="space-y-8">
-                    {[selectedCalendarDay].map(day => (
-                        <div key={day} className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-                            <div className="bg-slate-50 border-b border-slate-200 p-4">
-                                <h2 className="text-lg font-bold text-slate-800">{day}</h2>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-[160px_1fr_1fr] divide-y md:divide-y-0 md:divide-x divide-slate-100 border-b border-slate-100 bg-slate-50/50">
-                                <div className="p-3 font-semibold text-slate-500 text-sm hidden md:block">Time</div>
-                                <div className="p-3 font-bold text-slate-700 text-center hidden md:block">Room 1</div>
-                                <div className="p-3 font-bold text-slate-700 text-center hidden md:block">Room 2</div>
-                            </div>
-                            <div className="divide-y divide-slate-100">
-                                {TIME_SLOTS.map(slot => {
-                                    const isLunch = slot.toLowerCase().includes("lunch");
-                                    if (isLunch) {
+                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                        <div className="bg-slate-50 border-b border-slate-200 p-4">
+                            <h2 className="text-lg font-bold text-slate-800">{selectedRoom}</h2>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-[160px_1fr_1fr] divide-y md:divide-y-0 md:divide-x divide-slate-100 border-b border-slate-100 bg-slate-50/50">
+                            <div className="p-3 font-semibold text-slate-500 text-sm hidden md:block">Time</div>
+                            {EVENT_DAYS.map(day => (
+                                <div key={day} className="p-3 font-bold text-slate-700 text-center hidden md:block">{day}</div>
+                            ))}
+                        </div>
+                        <div className="divide-y divide-slate-100">
+                            {TIME_SLOTS.map(slot => {
+                                const isLunch = slot.toLowerCase().includes("lunch");
+                                if (isLunch) {
+                                    return (
+                                        <div key={slot} className="p-4 bg-slate-50 flex items-center justify-center gap-3">
+                                            <Clock size={16} className="text-slate-400" />
+                                            <span className="font-bold text-slate-600 tracking-wide text-sm">{slot}</span>
+                                        </div>
+                                    );
+                                }
+
+                                const renderCard = (dayName) => {
+                                    const speaker = getSpeakerForSlot(slot, dayName, selectedRoom);
+                                    if (speaker) {
                                         return (
-                                            <div key={slot} className="p-4 bg-slate-50 flex items-center justify-center gap-3">
-                                                <Clock size={16} className="text-slate-400" />
-                                                <span className="font-bold text-slate-600 tracking-wide text-sm">{slot}</span>
+                                            <div 
+                                                onClick={() => handleManageClick(slot, speaker, dayName, selectedRoom)}
+                                                className="group flex flex-col h-full p-3 rounded-xl border border-emerald-200 bg-emerald-50 hover:border-emerald-300 hover:bg-emerald-100 cursor-pointer transition-all"
+                                            >
+                                                <div className="flex items-start gap-3">
+                                                    <SpeakerAvatar src={speaker.photoUrl} size={32} />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="font-bold text-slate-900 text-sm truncate">{speaker.name}</div>
+                                                        <div className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wide truncate">
+                                                            {speaker.speakerTag || "Speaker"}
+                                                        </div>
+                                                    </div>
+                                                    <ArrowRightLeft size={14} className="text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                                                </div>
+                                            </div>
+                                        );
+                                    } else {
+                                        return (
+                                            <div 
+                                                onClick={() => handleAssignClick(slot, dayName, selectedRoom)}
+                                                className="flex flex-col items-center justify-center h-full min-h-[60px] p-2 rounded-xl border border-dashed border-slate-300 hover:border-amber-400 hover:bg-amber-50 cursor-pointer transition-all text-slate-400 hover:text-amber-700"
+                                            >
+                                                <UserPlus size={16} className="mb-1" />
+                                                <span className="text-[10px] font-bold uppercase tracking-wider">Assign</span>
                                             </div>
                                         );
                                     }
+                                };
 
-                                    const renderCard = (roomName) => {
-                                        const speaker = getSpeakerForSlot(slot, day, roomName);
-                                        if (speaker) {
-                                            return (
-                                                <div 
-                                                    onClick={() => handleManageClick(slot, speaker, day, roomName)}
-                                                    className="group flex flex-col h-full p-3 rounded-xl border border-emerald-200 bg-emerald-50 hover:border-emerald-300 hover:bg-emerald-100 cursor-pointer transition-all"
-                                                >
-                                                    <div className="flex items-start gap-3">
-                                                        <SpeakerAvatar src={speaker.photoUrl} size={32} />
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="font-bold text-slate-900 text-sm truncate">{speaker.name}</div>
-                                                            <div className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wide truncate">
-                                                                {speaker.speakerTag || "Speaker"}
-                                                            </div>
-                                                        </div>
-                                                        <ArrowRightLeft size={14} className="text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                                                    </div>
-                                                </div>
-                                            );
-                                        } else {
-                                            return (
-                                                <div 
-                                                    onClick={() => handleAssignClick(slot, day, roomName)}
-                                                    className="flex flex-col items-center justify-center h-full min-h-[60px] p-2 rounded-xl border border-dashed border-slate-300 hover:border-amber-400 hover:bg-amber-50 cursor-pointer transition-all text-slate-400 hover:text-amber-700"
-                                                >
-                                                    <UserPlus size={16} className="mb-1" />
-                                                    <span className="text-[10px] font-bold uppercase tracking-wider">Assign</span>
-                                                </div>
-                                            );
-                                        }
-                                    };
-
-                                    return (
-                                        <div key={slot} className="grid grid-cols-1 md:grid-cols-[160px_1fr_1fr] divide-y md:divide-y-0 md:divide-x divide-slate-100">
-                                            <div className="p-3 flex items-center gap-2 font-semibold text-slate-600 text-sm bg-slate-50/30">
-                                                <Clock size={14} className="text-slate-400 shrink-0" />
-                                                {slot}
-                                            </div>
-                                            <div className="p-2 relative">
-                                                <div className="md:hidden text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 ml-1">Room 1</div>
-                                                {renderCard("Room 1")}
-                                            </div>
-                                            <div className="p-2 relative">
-                                                <div className="md:hidden text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 ml-1">Room 2</div>
-                                                {renderCard("Room 2")}
-                                            </div>
+                                return (
+                                    <div key={slot} className="grid grid-cols-1 md:grid-cols-[160px_1fr_1fr] divide-y md:divide-y-0 md:divide-x divide-slate-100">
+                                        <div className="p-3 flex items-center gap-2 font-semibold text-slate-600 text-sm bg-slate-50/30">
+                                            <Clock size={14} className="text-slate-400 shrink-0" />
+                                            {slot}
                                         </div>
-                                    );
-                                })}
-                            </div>
+                                        {EVENT_DAYS.map(day => (
+                                            <div key={day} className="p-2 relative">
+                                                <div className="md:hidden text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 ml-1">{day}</div>
+                                                {renderCard(day)}
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            })}
                         </div>
-                    ))}
+                    </div>
                 </div>
             )}
 
@@ -414,39 +400,68 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
                                         <X size={20} />
                                     </button>
                                 </div>
-                                <div className="p-5 space-y-4">
-                                    <div>
-                                        <label className="text-xs font-semibold text-slate-700 block mb-1">Room</label>
-                                        <select 
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                            value={moveState.room}
-                                            onChange={e => setMoveState(prev => ({ ...prev, room: e.target.value, timeSlot: "" }))}
-                                        >
-                                            {rooms.map(r => <option key={r} value={r}>{r}</option>)}
-                                        </select>
+                                <div className="p-5 space-y-6">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-xs font-semibold text-slate-700 block mb-2">Room</label>
+                                            <div className="flex bg-slate-100 p-1 rounded-xl">
+                                                {rooms.map(r => (
+                                                    <button
+                                                        key={r}
+                                                        onClick={() => setMoveState(prev => ({ ...prev, room: r, timeSlot: "" }))}
+                                                        className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                                            moveState.room === r 
+                                                                ? "bg-white text-emerald-600 shadow-sm" 
+                                                                : "text-slate-500 hover:text-slate-700"
+                                                        }`}
+                                                    >
+                                                        {r}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-semibold text-slate-700 block mb-2">Day</label>
+                                            <div className="flex bg-slate-100 p-1 rounded-xl">
+                                                {EVENT_DAYS.map(d => (
+                                                    <button
+                                                        key={d}
+                                                        onClick={() => setMoveState(prev => ({ ...prev, day: d, timeSlot: "" }))}
+                                                        className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                                            moveState.day === d 
+                                                                ? "bg-white text-emerald-600 shadow-sm" 
+                                                                : "text-slate-500 hover:text-slate-700"
+                                                        }`}
+                                                    >
+                                                        {d}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
                                     <div>
-                                        <label className="text-xs font-semibold text-slate-700 block mb-1">Day</label>
-                                        <select 
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                            value={moveState.day}
-                                            onChange={e => setMoveState(prev => ({ ...prev, day: e.target.value, timeSlot: "" }))}
-                                        >
-                                            {EVENT_DAYS.map(d => <option key={d} value={d}>{d}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-semibold text-slate-700 block mb-1">Available Time Slots</label>
-                                        <select 
-                                            className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                                            value={moveState.timeSlot}
-                                            onChange={e => setMoveState(prev => ({ ...prev, timeSlot: e.target.value }))}
-                                        >
-                                            <option value="">Select an available slot...</option>
-                                            {availableMoveSlots.map(slot => (
-                                                <option key={slot} value={slot}>{slot}</option>
-                                            ))}
-                                        </select>
+                                        <label className="text-xs font-semibold text-slate-700 block mb-2">Available Time Slots</label>
+                                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-[180px] overflow-y-auto pr-1">
+                                            {availableMoveSlots.length === 0 ? (
+                                                <div className="col-span-full py-6 text-center text-sm text-slate-500 italic bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                                                    No slots available for this date and room.
+                                                </div>
+                                            ) : (
+                                                availableMoveSlots.map(slot => (
+                                                    <button
+                                                        key={slot}
+                                                        onClick={() => setMoveState(prev => ({ ...prev, timeSlot: slot }))}
+                                                        className={`flex items-center justify-center py-2 px-1 rounded-lg text-xs font-bold transition-all border ${
+                                                            moveState.timeSlot === slot 
+                                                                ? "bg-emerald-500 text-white border-emerald-600 shadow-md shadow-emerald-500/20" 
+                                                                : "bg-white text-slate-600 border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-700"
+                                                        }`}
+                                                    >
+                                                        {slot}
+                                                    </button>
+                                                ))
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="p-4 border-t border-slate-100 flex justify-end gap-3">

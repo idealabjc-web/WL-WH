@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { StatCard, StatusBadge, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
-import { TIME_SLOTS, EVENT_DAYS, generatePortalToken, uploadSpeakerAbstract } from "../api/speakersApi";
+import { TIME_SLOTS, EVENT_DAYS, generatePortalToken, uploadSpeakerAbstract, uploadSpeakerPhoto } from "../api/speakersApi";
 import { supabase } from "../supabaseClient";
 import * as XLSX from "xlsx-js-style";
 
@@ -22,6 +22,9 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
     const [abstractFile, setAbstractFile] = useState(null);
     const [abstractUploading, setAbstractUploading] = useState(false);
     const abstractInputRef = useRef(null);
+    const [photoFile, setPhotoFile] = useState(null);
+    const [photoUploading, setPhotoUploading] = useState(false);
+    const photoInputRef = useRef(null);
 
     const isSelf = currentSpeaker && (
         speaker.id === currentSpeaker.id || 
@@ -76,12 +79,24 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
             }
         }
 
+        // Upload photo file if one was selected
+        if (photoFile) {
+            setPhotoUploading(true);
+            const photoUrl = await uploadSpeakerPhoto(speaker.id, photoFile);
+            setPhotoUploading(false);
+            if (photoUrl) {
+                updatedForm = { ...updatedForm, photoUrl: photoUrl };
+            }
+        }
+
         setSaving(true);
         const success = await onUpdate(speaker.id, updatedForm);
         setSaving(false);
         if (success) {
             setAbstractFile(null);
+            setPhotoFile(null);
             if (abstractInputRef.current) abstractInputRef.current.value = "";
+            if (photoInputRef.current) photoInputRef.current.value = "";
             setIsEditing(false);
         }
     };
@@ -131,6 +146,43 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                         <X size={18} />
                     </button>
                 </div>
+
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-5 pb-4 border-b border-slate-100 dark:border-slate-800">
+                    <SpeakerAvatar src={photoFile ? URL.createObjectURL(photoFile) : form.photoUrl} size={64} />
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors shadow-xs"
+                            onClick={() => photoInputRef.current?.click()}
+                        >
+                            Change Photo
+                        </button>
+                        {(form.photoUrl || photoFile) && (
+                            <button
+                                type="button"
+                                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors shadow-xs"
+                                onClick={() => {
+                                    setPhotoFile(null);
+                                    setForm(f => ({ ...f, photoUrl: "" }));
+                                    if (photoInputRef.current) photoInputRef.current.value = "";
+                                }}
+                            >
+                                Remove Photo
+                            </button>
+                        )}
+                        <input
+                            type="file"
+                            accept="image/*"
+                            ref={photoInputRef}
+                            className="hidden"
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) setPhotoFile(file);
+                            }}
+                        />
+                    </div>
+                </div>
+
                 <div className="grid sm:grid-cols-2 gap-3 mb-4">
                     <div><label className="text-xs font-semibold text-slate-700">Name</label><input className={inputCls} value={form.name} onChange={set("name")} /></div>
                     <div><label className="text-xs font-semibold text-slate-700">Session</label><input className={inputCls} value={form.sessionTitle} onChange={set("sessionTitle")} /></div>
@@ -156,13 +208,12 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                         <label className="text-xs font-semibold text-slate-700">Time Slot</label>
                         <select className={inputCls} value={form.timeSlot} onChange={set("timeSlot")}>
                             <option value="">Select...</option>
-                            {TIME_SLOTS.map(t => {
-                                const isLunch = t.toLowerCase().includes("lunch");
+                            {TIME_SLOTS.filter(s => !s.toLowerCase().includes("lunch")).map(t => {
                                 let isBooked = false;
                                 
                                 const normRoom = (r) => (r || "Room TBA").trim();
                                 
-                                if (!isLunch && form.day) {
+                                if (form.day) {
                                     isBooked = allSpeakers.some(s => 
                                         s.id !== form.id && 
                                         (s.day === form.day || (form.day === "November 25" && s.day === "Day 1") || (form.day === "November 26" && s.day === "Day 2")) && 
@@ -170,7 +221,7 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                                         s.timeSlot === t
                                     );
                                 }
-                                const showStatus = !isLunch && form.day;
+                                const showStatus = form.day;
                                 return (
                                     <option 
                                         key={t} 
@@ -313,8 +364,8 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                 </div>
                 <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end pt-2 border-t border-slate-200">
                     <button onClick={() => setIsEditing(false)} className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg hover:bg-slate-200 text-slate-700 min-h-[42px] transition-colors">Cancel</button>
-                    <button onClick={save} disabled={saving || abstractUploading} className="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm disabled:opacity-50 min-h-[42px] transition-colors">
-                        {abstractUploading ? "Uploading..." : saving ? "Saving..." : "Save Changes"}
+                    <button onClick={save} disabled={saving || abstractUploading || photoUploading} className="w-full sm:w-auto px-5 py-2.5 text-sm font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm disabled:opacity-50 min-h-[42px] transition-colors">
+                        {abstractUploading || photoUploading ? "Uploading..." : saving ? "Saving..." : "Save Changes"}
                     </button>
                 </div>
             </div>
