@@ -1,6 +1,6 @@
 import { supabase, isSupabaseConfigured } from "../supabaseClient";
 
-const CACHE_KEY = "wlwh_id_cards_cache";
+const CACHE_KEY = "wlwh_id_cards_cache_v4_dubai";
 
 /**
  * Uploads a generated ID card JPEG blob to Supabase storage.
@@ -13,7 +13,7 @@ export async function uploadIdCardToStorage(speaker, blob, filename) {
     }
 
     const safeName = (speaker.name || "speaker").replace(/[^a-zA-Z0-9_-]/g, "_");
-    const name = filename || `ID_Card_${safeName}_${speaker.id}.jpg`;
+    const name = filename || `ID_Badge_${safeName}_${speaker.id}.jpg`;
 
     // 1. Try dedicated 'id-cards' bucket first
     try {
@@ -81,23 +81,24 @@ export async function fetchStoredIdCards(speakers = []) {
 
     // 0. Instant match from speakers table column if already populated
     for (const s of speakers) {
-        if (s.idCardUrl) {
+        if (s.idCardUrl && s.idCardUrl.includes("ID_Badge_")) {
             const safeName = (s.name || "speaker").replace(/[^a-zA-Z0-9_-]/g, "_");
             discovered[s.id] = {
                 id: s.id,
                 speaker: s,
-                filename: `ID_Card_${safeName}_${s.id}.jpg`,
+                filename: `ID_Badge_${safeName}_${s.id}.jpg`,
                 publicUrl: s.idCardUrl,
                 dataUrl: s.idCardUrl,
                 isStored: true,
+                templateVersion: "v3_portrait"
             };
         }
     }
 
-    // Helper to match filenames like 'ID_Card_Name_WL-101.jpg' or 'WL-101.jpg'
+    // Helper to match filenames like 'ID_Badge_Name_WL-101.jpg'
     const findSpeakerForFilename = (filename) => {
         for (const s of speakers) {
-            if (filename.includes(`_${s.id}.`) || filename.startsWith(`${s.id}.`) || filename === `${s.id}.jpg`) {
+            if (filename.includes(`_${s.id}.`) || filename.startsWith(`${s.id}.`)) {
                 return s;
             }
         }
@@ -109,7 +110,7 @@ export async function fetchStoredIdCards(speakers = []) {
         const { data: files } = await supabase.storage.from("id-cards").list();
         if (Array.isArray(files)) {
             for (const f of files) {
-                if (!f.name || f.name.endsWith(".txt")) continue;
+                if (!f.name || f.name.endsWith(".txt") || !f.name.startsWith("ID_Badge_")) continue;
                 const spk = findSpeakerForFilename(f.name);
                 if (spk) {
                     const { data: urlData } = supabase.storage.from("id-cards").getPublicUrl(f.name);
@@ -121,6 +122,7 @@ export async function fetchStoredIdCards(speakers = []) {
                             publicUrl: urlData.publicUrl,
                             dataUrl: urlData.publicUrl,
                             isStored: true,
+                            templateVersion: "v3_portrait"
                         };
                     }
                 }
@@ -128,32 +130,6 @@ export async function fetchStoredIdCards(speakers = []) {
         }
     } catch (e) {
         // bucket might not exist yet, ignore
-    }
-
-    // 2. Check fallback 'qr-badges' bucket inside 'id-cards' folder
-    try {
-        const { data: files } = await supabase.storage.from("qr-badges").list("id-cards");
-        if (Array.isArray(files)) {
-            for (const f of files) {
-                if (!f.name || f.name.endsWith(".txt")) continue;
-                const spk = findSpeakerForFilename(f.name);
-                if (spk && !discovered[spk.id]) {
-                    const { data: urlData } = supabase.storage.from("qr-badges").getPublicUrl(`id-cards/${f.name}`);
-                    if (urlData?.publicUrl) {
-                        discovered[spk.id] = {
-                            id: spk.id,
-                            speaker: spk,
-                            filename: f.name,
-                            publicUrl: urlData.publicUrl,
-                            dataUrl: urlData.publicUrl,
-                            isStored: true,
-                        };
-                    }
-                }
-            }
-        }
-    } catch (e) {
-        console.warn("Could not list from qr-badges/id-cards:", e);
     }
 
     return discovered;
@@ -164,6 +140,9 @@ export async function fetchStoredIdCards(speakers = []) {
  */
 export function getLocalCachedCards() {
     try {
+        // Remove legacy cached cards from old purple template
+        localStorage.removeItem("wlwh_id_cards_cache");
+        localStorage.removeItem("wlwh_id_cards_cache_v2");
         const raw = localStorage.getItem(CACHE_KEY);
         if (!raw) return {};
         return JSON.parse(raw);
@@ -182,8 +161,9 @@ export function saveLocalCachedCards(cards) {
                 speaker: c.speaker,
                 filename: c.filename,
                 publicUrl: c.publicUrl || null,
-                dataUrl: c.publicUrl || c.dataUrl || null,
+                dataUrl: c.dataUrl || c.publicUrl || null,
                 isStored: Boolean(c.publicUrl),
+                templateVersion: c.templateVersion || "v3_portrait"
             };
         }
         localStorage.setItem(CACHE_KEY, JSON.stringify(serialized));

@@ -33,26 +33,37 @@ export default function IdCardsPage({
     const totalSpeakers = speakers.length;
     const generatedCount = Object.keys(cards).length;
 
-    // 1. On Mount & Speakers Change: Load from localStorage instantly + sync with Supabase Storage Bucket
+    // 1. On Mount & Speakers Change: Load from cache & auto-generate portrait cards for speakers if missing
     useEffect(() => {
-        // A. Immediate instant restoration from local cache (persists through refresh)
-        const cached = getLocalCachedCards();
-        if (cached && Object.keys(cached).length > 0) {
-            setCards((prev) => ({ ...cached, ...prev }));
-        }
+        if (!speakers || speakers.length === 0) return;
 
-        // B. Sync with Supabase cloud storage bucket
-        if (speakers.length > 0) {
-            fetchStoredIdCards(speakers).then((stored) => {
-                if (stored && Object.keys(stored).length > 0) {
-                    setCards((prev) => {
-                        const merged = { ...prev, ...stored };
-                        saveLocalCachedCards(merged);
-                        return merged;
-                    });
+        // Clear legacy purple cards from state
+        const cached = getLocalCachedCards();
+
+        const initializeCards = async () => {
+            const currentCards = { ...cached };
+            let hasNewGenerations = false;
+
+            for (const s of speakers) {
+                // If speaker has no card or has an old template card
+                if (!currentCards[s.id] || currentCards[s.id].templateVersion !== "v4_dubai_famous") {
+                    try {
+                        const card = await generateIdCardJpeg(s);
+                        currentCards[s.id] = card;
+                        hasNewGenerations = true;
+                    } catch (err) {
+                        console.error("Auto card generation failed for", s.name, err);
+                    }
                 }
-            });
-        }
+            }
+
+            setCards(currentCards);
+            if (hasNewGenerations) {
+                saveLocalCachedCards(currentCards);
+            }
+        };
+
+        initializeCards();
     }, [speakers]);
 
     // 2. Generate and store single card to Supabase bucket
@@ -432,18 +443,18 @@ export default function IdCardsPage({
                             {previewCard.speaker.name} · Official ID Badge
                         </h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 font-mono">
-                            {previewCard.filename} (JPEG 600×1000)
+                            {previewCard.filename} (JPEG 1080×1800)
                         </p>
 
-                        <div className="w-full max-w-[340px] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-lg">
+                        <div className="w-full max-w-[360px] aspect-[3/5] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-lg">
                             <img
                                 src={previewCard.dataUrl || previewCard.publicUrl}
                                 alt={previewCard.filename}
-                                className="w-full h-auto"
+                                className="w-full h-full object-contain"
                             />
                         </div>
 
-                        <div className="flex flex-col sm:flex-row gap-2.5 mt-5 w-full max-w-[340px]">
+                        <div className="flex flex-col sm:flex-row gap-2.5 mt-5 w-full max-w-[360px]">
                             <button
                                 onClick={() => downloadSingleCard(previewCard)}
                                 className="w-full sm:flex-1 inline-flex items-center justify-center gap-2 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white font-semibold text-sm py-2.5 rounded-xl shadow-xs transition-colors min-h-[44px]"
