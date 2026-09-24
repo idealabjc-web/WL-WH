@@ -58,7 +58,7 @@ export const TIME_SLOTS = [
 ];
 
 export const emptyForm = {
-    name: "", email: "", phone: "", sessionTitle: "", day: "", timeSlot: "",
+    name: "", email: "", phone: "", country: "", sessionTitle: "", day: "", timeSlot: "",
     conferenceRoom: "", accommodationStatus: "", hotelRoom: "", checkinDate: "", checkoutDate: "", nights: "", diet: "No preference",
     allergy: "", tour: "yes", concerns: "", photoUrl: "",
     abstractProvided: "no", abstractUrl: "", whoseSpeaker: "", speakerTag: ""
@@ -83,6 +83,7 @@ export function speakerToRow(s) {
         whose_speaker: s.whoseSpeaker || null,
         portal_token: s.portalToken || null,
         speaker_tag: s.speakerTag || null,
+        country: s.country || null,
     };
 }
 
@@ -98,6 +99,7 @@ export function rowToSpeaker(r) {
         name: r.name,
         email: r.email,
         phone: r.phone,
+        country: r.country || "",
         sessionTitle: session.session_title || r.session_title || null,
         day: session.day || r.day || null,
         timeSlot: session.time_slot || r.time_slot || null,

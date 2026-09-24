@@ -205,7 +205,9 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                 <Field label="Whose speaker is this?">
                     <input className={inputCls} value={form.whoseSpeaker} onChange={set("whoseSpeaker")} placeholder="e.g. Operations Team" />
                 </Field>
-                <div className="hidden sm:block"></div>
+                <Field label="Country">
+                    <input className={inputCls} value={form.country} onChange={set("country")} placeholder="e.g. United Arab Emirates, USA, UK" />
+                </Field>
             </div>
             <div className="mb-6 relative bg-gradient-to-r from-amber-50/50 to-white dark:from-slate-900 dark:to-slate-950 border border-amber-200 dark:border-amber-900/50 rounded-xl p-5 shadow-sm ring-4 ring-amber-50/50 dark:ring-0">
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-400 dark:bg-amber-600 rounded-l-xl"></div>
