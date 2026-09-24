@@ -5,6 +5,7 @@ import SpeakerAvatar from "../components/common/SpeakerAvatar";
 import { uid, generatePortalToken, emptyForm, generateAndStoreQrBadge, uploadSpeakerPhoto, uploadSpeakerAbstract, TIME_SLOTS, EVENT_DAYS } from "../api/speakersApi";
 
 import PhoneField from "../components/common/PhoneField";
+import CountryField from "../components/common/CountryField";
 
 export default function RegisterPage({ speakers = [], onAdd, toast }) {
     const [form, setForm] = useState(emptyForm);
@@ -206,7 +207,11 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                     <input className={inputCls} value={form.whoseSpeaker} onChange={set("whoseSpeaker")} placeholder="e.g. Operations Team" />
                 </Field>
                 <Field label="Country">
-                    <input className={inputCls} value={form.country} onChange={set("country")} placeholder="e.g. United Arab Emirates, USA, UK" />
+                    <CountryField
+                        value={form.country}
+                        onChange={(val) => setForm((f) => ({ ...f, country: val }))}
+                        placeholder="Search or select country (e.g. United Arab Emirates)..."
+                    />
                 </Field>
             </div>
             <div className="mb-6 relative bg-gradient-to-r from-amber-50/50 to-white dark:from-slate-900 dark:to-slate-950 border border-amber-200 dark:border-amber-900/50 rounded-xl p-5 shadow-sm ring-4 ring-amber-50/50 dark:ring-0">
