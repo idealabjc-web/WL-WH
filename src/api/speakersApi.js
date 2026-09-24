@@ -83,7 +83,7 @@ export function speakerToRow(s) {
         whose_speaker: s.whoseSpeaker || null,
         portal_token: s.portalToken || null,
         speaker_tag: s.speakerTag || null,
-        country: s.country || null,
+        // country: s.country || null, // REMOVED TEMPORARILY: Causes crash if 'country' column doesn't exist in Supabase
     };
 }
 

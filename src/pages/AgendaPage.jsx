@@ -16,9 +16,10 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
 
     // Find speaker assigned to a specific slot
     const getSpeakerForSlot = (timeSlot, day, room = selectedRoom) => {
+        const normRoom = (r) => (r || "").trim();
         return speakers.find(s => 
-            s.conferenceRoom === room && 
-            s.day === day && 
+            normRoom(s.conferenceRoom) === normRoom(room) && 
+            (s.day === day || (day === "November 25" && s.day === "Day 1") || (day === "November 26" && s.day === "Day 2")) && 
             s.timeSlot === timeSlot
         );
     };
@@ -88,19 +89,13 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
         }
     };
 
-    // Calculate available slots for the selected move room/day
-    const availableMoveSlots = useMemo(() => {
+    // Calculate all slots for the selected move room/day
+    const allMoveSlots = useMemo(() => {
         if (!slotAction || slotAction.type !== "move") return [];
-        return TIME_SLOTS.filter(slot => {
-            if (slot.toLowerCase().includes("lunch")) return false;
-            // Check if anyone else has this slot
-            const taken = speakers.find(s => 
-                s.id !== slotAction.speaker.id &&
-                s.conferenceRoom === moveState.room && 
-                s.day === moveState.day && 
-                s.timeSlot === slot
-            );
-            return !taken;
+        return TIME_SLOTS.filter(s => !s.toLowerCase().includes("lunch")).map(slot => {
+            const takenSpeaker = getSpeakerForSlot(slot, moveState.day, moveState.room);
+            const isTaken = takenSpeaker && takenSpeaker.id !== slotAction.speaker.id;
+            return { slot, isTaken };
         });
     }, [speakers, moveState.room, moveState.day, slotAction]);
 
@@ -116,21 +111,23 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
 
             {/* Controls (Room Filter) */}
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                <div className="flex bg-slate-100 p-1 rounded-xl">
-                    {rooms.map(room => (
-                        <button
-                            key={room}
-                            onClick={() => setSelectedRoom(room)}
-                            className={`flex-1 px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
-                                selectedRoom === room 
-                                    ? "bg-white text-slate-900 shadow-sm" 
-                                    : "text-slate-500 hover:text-slate-700"
-                            }`}
-                        >
-                            {room}
-                        </button>
-                    ))}
-                </div>
+                {viewMode !== "calendar" && (
+                    <div className="flex bg-slate-100 p-1 rounded-xl">
+                        {rooms.map(room => (
+                            <button
+                                key={room}
+                                onClick={() => setSelectedRoom(room)}
+                                className={`flex-1 px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
+                                    selectedRoom === room 
+                                        ? "bg-white text-slate-900 shadow-sm" 
+                                        : "text-slate-500 hover:text-slate-700"
+                                }`}
+                            >
+                                {room}
+                            </button>
+                        ))}
+                    </div>
+                )}
                 
                 {/* View Toggle */}
                 <div className="flex bg-slate-100 p-1 rounded-xl ml-auto">
@@ -235,14 +232,17 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
             ) : (
                 <div className="space-y-8">
                     <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-                        <div className="bg-slate-50 border-b border-slate-200 p-4">
-                            <h2 className="text-lg font-bold text-slate-800">{selectedRoom}</h2>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-[160px_1fr_1fr] divide-y md:divide-y-0 md:divide-x divide-slate-100 border-b border-slate-100 bg-slate-50/50">
-                            <div className="p-3 font-semibold text-slate-500 text-sm hidden md:block">Time</div>
-                            {EVENT_DAYS.map(day => (
-                                <div key={day} className="p-3 font-bold text-slate-700 text-center hidden md:block">{day}</div>
-                            ))}
+                        <div className="hidden md:flex flex-col border-b border-slate-100 bg-slate-50/50">
+                            <div className="grid grid-cols-2 divide-x divide-slate-200 border-b border-slate-200">
+                                <div className="p-3 font-extrabold text-emerald-800 bg-emerald-50 text-center text-sm uppercase tracking-wider">Room 1</div>
+                                <div className="p-3 font-extrabold text-blue-800 bg-blue-50 text-center text-sm uppercase tracking-wider">Room 2</div>
+                            </div>
+                            <div className="grid grid-cols-4 divide-x divide-slate-100">
+                                <div className="p-2 font-bold text-emerald-600 text-center text-xs bg-emerald-50/50">{EVENT_DAYS[0]}</div>
+                                <div className="p-2 font-bold text-emerald-600 text-center text-xs bg-emerald-50/50">{EVENT_DAYS[1]}</div>
+                                <div className="p-2 font-bold text-blue-600 text-center text-xs bg-blue-50/50">{EVENT_DAYS[0]}</div>
+                                <div className="p-2 font-bold text-blue-600 text-center text-xs bg-blue-50/50">{EVENT_DAYS[1]}</div>
+                            </div>
                         </div>
                         <div className="divide-y divide-slate-100">
                             {TIME_SLOTS.map(slot => {
@@ -256,51 +256,73 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
                                     );
                                 }
 
-                                const renderCard = (dayName) => {
-                                    const speaker = getSpeakerForSlot(slot, dayName, selectedRoom);
-                                    if (speaker) {
-                                        return (
-                                            <div 
-                                                onClick={() => handleManageClick(slot, speaker, dayName, selectedRoom)}
-                                                className="group flex flex-col h-full p-3 rounded-xl border border-emerald-200 bg-emerald-50 hover:border-emerald-300 hover:bg-emerald-100 cursor-pointer transition-all"
-                                            >
-                                                <div className="flex items-start gap-3">
-                                                    <SpeakerAvatar src={speaker.photoUrl} size={32} />
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="font-bold text-slate-900 text-sm truncate">{speaker.name}</div>
-                                                        <div className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wide truncate">
-                                                            {speaker.speakerTag || "Speaker"}
-                                                        </div>
-                                                    </div>
-                                                    <ArrowRightLeft size={14} className="text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                                                </div>
-                                            </div>
-                                        );
-                                    } else {
-                                        return (
-                                            <div 
-                                                onClick={() => handleAssignClick(slot, dayName, selectedRoom)}
-                                                className="flex flex-col items-center justify-center h-full min-h-[60px] p-2 rounded-xl border border-dashed border-slate-300 hover:border-amber-400 hover:bg-amber-50 cursor-pointer transition-all text-slate-400 hover:text-amber-700"
-                                            >
-                                                <UserPlus size={16} className="mb-1" />
-                                                <span className="text-[10px] font-bold uppercase tracking-wider">Assign</span>
-                                            </div>
-                                        );
-                                    }
-                                };
+                                const columns = [
+                                    { room: "Room 1", day: EVENT_DAYS[0] },
+                                    { room: "Room 1", day: EVENT_DAYS[1] },
+                                    { room: "Room 2", day: EVENT_DAYS[0] },
+                                    { room: "Room 2", day: EVENT_DAYS[1] },
+                                ];
 
                                 return (
-                                    <div key={slot} className="grid grid-cols-1 md:grid-cols-[160px_1fr_1fr] divide-y md:divide-y-0 md:divide-x divide-slate-100">
-                                        <div className="p-3 flex items-center gap-2 font-semibold text-slate-600 text-sm bg-slate-50/30">
-                                            <Clock size={14} className="text-slate-400 shrink-0" />
-                                            {slot}
-                                        </div>
-                                        {EVENT_DAYS.map(day => (
-                                            <div key={day} className="p-2 relative">
-                                                <div className="md:hidden text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 ml-1">{day}</div>
-                                                {renderCard(day)}
-                                            </div>
-                                        ))}
+                                    <div key={slot} className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+                                        {columns.map((col, idx) => {
+                                            const speaker = getSpeakerForSlot(slot, col.day, col.room);
+                                            const isRoom2 = col.room === "Room 2";
+                                            const cardBgCls = isRoom2 
+                                                ? "border border-blue-300 bg-gradient-to-br from-blue-100 via-blue-50 to-indigo-100 shadow-sm hover:shadow-md hover:border-blue-400 hover:from-blue-200 hover:to-indigo-200" 
+                                                : "border border-emerald-300 bg-gradient-to-br from-emerald-100 via-emerald-50 to-teal-100 shadow-sm hover:shadow-md hover:border-emerald-400 hover:from-emerald-200 hover:to-teal-200";
+                                            const timeTextCls = isRoom2 ? "text-blue-800" : "text-emerald-800";
+                                            const iconCls = isRoom2 ? "text-blue-600" : "text-emerald-600";
+                                            const tagCls = isRoom2 ? "text-blue-700" : "text-emerald-700";
+                                            const dividerCls = isRoom2 ? "border-blue-200" : "border-emerald-200";
+                                            const emptyCardCls = isRoom2
+                                                ? "border border-dashed border-blue-200 bg-transparent hover:border-blue-400 hover:bg-blue-50/50 text-blue-400/80 hover:text-blue-700"
+                                                : "border border-dashed border-emerald-200 bg-transparent hover:border-emerald-400 hover:bg-emerald-50/50 text-emerald-400/80 hover:text-emerald-700";
+
+                                            if (speaker) {
+                                                return (
+                                                    <div key={`${col.room}-${col.day}`} className="p-2 relative">
+                                                        <div className="md:hidden text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 ml-1">{col.room} - {col.day}</div>
+                                                        <div 
+                                                            onClick={() => handleManageClick(slot, speaker, col.day, col.room)}
+                                                            className={`group flex flex-col h-full p-3 rounded-xl border cursor-pointer transition-all relative ${cardBgCls}`}
+                                                        >
+                                                            <div className={`flex items-center gap-1.5 mb-2 border-b pb-1.5 ${dividerCls}`}>
+                                                                <Clock size={12} className={iconCls} />
+                                                                <span className={`text-[10px] font-bold ${timeTextCls}`}>{slot}</span>
+                                                            </div>
+                                                            <div className="flex items-start gap-3">
+                                                                <SpeakerAvatar src={speaker.photoUrl} size={32} />
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="font-bold text-slate-900 text-sm truncate">{speaker.name}</div>
+                                                                    <div className={`text-[10px] font-semibold uppercase tracking-wide truncate ${tagCls}`}>
+                                                                        {speaker.speakerTag || "Speaker"}
+                                                                    </div>
+                                                                </div>
+                                                                <ArrowRightLeft size={14} className={`${iconCls} opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-1`} />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            } else {
+                                                return (
+                                                    <div key={`${col.room}-${col.day}`} className="p-2 relative">
+                                                        <div className="md:hidden text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 ml-1">{col.room} - {col.day}</div>
+                                                        <div 
+                                                            onClick={() => handleAssignClick(slot, col.day, col.room)}
+                                                            className={`group flex flex-col items-center justify-center h-full min-h-[70px] p-2 rounded-xl cursor-pointer transition-all relative ${emptyCardCls}`}
+                                                        >
+                                                            <div className={`absolute top-2 left-2 flex items-center gap-1 ${isRoom2 ? 'text-blue-400/80 group-hover:text-blue-600' : 'text-emerald-400/80 group-hover:text-emerald-600'} transition-colors`}>
+                                                                <Clock size={10} />
+                                                                <span className="text-[10px] font-bold">{slot}</span>
+                                                            </div>
+                                                            <UserPlus size={18} className="mb-1 mt-4" />
+                                                            <span className="text-[11px] font-bold uppercase tracking-wider">Assign</span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+                                        })}
                                     </div>
                                 );
                             })}
@@ -440,27 +462,24 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="text-xs font-semibold text-slate-700 block mb-2">Available Time Slots</label>
+                                        <label className="text-xs font-semibold text-slate-700 block mb-2">Time Slots</label>
                                         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-[180px] overflow-y-auto pr-1">
-                                            {availableMoveSlots.length === 0 ? (
-                                                <div className="col-span-full py-6 text-center text-sm text-slate-500 italic bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                                                    No slots available for this date and room.
-                                                </div>
-                                            ) : (
-                                                availableMoveSlots.map(slot => (
-                                                    <button
-                                                        key={slot}
-                                                        onClick={() => setMoveState(prev => ({ ...prev, timeSlot: slot }))}
-                                                        className={`flex items-center justify-center py-2 px-1 rounded-lg text-xs font-bold transition-all border ${
-                                                            moveState.timeSlot === slot 
+                                            {allMoveSlots.map(({ slot, isTaken }) => (
+                                                <button
+                                                    key={slot}
+                                                    disabled={isTaken}
+                                                    onClick={() => setMoveState(prev => ({ ...prev, timeSlot: slot }))}
+                                                    className={`flex items-center justify-center py-2 px-1 rounded-lg text-xs font-bold transition-all border ${
+                                                        isTaken
+                                                            ? "bg-rose-50 text-rose-500 border-rose-200 cursor-not-allowed"
+                                                            : moveState.timeSlot === slot 
                                                                 ? "bg-emerald-500 text-white border-emerald-600 shadow-md shadow-emerald-500/20" 
-                                                                : "bg-white text-slate-600 border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-700"
-                                                        }`}
-                                                    >
-                                                        {slot}
-                                                    </button>
-                                                ))
-                                            )}
+                                                                : "bg-white text-slate-600 border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-700 cursor-pointer"
+                                                    }`}
+                                                >
+                                                    {slot}
+                                                </button>
+                                            ))}
                                         </div>
                                     </div>
                                 </div>

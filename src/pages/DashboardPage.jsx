@@ -14,6 +14,7 @@ import * as XLSX from "xlsx-js-style";
 
 
 import PhoneField from "../components/common/PhoneField";
+import CountryField from "../components/common/CountryField";
 
 function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, onRefresh, allSpeakers, isSpeaker = false, currentSpeaker = null }) {
     const [isEditing, setIsEditing] = useState(false);
@@ -184,8 +185,8 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                 </div>
 
                 <div className="grid sm:grid-cols-2 gap-3 mb-4">
-                    <div><label className="text-xs font-semibold text-slate-700">Name</label><input className={inputCls} value={form.name} onChange={set("name")} /></div>
-                    <div><label className="text-xs font-semibold text-slate-700">Session</label><input className={inputCls} value={form.sessionTitle} onChange={set("sessionTitle")} /></div>
+                    <div><label className="text-xs font-semibold text-slate-700">Name</label><input className={inputCls} value={form.name || ""} onChange={set("name")} /></div>
+                    <div><label className="text-xs font-semibold text-slate-700">Session</label><input className={inputCls} value={form.sessionTitle || form.session_title || ""} onChange={set("sessionTitle")} /></div>
                     <div>
                         <label className="text-xs font-semibold text-slate-700">Phone</label>
                         <PhoneField
@@ -194,6 +195,15 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                         />
                     </div>
                     <div><label className="text-xs font-semibold text-slate-700">Email</label><input className={inputCls} value={form.email} onChange={set("email")} /></div>
+                    
+                    <div>
+                        <label className="text-xs font-semibold text-slate-700">Country</label>
+                        <CountryField
+                            value={form.country}
+                            onChange={(val) => setForm((f) => ({ ...f, country: val }))}
+                        />
+                    </div>
+                    <div><label className="text-xs font-semibold text-slate-700">Whose Speaker?</label><input className={inputCls} value={form.whoseSpeaker || ""} onChange={set("whoseSpeaker")} /></div>
                     
                     <div>
                         <label className="text-xs font-semibold text-slate-700">Day</label>
@@ -238,7 +248,7 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                     
                     <div>
                         <label className="text-xs font-semibold text-slate-700">Conference Room</label>
-                        <select className={inputCls} value={form.conferenceRoom} onChange={set("conferenceRoom")}>
+                        <select className={inputCls} value={form.conferenceRoom || form.conference_room || form.room || ""} onChange={set("conferenceRoom")}>
                             <option value="">Select...</option>
                             <option value="Room 1">Room 1</option>
                             <option value="Room 2">Room 2</option>
@@ -246,7 +256,7 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                     </div>
                     <div>
                         <label className="text-xs font-semibold text-slate-700">Accommodation Status</label>
-                        <select className={inputCls} value={form.accommodationStatus} onChange={(e) => {
+                        <select className={inputCls} value={form.accommodationStatus || form.accommodation_status || ""} onChange={(e) => {
                             const val = e.target.value;
                             if (val === "Without Accommodation") {
                                 setForm(f => ({ ...f, accommodationStatus: val, hotelRoom: "", checkinDate: "", checkoutDate: "", nights: "" }));
@@ -270,21 +280,21 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                         </select>
                     </div>
 
-                    {form.accommodationStatus === "With Accommodation" && (
+                    {(form.accommodationStatus === "With Accommodation" || form.accommodation_status === "With Accommodation") && (
                         <>
                             <div>
                                 <label className="text-xs font-semibold text-slate-700">Hotel Room</label>
-                                <input className={inputCls} value={form.hotelRoom} onChange={set("hotelRoom")} placeholder="e.g. 1204" />
+                                <input className={inputCls} value={form.hotelRoom || form.hotel_room || form.room || ""} onChange={set("hotelRoom")} placeholder="e.g. 1204" />
                             </div>
                             <div>
                                 <label className="text-xs font-semibold text-slate-700">Check-in</label>
-                                <input type="date" className={inputCls} value={form.checkinDate} onChange={set("checkinDate")} />
+                                <input type="date" className={inputCls} value={form.checkinDate || form.checkin_date || ""} onChange={set("checkinDate")} />
                             </div>
                             <div>
                                 <label className="text-xs font-semibold text-slate-700">Check-out</label>
-                                <input type="date" className={inputCls} value={form.checkoutDate} onChange={set("checkoutDate")} />
+                                <input type="date" className={inputCls} value={form.checkoutDate || form.checkout_date || ""} onChange={set("checkoutDate")} />
                             </div>
-                            <div><label className="text-xs font-semibold text-slate-700">Nights</label><input className={inputCls} value={form.nights} onChange={set("nights")} /></div>
+                            <div><label className="text-xs font-semibold text-slate-700">Nights</label><input className={inputCls} value={form.nights || ""} onChange={set("nights")} /></div>
                         </>
                     )}
                     
@@ -424,6 +434,8 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                     <div className="text-xs font-semibold text-amber-600 tracking-wide mb-1.5">CONTACT</div>
                     {row("Email", isSpeaker && !isSelf ? "Confidential" : speaker.email)}
                     {row("Phone", isSpeaker && !isSelf ? "Confidential" : speaker.phone)}
+                    {row("Country", isSpeaker && !isSelf ? "Confidential" : speaker.country)}
+                    {row("Whose Speaker", speaker.whoseSpeaker)}
                 </div>
             </div>
             <div className="grid sm:grid-cols-2 gap-x-6 mt-3">
@@ -547,7 +559,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
             !(
                 s.name.toLowerCase().includes(q) ||
                 (s.sessionTitle || "").toLowerCase().includes(q) ||
-                (s.room || "").toLowerCase().includes(q)
+                (s.conferenceRoom || "").toLowerCase().includes(q)
             )
         )
             return false;
@@ -750,7 +762,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                 </span>
                                 <span className="flex items-center gap-1">
                                     <MapPin size={14} className="text-amber-600" />
-                                    {mySpeaker.room || "Room TBA"}
+                                    {mySpeaker.conferenceRoom || "Room TBA"}
                                 </span>
                             </div>
                         </div>
@@ -938,7 +950,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                                 <>
                                                     <div>
                                                         <span className="text-slate-400 block text-[10px] uppercase font-semibold">Room</span>
-                                                        <span className="font-semibold text-slate-800">{s.room || "—"}</span>
+                                                        <span className="font-semibold text-slate-800">{s.conferenceRoom || "—"}</span>
                                                     </div>
                                                     <div>
                                                         <span className="text-slate-400 block text-[10px] uppercase font-semibold">Dietary</span>
@@ -1027,7 +1039,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                                     <div className="text-xs font-bold text-slate-800 whitespace-nowrap">{s.day ? `${s.day} • ${s.timeSlot || ""}` : "—"}</div>
                                                     <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-1 font-medium whitespace-nowrap">
                                                         <MapPin size={11} className="text-slate-400" />
-                                                        {s.room || "Room TBA"}
+                                                        {s.conferenceRoom || "Room TBA"}
                                                     </div>
                                                 </td>
                                                 <td className="py-3 px-4">

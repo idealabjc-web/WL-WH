@@ -49,10 +49,10 @@ export default function AgendaPoster({ speakers, room }) {
         // Available slot but not assigned
         if (!speaker) {
             return (
-                <div key={timeSlot} className="flex items-center w-full mb-1.5 rounded-full overflow-hidden border-[1.5px] border-black bg-[#c00000] shadow-sm relative h-[36px]">
-                    <div className="w-[34px] h-[34px] bg-black/40 rounded-md shrink-0 -ml-[1.5px] border-[1.5px] border-black flex items-center justify-center text-white/50 text-[14px]">?</div>
-                    <div className="flex-1 text-left font-bold text-white text-[13px] px-3 font-sans opacity-60 overflow-hidden whitespace-nowrap block" style={{ lineHeight: "33px" }}>TBA</div>
-                    <div className="bg-white text-black font-bold text-[11px] rounded-full border-[1.5px] border-[#c00000] px-3 mx-1 flex items-center justify-center shrink-0 min-w-[86px] h-[28px] font-sans z-10">
+                <div key={timeSlot} className="flex items-center w-full mb-1.5 rounded-full overflow-hidden border-[1.5px] border-black bg-[#059669] shadow-sm relative h-[36px]">
+                    <div className="w-[34px] h-[34px] bg-black/40 rounded-md shrink-0 -ml-[1.5px] border-[1.5px] border-black flex items-center justify-center text-white/80 text-[14px]">?</div>
+                    <div className="flex-1 text-left font-bold text-white text-[13px] px-3 font-sans overflow-hidden whitespace-nowrap block" style={{ lineHeight: "33px" }}>TBA</div>
+                    <div className="bg-white text-black font-bold text-[11px] rounded-full border-[1.5px] border-[#059669] px-3 mx-1 flex items-center justify-center shrink-0 min-w-[86px] h-[28px] font-sans z-10">
                         {timeSlot}
                     </div>
                 </div>
