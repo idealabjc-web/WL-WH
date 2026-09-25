@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { CheckCircle2, AlertTriangle, ExternalLink, ImagePlus, Camera } from "lucide-react";
 import { Field, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
-import { uid, generatePortalToken, emptyForm, generateAndStoreQrBadge, uploadSpeakerPhoto, uploadSpeakerAbstract, TIME_SLOTS, EVENT_DAYS } from "../api/speakersApi";
+import { uid, generatePortalToken, emptyForm, generateAndStoreQrBadge, uploadSpeakerPhoto, uploadSpeakerAbstract, TIME_SLOTS, EVENT_DAYS, TEAMS } from "../api/speakersApi";
 
 import PhoneField from "../components/common/PhoneField";
 import CountryField from "../components/common/CountryField";
@@ -202,9 +202,17 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                     <input className={inputCls} value={form.sessionTitle} onChange={set("sessionTitle")} placeholder="e.g. The Future of Renewable Energy" />
                 </Field>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-3">
                 <Field label="Whose speaker is this?">
                     <input className={inputCls} value={form.whoseSpeaker} onChange={set("whoseSpeaker")} placeholder="e.g. Operations Team" />
+                </Field>
+                <Field label="Team">
+                    <select className={inputCls} value={form.team || ""} onChange={set("team")}>
+                        <option value="">Select Team...</option>
+                        {TEAMS.map((team) => (
+                            <option key={team} value={team}>{team}</option>
+                        ))}
+                    </select>
                 </Field>
                 <Field label="Country">
                     <CountryField

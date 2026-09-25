@@ -3,7 +3,7 @@ import {
     LogOut, Calendar, Clock, Hotel, Utensils, MapPin, 
     BadgeCheck, User, Settings as SettingsIcon, LayoutList, 
     ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, 
-    Sparkles, CheckCircle2, Megaphone 
+    Sparkles, CheckCircle2, Megaphone, Award
 } from "lucide-react";
 
 import CheckinPage from "../CheckinPage";
@@ -16,9 +16,11 @@ import { fetchFeedback, feedbackToRow } from "../../api/feedbackApi";
 import { fetchAnnouncements } from "../../api/announcementsApi";
 import SpeakerCheckoutPage from "./SpeakerCheckoutPage";
 import SpeakerAnnouncementsPage from "./SpeakerAnnouncementsPage";
+import SpeakerCertificatePage from "./SpeakerCertificatePage";
 
 const TABS = [
     { id: "home", label: "Home", icon: BadgeCheck },
+    { id: "certificate", label: "Certificate", icon: Award },
     { id: "announcements", label: "Announcements", icon: Megaphone },
     { id: "feedback", label: "Feedback", icon: MessageSquare },
     { id: "logistics", label: "Logistics & Travel", mobileLabel: "Logistics", icon: Hotel },
@@ -405,6 +407,35 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                                 onNavigateTab={handleTabChange}
                             />
 
+                            {/* Certopus Certificate Discovery Card */}
+                            <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+                                <div className="flex items-start gap-3.5">
+                                    <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
+                                        <Award size={22} className="stroke-[2.5]" />
+                                    </div>
+                                    <div>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <h3 className="text-sm sm:text-base font-bold text-slate-900">
+                                                Official Certopus Certificate
+                                            </h3>
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                                                Verifiable Digital Credential
+                                            </span>
+                                        </div>
+                                        <p className="text-xs sm:text-sm text-slate-600 mt-1">
+                                            All verified keynote speakers and delegates will be awarded a tamper-proof digital Certificate of Participation issued via Certopus.
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => handleTabChange("certificate")}
+                                    className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold rounded-xl shadow-xs transition-all shrink-0 active:scale-95"
+                                >
+                                    <span>View Sample & Details</span>
+                                    <span>→</span>
+                                </button>
+                            </div>
+
                             <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-7 shadow-sm">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
                                     <div>
@@ -437,6 +468,10 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                                 </div>
                             </div>
                         </div>
+                    )}
+
+                    {tab === "certificate" && (
+                        <SpeakerCertificatePage speaker={currentSpeaker} />
                     )}
 
                     {tab === "announcements" && (

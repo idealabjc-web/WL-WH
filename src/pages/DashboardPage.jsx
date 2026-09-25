@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { StatCard, StatusBadge, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
-import { TIME_SLOTS, EVENT_DAYS, generatePortalToken, uploadSpeakerAbstract, uploadSpeakerPhoto } from "../api/speakersApi";
+import { TIME_SLOTS, EVENT_DAYS, generatePortalToken, uploadSpeakerAbstract, uploadSpeakerPhoto, TEAMS } from "../api/speakersApi";
 import { supabase } from "../supabaseClient";
 import * as XLSX from "xlsx-js-style";
 
@@ -204,6 +204,15 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                         />
                     </div>
                     <div><label className="text-xs font-semibold text-slate-700">Whose Speaker?</label><input className={inputCls} value={form.whoseSpeaker || ""} onChange={set("whoseSpeaker")} /></div>
+                    <div>
+                        <label className="text-xs font-semibold text-slate-700">Team</label>
+                        <select className={inputCls} value={form.team || ""} onChange={set("team")}>
+                            <option value="">Select Team...</option>
+                            {TEAMS.map((t) => (
+                                <option key={t} value={t}>{t}</option>
+                            ))}
+                        </select>
+                    </div>
                     
                     <div>
                         <label className="text-xs font-semibold text-slate-700">Day</label>
@@ -435,6 +444,7 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                     {row("Phone", isSpeaker && !isSelf ? "Confidential" : speaker.phone)}
                     {row("Country", isSpeaker && !isSelf ? "Confidential" : speaker.country)}
                     {row("Whose Speaker", speaker.whoseSpeaker)}
+                    {speaker.team && row("Team", speaker.team)}
                 </div>
             </div>
             <div className="grid sm:grid-cols-2 gap-x-6 mt-3">

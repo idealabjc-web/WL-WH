@@ -57,11 +57,21 @@ export const TIME_SLOTS = [
     "16:40 - 17:05", "17:05 - 17:30", "17:30 - 17:55", "17:55 - 18:20"
 ];
 
+export const TEAMS = [
+    "Voice",
+    "Next",
+    "Wynx",
+    "Wyn",
+    "Idias",
+    "Icon",
+    "Prosummits"
+];
+
 export const emptyForm = {
     name: "", email: "", phone: "", country: "", sessionTitle: "", day: "", timeSlot: "",
     conferenceRoom: "", accommodationStatus: "", hotelRoom: "", checkinDate: "", checkoutDate: "", nights: "", diet: "No preference",
     allergy: "", tour: "yes", concerns: "", photoUrl: "",
-    abstractProvided: "no", abstractUrl: "", whoseSpeaker: "", speakerTag: ""
+    abstractProvided: "no", abstractUrl: "", whoseSpeaker: "", team: "", speakerTag: ""
 };
 
 // Supabase <-> app-state mapping
@@ -81,9 +91,9 @@ export function speakerToRow(s) {
         abstract_status: s.abstractStatus || null,
         abstract_url: s.abstractUrl || null,
         whose_speaker: s.whoseSpeaker || null,
+        team: s.team || null,
         portal_token: s.portalToken || null,
         speaker_tag: s.speakerTag || null,
-        // country: s.country || null, // REMOVED TEMPORARILY: Causes crash if 'country' column doesn't exist in Supabase
     };
 }
 
@@ -94,6 +104,19 @@ export function rowToSpeaker(r) {
     const accomm = Array.isArray(r.accommodations) ? (r.accommodations[0] || {}) : (r.accommodations || {});
     const att = Array.isArray(r.attendance) ? (r.attendance[0] || {}) : (r.attendance || {});
     
+    // Parse team from whose_speaker if stored as "Name [Team]" or "Team"
+    let parsedWhoseSpeaker = r.whose_speaker || null;
+    let parsedTeam = r.team || null;
+    if (r.whose_speaker) {
+        const teamMatch = r.whose_speaker.match(/^(.*?)\s*\[(.*?)\]$/);
+        if (teamMatch) {
+            parsedWhoseSpeaker = teamMatch[1].trim() || null;
+            parsedTeam = teamMatch[2].trim() || null;
+        } else if (TEAMS.includes(r.whose_speaker)) {
+            parsedTeam = r.whose_speaker;
+        }
+    }
+
     return {
         id: r.id,
         name: r.name,
@@ -124,7 +147,8 @@ export function rowToSpeaker(r) {
         idCardUrl: r.id_card_url || null,
         abstractStatus: r.abstract_status || null,
         abstractUrl: r.abstract_url || null,
-        whoseSpeaker: r.whose_speaker || null,
+        whoseSpeaker: parsedWhoseSpeaker,
+        team: r.team || parsedTeam || null,
         portalToken: r.portal_token || null,
         speakerTag: r.speaker_tag || null,
     };
