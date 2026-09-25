@@ -23,7 +23,6 @@ const TABS = [
     { id: "certificate", label: "Certificate", icon: Award },
     { id: "announcements", label: "Announcements", icon: Megaphone },
     { id: "feedback", label: "Feedback", icon: MessageSquare },
-    { id: "logistics", label: "Logistics & Travel", mobileLabel: "Logistics", icon: Hotel },
 ];
 
 const VALID_TABS = [...TABS.map(t => t.id), "checkout"];
@@ -489,32 +488,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                         />
                     )}
 
-                    {tab === "logistics" && (
-                        <div className="bg-white border border-slate-200 rounded-2xl p-5 sm:p-7 shadow-sm space-y-6">
-                            <div>
-                                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                                    <Hotel size={20} className="text-amber-600" /> Accommodation & Travel Itinerary
-                                </h2>
-                                <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                                    Hotel reservation and logistics details for your stay in Dubai.
-                                </p>
-                            </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                                {infoCard(<Hotel />, "Hotel Room", currentSpeaker.room || "To be assigned at front desk")}
-                                {infoCard(<Calendar />, "Check-in Date", currentSpeaker.checkin_date || currentSpeaker.checkinDate)}
-                                {infoCard(<Calendar />, "Check-out Date", currentSpeaker.checkout_date || currentSpeaker.checkoutDate)}
-                                {currentSpeaker.nights && infoCard(<Hotel />, "Duration of Stay", `${currentSpeaker.nights} nights`)}
-                                {infoCard(<Utensils />, "Dietary Preference", currentSpeaker.diet !== "No preference" ? currentSpeaker.diet : "Standard (No dietary restrictions)")}
-                                {currentSpeaker.allergy && infoCard(<AlertTriangle />, "Allergy Notification", currentSpeaker.allergy)}
-                            </div>
-
-                            <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-500">
-                                <span>Need to adjust your hotel dates or travel plans?</span>
-                                <span className="font-semibold text-slate-700">Contact event concierge: concierge@wlwh.com</span>
-                            </div>
-                        </div>
-                    )}
 
 
                     {tab === "checkout" && (
@@ -531,7 +505,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
 
             {/* Mobile Bottom Navigation Bar */}
             <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-xl border-t border-slate-800/80 pb-safe shadow-2xl">
-                <div className="grid grid-cols-5 w-full items-center px-1 py-1">
+                <div className="grid grid-cols-4 w-full items-center px-1 py-1">
                     {TABS.map(t => (
                         <button
                             key={t.id}
