@@ -266,7 +266,7 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3">
                 <Field label="Day">
                     <select className={inputCls} value={form.day} onChange={set("day")}>
                         <option value="">Select a day...</option>
@@ -275,30 +275,40 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                         ))}
                     </select>
                 </Field>
+                <Field label="Conference Room">
+                    <select className={inputCls} value={form.conferenceRoom} onChange={set("conferenceRoom")}>
+                        <option value="">Select Room...</option>
+                        <option value="Room 1">Room 1</option>
+                        <option value="Room 2">Room 2</option>
+                    </select>
+                </Field>
             </div>
             <div className="mb-4">
-                <Field label="Time slot (requires Day selection first)">
+                <Field label="Time slot (requires Day and Room selection first)">
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
                         {TIME_SLOTS.filter(s => !s.toLowerCase().includes("lunch")).map(slot => {
-                            const isBooked = form.day ? speakers.some(s => {
+                            const isBooked = (form.day && form.conferenceRoom) ? speakers.some(s => {
                                 const normRoom = (r) => (r || "Room TBA").trim();
                                 return (s.day === form.day || (form.day === "November 25" && s.day === "Day 1") || (form.day === "November 26" && s.day === "Day 2")) && 
                                 normRoom(s.conferenceRoom) === normRoom(form.conferenceRoom) &&
                                 s.timeSlot === slot
                             }) : false;
                             const isSelected = form.timeSlot === slot;
+                            const isDisabled = !(form.day && form.conferenceRoom) || isBooked;
                             return (
                                 <button
                                     key={slot}
                                     type="button"
-                                    disabled={isBooked}
+                                    disabled={isDisabled}
                                     onClick={() => setForm(f => ({ ...f, timeSlot: slot }))}
                                     className={`py-2 px-1 text-xs font-semibold rounded-lg border transition-all flex items-center justify-center gap-1.5 min-h-[36px]
                                         ${isBooked 
                                             ? "bg-rose-50 border-rose-200 text-rose-500 cursor-not-allowed opacity-75" 
-                                            : isSelected 
-                                                ? "bg-emerald-500 border-emerald-600 text-white shadow-sm ring-1 ring-emerald-500 ring-offset-1" 
-                                                : "bg-white border-slate-200 text-slate-600 hover:border-emerald-400 hover:bg-emerald-50"
+                                            : !(form.day && form.conferenceRoom)
+                                                ? "bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed opacity-60"
+                                                : isSelected 
+                                                    ? "bg-emerald-500 border-emerald-600 text-white shadow-sm ring-1 ring-emerald-500 ring-offset-1" 
+                                                    : "bg-white border-slate-200 text-slate-600 hover:border-emerald-400 hover:bg-emerald-50"
                                         }`}
                                 >
                                     {isBooked ? <AlertTriangle size={12} className="shrink-0" /> : null}
@@ -310,14 +320,7 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                     </div>
                 </Field>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-3">
-                <Field label="Conference Room">
-                    <select className={inputCls} value={form.conferenceRoom} onChange={set("conferenceRoom")}>
-                        <option value="">Select Room...</option>
-                        <option value="Room 1">Room 1</option>
-                        <option value="Room 2">Room 2</option>
-                    </select>
-                </Field>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3">
                 <Field label="Accommodation Status">
                     <select className={inputCls} value={form.accommodationStatus} onChange={(e) => {
                         const val = e.target.value;

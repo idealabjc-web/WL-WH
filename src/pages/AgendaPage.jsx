@@ -100,7 +100,7 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
     }, [speakers, moveState.room, moveState.day, slotAction]);
 
     return (
-        <div className="p-4 sm:p-6 sm:max-w-[1200px] mx-auto animate-in fade-in duration-300 pb-24">
+        <div className="p-4 sm:p-6 w-full max-w-none mx-auto animate-in fade-in duration-300 pb-24">
             <div className="mb-6">
                 <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
                     <Calendar size={28} className="text-emerald-500" />

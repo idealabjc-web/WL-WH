@@ -1,10 +1,30 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import html2canvas from 'html2canvas';
 import { Download } from 'lucide-react';
 import { TIME_SLOTS, EVENT_DAYS } from '../api/speakersApi';
 
 export default function AgendaPoster({ speakers, room }) {
     const posterRef = useRef(null);
+    const containerRef = useRef(null);
+    const [scale, setScale] = useState(1);
+
+    useEffect(() => {
+        const updateScale = () => {
+            if (containerRef.current) {
+                const parentWidth = containerRef.current.parentElement.offsetWidth;
+                if (parentWidth < 1150) {
+                    setScale(parentWidth / 1150);
+                } else {
+                    setScale(1);
+                }
+            }
+        };
+        updateScale();
+        // small delay to ensure layout is done
+        setTimeout(updateScale, 100);
+        window.addEventListener('resize', updateScale);
+        return () => window.removeEventListener('resize', updateScale);
+    }, []);
 
     const downloadJPEG = async () => {
         if (!posterRef.current) return;
@@ -51,7 +71,7 @@ export default function AgendaPoster({ speakers, room }) {
             return (
                 <div key={timeSlot} className="flex items-center w-full mb-1.5 rounded-full overflow-hidden border-[1.5px] border-black bg-[#059669] shadow-sm relative h-[36px]">
                     <div className="w-[34px] h-[34px] bg-black/40 rounded-md shrink-0 -ml-[1.5px] border-[1.5px] border-black flex items-center justify-center text-white/80 text-[14px]">?</div>
-                    <div className="flex-1 text-left font-bold text-white text-[13px] px-3 font-sans overflow-hidden whitespace-nowrap block" style={{ lineHeight: "33px" }}>TBA</div>
+                    <div className="flex-1 text-left font-bold text-white text-[13px] px-3 font-sans overflow-hidden whitespace-nowrap block uppercase" style={{ lineHeight: "33px" }}>SLOT AVAILABLE</div>
                     <div className="bg-white text-black font-bold text-[11px] rounded-full border-[1.5px] border-[#059669] px-3 mx-1 flex items-center justify-center shrink-0 min-w-[86px] h-[28px] font-sans z-10">
                         {timeSlot}
                     </div>
@@ -93,7 +113,7 @@ export default function AgendaPoster({ speakers, room }) {
     const bookableSlots = TIME_SLOTS;
 
     return (
-        <div className="flex flex-col items-center py-4 bg-slate-50/50 rounded-2xl border border-slate-200">
+        <div className="flex flex-col items-center py-4 w-full">
             <button 
                 onClick={downloadJPEG} 
                 className="mb-6 flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold px-6 py-2.5 rounded-xl shadow-sm transition-all"
@@ -101,10 +121,10 @@ export default function AgendaPoster({ speakers, room }) {
                 <Download size={18} /> Download High-Res JPEG
             </button>
             
-            <div className="w-full max-w-[1150px] overflow-auto border-4 border-slate-200 shadow-2xl rounded-sm bg-slate-200 p-2">
+            <div className="w-full flex justify-center" ref={containerRef} style={{ zoom: scale }}>
                 <div 
                     ref={posterRef} 
-                    className="bg-white w-[1120px] p-4 flex flex-col relative mx-auto"
+                    className="bg-white w-[1120px] p-4 flex flex-col relative mx-auto shadow-2xl border-4 border-slate-200"
                     style={{ fontFamily: "Georgia, 'Times New Roman', Times, serif" }}
                 >
                     {/* Header blocks */}

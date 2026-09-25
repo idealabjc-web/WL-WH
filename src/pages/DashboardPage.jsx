@@ -54,7 +54,7 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
     const save = async () => {
         if (!form.name.trim()) return;
 
-        if (form.day && form.timeSlot) {
+        if (form.day && form.conferenceRoom && form.timeSlot) {
             const isBlocked = allSpeakers.some(s => {
                 const normRoom = (r) => (r || "Room TBA").trim();
                 return s.id !== form.id && 
@@ -63,7 +63,7 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                 s.timeSlot === form.timeSlot
             });
             if (isBlocked) {
-                alert(`Time slot ${form.timeSlot} on ${form.day} is already booked by another speaker.`);
+                alert(`Time slot ${form.timeSlot} on ${form.day} in ${form.conferenceRoom} is already booked by another speaker.`);
                 return;
             }
         }
@@ -215,6 +215,14 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                         </select>
                     </div>
                     <div>
+                        <label className="text-xs font-semibold text-slate-700">Conference Room</label>
+                        <select className={inputCls} value={form.conferenceRoom || form.conference_room || form.room || ""} onChange={set("conferenceRoom")}>
+                            <option value="">Select...</option>
+                            <option value="Room 1">Room 1</option>
+                            <option value="Room 2">Room 2</option>
+                        </select>
+                    </div>
+                    <div>
                         <label className="text-xs font-semibold text-slate-700">Time Slot</label>
                         <select className={inputCls} value={form.timeSlot} onChange={set("timeSlot")}>
                             <option value="">Select...</option>
@@ -223,7 +231,7 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                                 
                                 const normRoom = (r) => (r || "Room TBA").trim();
                                 
-                                if (form.day) {
+                                if (form.day && form.conferenceRoom) {
                                     isBooked = allSpeakers.some(s => 
                                         s.id !== form.id && 
                                         (s.day === form.day || (form.day === "November 25" && s.day === "Day 1") || (form.day === "November 26" && s.day === "Day 2")) && 
@@ -231,27 +239,18 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                                         s.timeSlot === t
                                     );
                                 }
-                                const showStatus = form.day;
+                                const showStatus = form.day && form.conferenceRoom;
                                 return (
                                     <option 
                                         key={t} 
                                         value={t}
-                                        disabled={isBooked}
-                                        style={showStatus ? { color: isBooked ? "#e11d48" : "#059669", fontWeight: "600" } : {}}
+                                        disabled={isBooked || !showStatus}
+                                        style={showStatus ? { color: isBooked ? "#e11d48" : "#059669", fontWeight: "600" } : { color: "#94a3b8" }}
                                     >
-                                        {t} {showStatus ? (isBooked ? "(Booked)" : "(Available)") : ""}
+                                        {t} {showStatus ? (isBooked ? "(Booked)" : "(Available)") : "(Requires Day & Room)"}
                                     </option>
                                 );
                             })}
-                        </select>
-                    </div>
-                    
-                    <div>
-                        <label className="text-xs font-semibold text-slate-700">Conference Room</label>
-                        <select className={inputCls} value={form.conferenceRoom || form.conference_room || form.room || ""} onChange={set("conferenceRoom")}>
-                            <option value="">Select...</option>
-                            <option value="Room 1">Room 1</option>
-                            <option value="Room 2">Room 2</option>
                         </select>
                     </div>
                     <div>
@@ -580,25 +579,41 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
     const exportExcel = () => {
         // Status is a computed first column; rest are data fields
         const cols = [
-            { key: "_status",      label: "Status" },
-            { key: "id",           label: "Badge ID" },
-            { key: "name",         label: "Name" },
-            { key: "email",        label: "Email" },
-            { key: "phone",        label: "Phone" },
-            { key: "sessionTitle", label: "Session Title" },
-            { key: "day",          label: "Day" },
-            { key: "timeSlot",     label: "Time Slot" },
-            { key: "room",         label: "Room" },
-            { key: "checkinDate",  label: "Hotel Check-in" },
-            { key: "checkoutDate", label: "Hotel Check-out" },
-            { key: "nights",       label: "Nights" },
-            { key: "diet",         label: "Diet" },
-            { key: "allergy",      label: "Allergy" },
-            { key: "tour",         label: "Tour" },
-            { key: "concerns",     label: "Concerns" },
-            { key: "checkedInAt",  label: "Check-in Time" },
-            { key: "checkedOutAt", label: "Check-out Time" },
-            { key: "checkoutNotes",label: "Checkout Notes" },
+            { key: "_status",      label: "Status", width: 13 },
+            { key: "id",           label: "Badge ID", width: 11 },
+            { key: "name",         label: "Name", width: 24 },
+            { key: "email",        label: "Email", width: 26 },
+            { key: "phone",        label: "Phone", width: 16 },
+            { key: "country",      label: "Country", width: 20 },
+            { key: "whoseSpeaker", label: "Whose Speaker", width: 20 },
+            { key: "speakerTag",   label: "Speaker Tag", width: 15 },
+            { key: "sessionTitle", label: "Session Title", width: 34 },
+            { key: "abstractProvided", label: "Abstract Provided", width: 15 },
+            { key: "day",          label: "Day", width: 10 },
+            { key: "timeSlot",     label: "Time Slot", width: 16 },
+            { key: "conferenceRoom", label: "Room", get: s => s.conferenceRoom || s.conference_room || s.room || "", width: 15 },
+            { key: "accommodationStatus", label: "Accommodation", width: 22 },
+            { key: "hotelRoom",    label: "Hotel Room", width: 12 },
+            { key: "checkinDate",  label: "Hotel Check-in", width: 14 },
+            { key: "checkoutDate", label: "Hotel Check-out", width: 14 },
+            { key: "nights",       label: "Nights", width: 8 },
+            { key: "diet",         label: "Diet", width: 18 },
+            { key: "allergy",      label: "Allergy", width: 18 },
+            { key: "tour",         label: "Tour", width: 8 },
+            { key: "concerns",     label: "Concerns", width: 30 },
+            { key: "checkedInAt",  label: "Check-in Time", get: s => {
+                const time = s.checkedInAt || s.checked_in_at;
+                if (time) return time;
+                if (s.checkedIn || s.checked_in) return "Time not recorded";
+                return "";
+            }, width: 20 },
+            { key: "checkedOutAt", label: "Check-out Time", get: s => {
+                const time = s.checkedOutAt || s.checked_out_at;
+                if (time) return time;
+                if (s.checkedOut || s.checked_out) return "Time not recorded";
+                return "";
+            }, width: 20 },
+            { key: "checkoutNotes",label: "Checkout Notes", width: 30 },
         ];
 
         // ── Styles ────────────────────────────────────────────────
@@ -656,13 +671,18 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
         // Data rows with alternating background
         speakers.forEach((s, i) => {
             const isAlt = i % 2 === 1;
-            wsData.push(cols.map(({ key }) => {
+            wsData.push(cols.map(c => {
+                const { key, get } = c;
                 if (key === "_status") {
                     return { v: getStatus(s), t: "s", s: statusCellStyle(s, isAlt) };
                 }
-                let v = s[key];
-                if ((key === "checkedInAt" || key === "checkedOutAt") && v)
+                let v = get ? get(s) : s[key];
+                if ((key === "checkedInAt" || key === "checkedOutAt") && v && typeof v === "number") {
                     v = new Date(v).toLocaleString();
+                } else if ((key === "checkedInAt" || key === "checkedOutAt") && v && typeof v === "string" && v !== "Time not recorded") {
+                    const parsed = new Date(v);
+                    if (!isNaN(parsed)) v = parsed.toLocaleString();
+                }
                 return { v: v ?? "", t: "s", s: cellStyle(s, isAlt) };
             }));
         });
@@ -670,13 +690,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
         const ws = XLSX.utils.aoa_to_sheet(wsData);
 
         // Column widths
-        ws["!cols"] = [
-            { wch: 13 }, { wch: 11 }, { wch: 24 }, { wch: 26 }, { wch: 16 },
-            { wch: 34 }, { wch: 8  }, { wch: 16 }, { wch: 10 },
-            { wch: 14 }, { wch: 14 }, { wch: 8  }, { wch: 18 },
-            { wch: 18 }, { wch: 8  }, { wch: 30 },
-            { wch: 20 }, { wch: 20 }, { wch: 30 },
-        ];
+        ws["!cols"] = cols.map(c => ({ wch: c.width || 15 }));
 
         // Header row height + data row heights
         ws["!rows"] = [{ hpt: 24 }, ...speakers.map(() => ({ hpt: 18 }))];
