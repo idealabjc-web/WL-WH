@@ -38,6 +38,8 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
     }, [speaker]);
 
     const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+    const [viewDay, setViewDay] = useState("");
+    const [viewRoom, setViewRoom] = useState("");
 
     useEffect(() => {
         if (isEditing && form.checkinDate && form.checkoutDate) {
@@ -54,17 +56,31 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
     const save = async () => {
         if (!form.name.trim()) return;
 
-        if (form.day && form.conferenceRoom && form.timeSlot) {
-            const isBlocked = allSpeakers.some(s => {
-                const normRoom = (r) => (r || "Room TBA").trim();
-                return s.id !== form.id && 
-                (s.day === form.day || (form.day === "November 25" && s.day === "Day 1") || (form.day === "November 26" && s.day === "Day 2")) && 
-                normRoom(s.conferenceRoom) === normRoom(form.conferenceRoom) &&
-                s.timeSlot === form.timeSlot
-            });
-            if (isBlocked) {
-                alert(`Time slot ${form.timeSlot} on ${form.day} in ${form.conferenceRoom} is already booked by another speaker.`);
-                return;
+        if (form.sessions) {
+            for (const sess of form.sessions) {
+                if (sess.day && sess.conferenceRoom && sess.timeSlot) {
+                    const isBlocked = allSpeakers.some(spk => {
+                        if (spk.id === form.id) return false;
+                        const normRoom = (r) => (r || "Room TBA").trim();
+                        // Check spk.sessions
+                        const hasConflictInSessions = spk.sessions && spk.sessions.some(s => 
+                            (s.day === sess.day || (sess.day === "November 25" && s.day === "Day 1") || (sess.day === "November 26" && s.day === "Day 2")) && 
+                            normRoom(s.conferenceRoom) === normRoom(sess.conferenceRoom) &&
+                            s.timeSlot === sess.timeSlot
+                        );
+                        // Check fallback spk.day, etc.
+                        const hasConflictInLegacy = 
+                            (spk.day === sess.day || (sess.day === "November 25" && spk.day === "Day 1") || (sess.day === "November 26" && spk.day === "Day 2")) && 
+                            normRoom(spk.conferenceRoom) === normRoom(sess.conferenceRoom) &&
+                            spk.timeSlot === sess.timeSlot;
+
+                        return hasConflictInSessions || hasConflictInLegacy;
+                    });
+                    if (isBlocked) {
+                        alert(`Time slot ${sess.timeSlot} on ${sess.day} in ${sess.conferenceRoom} is already booked by another speaker.`);
+                        return;
+                    }
+                }
             }
         }
 
@@ -280,53 +296,96 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                         )}
                     </div>
                     
-                    <div>
-                        <label className="text-xs font-semibold text-slate-700">Day</label>
-                        <select className={inputCls} value={form.day} onChange={set("day")}>
-                            <option value="">Select...</option>
-                            {EVENT_DAYS.map(d => (
-                                <option key={d} value={d}>{d}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="text-xs font-semibold text-slate-700">Conference Room</label>
-                        <select className={inputCls} value={form.conferenceRoom || form.conference_room || form.room || ""} onChange={set("conferenceRoom")}>
-                            <option value="">Select...</option>
-                            <option value="Room 1">Room 1</option>
-                            <option value="Room 2">Room 2</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="text-xs font-semibold text-slate-700">Time Slot</label>
-                        <select className={inputCls} value={form.timeSlot} onChange={set("timeSlot")}>
-                            <option value="">Select...</option>
-                            {TIME_SLOTS.filter(s => !s.toLowerCase().includes("lunch")).map(t => {
-                                let isBooked = false;
-                                
+                    <div className="sm:col-span-2">
+                        <div className="grid sm:grid-cols-2 gap-3 mb-4">
+                            <div>
+                                <label className="text-xs font-semibold text-slate-700">Viewing Day</label>
+                                <select className={inputCls} value={viewDay} onChange={(e) => setViewDay(e.target.value)}>
+                                    <option value="">Select a day...</option>
+                                    {EVENT_DAYS.map(d => (
+                                        <option key={d} value={d}>{d}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-xs font-semibold text-slate-700">Viewing Room</label>
+                                <select className={inputCls} value={viewRoom} onChange={(e) => setViewRoom(e.target.value)}>
+                                    <option value="">Select Room...</option>
+                                    <option value="Room 1">Room 1</option>
+                                    <option value="Room 2">Room 2</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <label className="text-xs font-semibold text-slate-700 mb-1.5 block">Time slot (requires Day and Room selection first)</label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                            {TIME_SLOTS.filter(s => !s.toLowerCase().includes("lunch")).map(slot => {
+                                let isBookedByOther = false;
                                 const normRoom = (r) => (r || "Room TBA").trim();
                                 
-                                if (form.day && form.conferenceRoom) {
-                                    isBooked = allSpeakers.some(s => 
-                                        s.id !== form.id && 
-                                        (s.day === form.day || (form.day === "November 25" && s.day === "Day 1") || (form.day === "November 26" && s.day === "Day 2")) && 
-                                        normRoom(s.conferenceRoom) === normRoom(form.conferenceRoom) &&
-                                        s.timeSlot === t
-                                    );
+                                if (viewDay && viewRoom) {
+                                    isBookedByOther = allSpeakers.some(spk => {
+                                        if (spk.id === form.id) return false;
+                                        const hasConflictInSessions = spk.sessions && spk.sessions.some(s => 
+                                            (s.day === viewDay || (viewDay === "November 25" && s.day === "Day 1") || (viewDay === "November 26" && s.day === "Day 2")) && 
+                                            normRoom(s.conferenceRoom) === normRoom(viewRoom) &&
+                                            s.timeSlot === slot
+                                        );
+                                        const hasConflictInLegacy = 
+                                            (spk.day === viewDay || (viewDay === "November 25" && spk.day === "Day 1") || (viewDay === "November 26" && spk.day === "Day 2")) && 
+                                            normRoom(spk.conferenceRoom) === normRoom(viewRoom) &&
+                                            spk.timeSlot === slot;
+                                        return hasConflictInSessions || hasConflictInLegacy;
+                                    });
                                 }
-                                const showStatus = form.day && form.conferenceRoom;
+                                
+                                const isSelected = (form.sessions || []).some(s => s.day === viewDay && s.conferenceRoom === viewRoom && s.timeSlot === slot);
+                                const isDisabled = !(viewDay && viewRoom) || isBookedByOther;
+
                                 return (
-                                    <option 
-                                        key={t} 
-                                        value={t}
-                                        disabled={isBooked || !showStatus}
-                                        style={showStatus ? { color: isBooked ? "#e11d48" : "#059669", fontWeight: "600" } : { color: "#94a3b8" }}
+                                    <button
+                                        key={slot}
+                                        type="button"
+                                        disabled={isDisabled}
+                                        onClick={() => {
+                                            const currentSessions = form.sessions || [];
+                                            if (isSelected) {
+                                                setForm(f => ({ ...f, sessions: currentSessions.filter(s => !(s.day === viewDay && s.conferenceRoom === viewRoom && s.timeSlot === slot)) }));
+                                            } else {
+                                                setForm(f => ({ ...f, sessions: [...currentSessions, { day: viewDay, conferenceRoom: viewRoom, timeSlot: slot }] }));
+                                            }
+                                        }}
+                                        className={`py-2 px-1 text-xs font-semibold rounded-lg border transition-all flex items-center justify-center gap-1.5 min-h-[36px]
+                                            ${isBookedByOther 
+                                                ? "bg-rose-50 border-rose-200 text-rose-500 cursor-not-allowed opacity-75" 
+                                                : !(viewDay && viewRoom)
+                                                    ? "bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed opacity-60"
+                                                    : isSelected 
+                                                        ? "bg-emerald-500 border-emerald-600 text-white shadow-sm ring-1 ring-emerald-500 ring-offset-1" 
+                                                        : "bg-white border-slate-200 text-slate-600 hover:border-emerald-400 hover:bg-emerald-50"
+                                            }`}
                                     >
-                                        {t} {showStatus ? (isBooked ? "(Booked)" : "(Available)") : "(Requires Day & Room)"}
-                                    </option>
+                                        {isSelected ? <CheckCircle2 size={12} className="shrink-0" /> : null}
+                                        {slot}
+                                    </button>
                                 );
                             })}
-                        </select>
+                        </div>
+                        {(form.sessions && form.sessions.length > 0) && (
+                            <div className="mb-4">
+                                <div className="text-xs font-medium text-slate-500 mb-1.5">Selected Slots ({form.sessions.length}):</div>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {form.sessions.map((s, idx) => (
+                                        <div key={idx} className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold px-2 py-1 rounded">
+                                            <span>{s.day} • {s.conferenceRoom || s.conference_room || s.room} • {s.timeSlot || s.time_slot}</span>
+                                            <button type="button" onClick={() => {
+                                                setForm(f => ({ ...f, sessions: f.sessions.filter((_, i) => i !== idx) }));
+                                            }} className="text-emerald-600 hover:text-emerald-900"><X size={12} /></button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                     <div>
                         <label className="text-xs font-semibold text-slate-700">Accommodation Status</label>
@@ -496,9 +555,23 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
             <div className="grid sm:grid-cols-2 gap-x-6">
                 <div>
                     <div className="text-xs font-semibold text-amber-600 tracking-wide mb-1.5">SESSION INFO</div>
-                    {row("Session / Talk", speaker.sessionTitle)}
-                    {row("Day", speaker.day)}
-                    {row("Time Slot", speaker.timeSlot)}
+                    {row("Session / Talk", speaker.sessionTitle || speaker.session_title)}
+                    {speaker.sessions && speaker.sessions.length > 0 ? (
+                        speaker.sessions.map((sess, idx) => (
+                            <div key={idx} className="mb-3 pb-3 border-b border-slate-100 dark:border-slate-800 last:border-0 last:mb-0 last:pb-0">
+                                {speaker.sessions.length > 1 && <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Time Slot {idx + 1}</div>}
+                                {row("Day", sess.day)}
+                                {row("Time Slot", sess.timeSlot || sess.time_slot)}
+                                {row("Room", sess.conferenceRoom || sess.conference_room || sess.room)}
+                            </div>
+                        ))
+                    ) : (
+                        <>
+                            {row("Day", speaker.day)}
+                            {row("Time Slot", speaker.timeSlot)}
+                            {row("Room", speaker.conferenceRoom || speaker.room)}
+                        </>
+                    )}
                     {row("Status", speaker.checkedOut ? "🟣 Checked out" : speaker.checkedIn ? "✅ Checked in (On-Site)" : "⏳ Pending")}
                     {speaker.checkedIn && row("Checked in at", new Date(speaker.checkedInAt).toLocaleString())}
                     {speaker.checkedOut && row("Checked out at", new Date(speaker.checkedOutAt).toLocaleString())}

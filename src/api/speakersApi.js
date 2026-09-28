@@ -68,8 +68,9 @@ export const TEAMS = [
 ];
 
 export const emptyForm = {
-    name: "", email: "", phone: "", country: "", sessionTitle: "", day: "", timeSlot: "",
-    conferenceRoom: "", accommodationStatus: "", hotelRoom: "", checkinDate: "", checkoutDate: "", nights: "", diet: "No preference",
+    name: "", email: "", phone: "", country: "", 
+    sessions: [],
+    sessionTitle: "", accommodationStatus: "", hotelRoom: "", checkinDate: "", checkoutDate: "", nights: "", diet: "No preference",
     allergy: "", tour: "yes", concerns: "", photoUrl: "",
     abstractProvided: "no", abstractUrl: "", whoseSpeaker: "", team: "", speakerTag: "",
     accompanyingPerson: "no", accompanyingPersonsList: []
@@ -125,6 +126,7 @@ export function rowToSpeaker(r) {
         email: r.email,
         phone: r.phone,
         country: r.country || "",
+        sessions: Array.isArray(r.sessions) ? r.sessions : (r.sessions ? [r.sessions] : []),
         sessionTitle: session.session_title || r.session_title || null,
         day: session.day || r.day || null,
         timeSlot: session.time_slot || r.time_slot || null,
@@ -176,7 +178,19 @@ export async function createSpeakerRecord(rec, skipQueue = false) {
     const { error: spkError } = await supabase.from("speakers").insert(speakerRow);
     if (spkError) throw spkError;
     
-    if (rec.sessionTitle || rec.day || rec.timeSlot || rec.conferenceRoom) {
+    if (rec.sessions && rec.sessions.length > 0) {
+        const sessionsToInsert = rec.sessions.filter(s => s.day || s.timeSlot || s.conferenceRoom).map(s => ({
+            speaker_id: rec.id,
+            session_title: rec.sessionTitle || null,
+            day: s.day || null,
+            time_slot: s.timeSlot || null,
+            conference_room: s.conferenceRoom || null
+        }));
+        if (sessionsToInsert.length > 0) {
+            const { error: sessError } = await supabase.from("sessions").insert(sessionsToInsert);
+            if (sessError) throw sessError;
+        }
+    } else if (rec.sessionTitle || rec.day || rec.timeSlot || rec.conferenceRoom) {
         const { error: sessError } = await supabase.from("sessions").insert({
             speaker_id: rec.id,
             session_title: rec.sessionTitle || null,
@@ -223,25 +237,43 @@ export async function updateSpeakerRecord(id, mergedRec, skipQueue = false) {
     const { error: spkError } = await supabase.from("speakers").update(speakerRow).eq("id", id);
     if (spkError) throw spkError;
     
-    // Upsert session
-    const { data: sessData } = await supabase.from("sessions").select("id").eq("speaker_id", id).maybeSingle();
-    if (sessData) {
-        const { error: sessUpdError } = await supabase.from("sessions").update({
-            session_title: mergedRec.sessionTitle || null,
-            day: mergedRec.day || null,
-            time_slot: mergedRec.timeSlot || null,
-            conference_room: mergedRec.conferenceRoom || null
-        }).eq("id", sessData.id);
-        if (sessUpdError) throw sessUpdError;
-    } else if (mergedRec.sessionTitle || mergedRec.day || mergedRec.timeSlot || mergedRec.conferenceRoom) {
-        const { error: sessInsError } = await supabase.from("sessions").insert({
+    // Upsert sessions
+    // If the record provides an explicit array of sessions, we replace all existing ones.
+    if (mergedRec.sessions) {
+        // Delete existing ones
+        await supabase.from("sessions").delete().eq("speaker_id", id);
+        const sessionsToInsert = mergedRec.sessions.filter(s => s.day || s.timeSlot || s.conferenceRoom).map(s => ({
             speaker_id: id,
             session_title: mergedRec.sessionTitle || null,
-            day: mergedRec.day || null,
-            time_slot: mergedRec.timeSlot || null,
-            conference_room: mergedRec.conferenceRoom || null
-        });
-        if (sessInsError) throw sessInsError;
+            day: s.day || null,
+            time_slot: s.timeSlot || null,
+            conference_room: s.conferenceRoom || null
+        }));
+        if (sessionsToInsert.length > 0) {
+            const { error: sessInsError } = await supabase.from("sessions").insert(sessionsToInsert);
+            if (sessInsError) throw sessInsError;
+        }
+    } else {
+        // Fallback for old single-session edit form
+        const { data: sessData } = await supabase.from("sessions").select("id").eq("speaker_id", id).maybeSingle();
+        if (sessData) {
+            const { error: sessUpdError } = await supabase.from("sessions").update({
+                session_title: mergedRec.sessionTitle || null,
+                day: mergedRec.day || null,
+                time_slot: mergedRec.timeSlot || null,
+                conference_room: mergedRec.conferenceRoom || null
+            }).eq("id", sessData.id);
+            if (sessUpdError) throw sessUpdError;
+        } else if (mergedRec.sessionTitle || mergedRec.day || mergedRec.timeSlot || mergedRec.conferenceRoom) {
+            const { error: sessInsError } = await supabase.from("sessions").insert({
+                speaker_id: id,
+                session_title: mergedRec.sessionTitle || null,
+                day: mergedRec.day || null,
+                time_slot: mergedRec.timeSlot || null,
+                conference_room: mergedRec.conferenceRoom || null
+            });
+            if (sessInsError) throw sessInsError;
+        }
     }
 
     // Upsert accommodation

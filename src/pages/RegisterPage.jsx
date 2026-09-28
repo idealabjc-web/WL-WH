@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { CheckCircle2, AlertTriangle, ExternalLink, ImagePlus, Camera } from "lucide-react";
+import { CheckCircle2, AlertTriangle, ExternalLink, ImagePlus, Camera, X } from "lucide-react";
 import { Field, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
 import { uid, generatePortalToken, emptyForm, generateAndStoreQrBadge, uploadSpeakerPhoto, uploadSpeakerAbstract, TIME_SLOTS, EVENT_DAYS, TEAMS } from "../api/speakersApi";
@@ -9,6 +9,8 @@ import CountryField from "../components/common/CountryField";
 
 export default function RegisterPage({ speakers = [], onAdd, toast }) {
     const [form, setForm] = useState(emptyForm);
+    const [viewDay, setViewDay] = useState("");
+    const [viewRoom, setViewRoom] = useState("");
     const [saving, setSaving] = useState(false);
     const [lastAdded, setLastAdded] = useState(null);
     const [qrDataUrl, setQrDataUrl] = useState(null);
@@ -56,20 +58,31 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
         if (!form.email.trim()) return toast("Email address is required.");
 
         if (!form.speakerTag) return toast("Speaker Tag is required.");
-        if (!form.day) return toast("Event Day is required.");
-        if (!form.timeSlot) return toast("Time Slot is required.");
-        if (!form.conferenceRoom) return toast("Conference Room is required.");
         if (!form.accommodationStatus) return toast("Accommodation Status is required.");
 
-        if (form.day && form.timeSlot) {
-            const isBlocked = speakers.some(s => 
-                (s.day === form.day || (form.day === "November 25" && s.day === "Day 1") || (form.day === "November 26" && s.day === "Day 2")) && 
-                s.timeSlot === form.timeSlot &&
-                s.conferenceRoom === form.conferenceRoom
-            );
-            if (isBlocked) {
-                toast(`Time slot ${form.timeSlot} on ${form.day} is already booked.`);
-                return;
+        for (let i = 0; i < form.sessions.length; i++) {
+            const s = form.sessions[i];
+            if (!s.day) return toast(`Event Day is required for Session ${i + 1}.`);
+            if (!s.timeSlot) return toast(`Time Slot is required for Session ${i + 1}.`);
+            if (!s.conferenceRoom) return toast(`Conference Room is required for Session ${i + 1}.`);
+
+            if (s.day && s.timeSlot) {
+                const isBlocked = speakers.some(spk => 
+                    spk.sessions && spk.sessions.some(sess => 
+                        (sess.day === s.day || (s.day === "November 25" && sess.day === "Day 1") || (s.day === "November 26" && sess.day === "Day 2")) && 
+                        sess.timeSlot === s.timeSlot &&
+                        sess.conferenceRoom === s.conferenceRoom
+                    )
+                ) || speakers.some(spk => 
+                    (spk.day === s.day || (s.day === "November 25" && spk.day === "Day 1") || (s.day === "November 26" && spk.day === "Day 2")) && 
+                    spk.timeSlot === s.timeSlot &&
+                    spk.conferenceRoom === s.conferenceRoom
+                );
+                
+                if (isBlocked) {
+                    toast(`Time slot ${s.timeSlot} on ${s.day} is already booked.`);
+                    return;
+                }
             }
         }
         setSaving(true);
@@ -207,7 +220,7 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                     />
                 </Field>
                 <Field label="Session / talk title">
-                    <input className={inputCls} value={form.sessionTitle} onChange={set("sessionTitle")} placeholder="e.g. The Future of Renewable Energy" />
+                    <input className={inputCls} value={form.sessionTitle || ""} onChange={set("sessionTitle")} placeholder="e.g. The Future of Renewable Energy" />
                 </Field>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-3">
@@ -347,7 +360,7 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3">
                 <Field label="Day">
-                    <select className={inputCls} value={form.day} onChange={set("day")}>
+                    <select className={inputCls} value={viewDay} onChange={(e) => setViewDay(e.target.value)}>
                         <option value="">Select a day...</option>
                         {EVENT_DAYS.map(d => (
                             <option key={d} value={d}>{d}</option>
@@ -355,42 +368,62 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                     </select>
                 </Field>
                 <Field label="Conference Room">
-                    <select className={inputCls} value={form.conferenceRoom} onChange={set("conferenceRoom")}>
+                    <select className={inputCls} value={viewRoom} onChange={(e) => setViewRoom(e.target.value)}>
                         <option value="">Select Room...</option>
                         <option value="Room 1">Room 1</option>
                         <option value="Room 2">Room 2</option>
                     </select>
                 </Field>
             </div>
-            <div className="mb-4">
+
+            <div className="mb-6">
                 <Field label="Time slot (requires Day and Room selection first)">
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-1">
                         {TIME_SLOTS.filter(s => !s.toLowerCase().includes("lunch")).map(slot => {
-                            const isBooked = (form.day && form.conferenceRoom) ? speakers.some(s => {
-                                const normRoom = (r) => (r || "Room TBA").trim();
-                                return (s.day === form.day || (form.day === "November 25" && s.day === "Day 1") || (form.day === "November 26" && s.day === "Day 2")) && 
-                                normRoom(s.conferenceRoom) === normRoom(form.conferenceRoom) &&
-                                s.timeSlot === slot
-                            }) : false;
-                            const isSelected = form.timeSlot === slot;
-                            const isDisabled = !(form.day && form.conferenceRoom) || isBooked;
+                            let isBookedByOther = false;
+                            
+                            if (viewDay && viewRoom) {
+                                isBookedByOther = speakers.some(spk => 
+                                    spk.sessions && spk.sessions.some(sess => {
+                                        const normRoom = (r) => (r || "Room TBA").trim();
+                                        return (sess.day === viewDay || (viewDay === "November 25" && sess.day === "Day 1") || (viewDay === "November 26" && sess.day === "Day 2")) && 
+                                        normRoom(sess.conferenceRoom) === normRoom(viewRoom) &&
+                                        sess.timeSlot === slot
+                                    })
+                                ) || speakers.some(spk => {
+                                    const normRoom = (r) => (r || "Room TBA").trim();
+                                    return (spk.day === viewDay || (viewDay === "November 25" && spk.day === "Day 1") || (viewDay === "November 26" && spk.day === "Day 2")) && 
+                                    normRoom(spk.conferenceRoom) === normRoom(viewRoom) &&
+                                    spk.timeSlot === slot
+                                });
+                            }
+                            
+                            const isSelected = form.sessions.some(s => s.day === viewDay && s.conferenceRoom === viewRoom && s.timeSlot === slot);
+                            const isDisabled = !(viewDay && viewRoom) || isBookedByOther;
+
                             return (
                                 <button
                                     key={slot}
                                     type="button"
                                     disabled={isDisabled}
-                                    onClick={() => setForm(f => ({ ...f, timeSlot: slot }))}
+                                    onClick={() => {
+                                        if (isSelected) {
+                                            setForm(f => ({ ...f, sessions: f.sessions.filter(s => !(s.day === viewDay && s.conferenceRoom === viewRoom && s.timeSlot === slot)) }));
+                                        } else {
+                                            setForm(f => ({ ...f, sessions: [...f.sessions, { day: viewDay, conferenceRoom: viewRoom, timeSlot: slot }] }));
+                                        }
+                                    }}
                                     className={`py-2 px-1 text-xs font-semibold rounded-lg border transition-all flex items-center justify-center gap-1.5 min-h-[36px]
-                                        ${isBooked 
+                                        ${isBookedByOther 
                                             ? "bg-rose-50 border-rose-200 text-rose-500 cursor-not-allowed opacity-75" 
-                                            : !(form.day && form.conferenceRoom)
+                                            : !(viewDay && viewRoom)
                                                 ? "bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed opacity-60"
                                                 : isSelected 
                                                     ? "bg-emerald-500 border-emerald-600 text-white shadow-sm ring-1 ring-emerald-500 ring-offset-1" 
                                                     : "bg-white border-slate-200 text-slate-600 hover:border-emerald-400 hover:bg-emerald-50"
                                         }`}
                                 >
-                                    {isBooked ? <AlertTriangle size={12} className="shrink-0" /> : null}
+                                    {isBookedByOther ? <AlertTriangle size={12} className="shrink-0" /> : null}
                                     {isSelected ? <CheckCircle2 size={12} className="shrink-0" /> : null}
                                     {slot}
                                 </button>
@@ -398,6 +431,22 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                         })}
                     </div>
                 </Field>
+
+                {form.sessions.length > 0 && (
+                    <div className="mt-3">
+                        <div className="text-xs font-medium text-slate-500 mb-1.5">Selected Slots ({form.sessions.length}):</div>
+                        <div className="flex flex-wrap gap-1.5">
+                            {form.sessions.map((s, idx) => (
+                                <div key={idx} className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold px-2 py-1 rounded">
+                                    <span>{s.day} • {s.conferenceRoom} • {s.timeSlot}</span>
+                                    <button type="button" onClick={() => {
+                                        setForm(f => ({ ...f, sessions: f.sessions.filter((_, i) => i !== idx) }));
+                                    }} className="text-emerald-600 hover:text-emerald-900"><X size={12} /></button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3">
                 <Field label="Accommodation Status">
