@@ -213,6 +213,72 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                             ))}
                         </select>
                     </div>
+
+                    <div className="sm:col-span-2 mt-2 mb-2 p-3 bg-slate-50 border border-slate-200 rounded-lg">
+                        <label className="text-xs font-semibold text-slate-700 mb-2 block">Accompanying Person?</label>
+                        <div className="flex gap-2 mb-3">
+                            {["yes", "no"].map((v) => (
+                                <label
+                                    key={v}
+                                    className={`flex-1 text-center border rounded-md py-1.5 text-xs font-semibold cursor-pointer capitalize transition-colors ${
+                                        form.accompanyingPerson === v ? "border-amber-400 bg-amber-50 text-slate-900" : "border-slate-200 text-slate-500 hover:bg-slate-50 bg-white"
+                                    }`}
+                                >
+                                    <input 
+                                        type="radio" 
+                                        className="hidden" 
+                                        checked={form.accompanyingPerson === v} 
+                                        onChange={() => {
+                                            setForm((f) => ({
+                                                ...f,
+                                                accompanyingPerson: v,
+                                                accompanyingPersonsList: v === "yes" ? (f.accompanyingPersonsList?.length ? f.accompanyingPersonsList : [""]) : []
+                                            }));
+                                        }} 
+                                    />
+                                    {v}
+                                </label>
+                            ))}
+                        </div>
+                        {form.accompanyingPerson === "yes" && (
+                            <div className="mt-2 pt-2 border-t border-slate-200">
+                                <label className="text-xs font-semibold text-slate-700 block mb-1">Number of Accompanying Persons</label>
+                                <select 
+                                    className={inputCls} 
+                                    value={form.accompanyingPersonsList?.length || 1} 
+                                    onChange={(e) => {
+                                        const count = parseInt(e.target.value) || 1;
+                                        const currentList = form.accompanyingPersonsList || [];
+                                        const newList = Array.from({ length: count }, (_, i) => currentList[i] || "");
+                                        setForm(f => ({ ...f, accompanyingPersonsList: newList }));
+                                    }}
+                                >
+                                    <option value={1}>1 Person</option>
+                                    <option value={2}>2 Persons</option>
+                                    <option value={3}>3 Persons</option>
+                                    <option value={4}>4 Persons</option>
+                                </select>
+                                
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+                                    {(form.accompanyingPersonsList || []).map((name, index) => (
+                                        <div key={index}>
+                                            <label className="text-xs font-semibold text-slate-700">Person {index + 1} Name</label>
+                                            <input 
+                                                className={inputCls} 
+                                                value={name} 
+                                                onChange={(e) => {
+                                                    const list = [...form.accompanyingPersonsList];
+                                                    list[index] = e.target.value;
+                                                    setForm(f => ({ ...f, accompanyingPersonsList: list }));
+                                                }} 
+                                                placeholder={`Name of person ${index + 1}`} 
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                     
                     <div>
                         <label className="text-xs font-semibold text-slate-700">Day</label>
@@ -445,6 +511,7 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                     {row("Country", isSpeaker && !isSelf ? "Confidential" : speaker.country)}
                     {row("Whose Speaker", speaker.whoseSpeaker)}
                     {speaker.team && row("Team", speaker.team)}
+                    {speaker.accompanyingPersonsList?.length > 0 && row("Accompanying Persons", speaker.accompanyingPersonsList.join(", "))}
                 </div>
             </div>
             <div className="grid sm:grid-cols-2 gap-x-6 mt-3">
@@ -597,6 +664,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
             { key: "country",      label: "Country", width: 20 },
             { key: "whoseSpeaker", label: "Whose Speaker", width: 20 },
             { key: "speakerTag",   label: "Speaker Tag", width: 15 },
+            { key: "accompanyingPersons", label: "Accompanying Persons", get: s => (s.accompanyingPersonsList || []).join(", "), width: 30 },
             { key: "sessionTitle", label: "Session Title", width: 34 },
             { key: "abstractProvided", label: "Abstract Provided", width: 15 },
             { key: "day",          label: "Day", width: 10 },

@@ -106,6 +106,7 @@ export default function ProfileCard({
                 {row("Speaker tour", speaker.tour)}
                 {row("Room concerns", speaker.concerns || "None")}
                 {row("Contact", `${speaker.email || "—"} ${speaker.phone ? "· " + speaker.phone : ""}`)}
+                {speaker.accompanyingPersonsList?.length > 0 && row("Accompanying Persons", speaker.accompanyingPersonsList.join(", "))}
                 {isCheckedIn && checkedInAt && row("Checked in at", new Date(checkedInAt).toLocaleString())}
                 {isCheckedOut && checkedOutAt && row("Checked out at", new Date(checkedOutAt).toLocaleString())}
                 {isCheckedOut && checkoutNotes && row("Departure remarks", checkoutNotes)}

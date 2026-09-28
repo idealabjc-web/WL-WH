@@ -54,7 +54,7 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
     const submit = async () => {
         if (!form.name.trim()) return toast("Speaker name is required.");
         if (!form.email.trim()) return toast("Email address is required.");
-        if (!form.phone.trim()) return toast("Phone number is required.");
+
         if (!form.speakerTag) return toast("Speaker Tag is required.");
         if (!form.day) return toast("Event Day is required.");
         if (!form.timeSlot) return toast("Time Slot is required.");
@@ -138,6 +138,13 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
         toast(ok ? "Synced." : "Still failing to sync — check your connection.");
     };
 
+    const handleAccompanyingCountChange = (e) => {
+        const count = parseInt(e.target.value) || 1;
+        const currentList = form.accompanyingPersonsList || [];
+        const newList = Array.from({ length: count }, (_, i) => currentList[i] || "");
+        setForm(f => ({ ...f, accompanyingPersonsList: newList }));
+    };
+
     return (
         <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-6 shadow-sm">
             <h2 className="text-base sm:text-lg font-semibold mb-4 text-slate-900">Add a speaker</h2>
@@ -192,7 +199,7 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                 </Field>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3">
-                <Field label="Phone">
+                <Field label="Phone (optional)">
                     <PhoneField
                         value={form.phone}
                         onChange={(val) => setForm((f) => ({ ...f, phone: val }))}
@@ -221,6 +228,69 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                         placeholder="Search or select country (e.g. United Arab Emirates)..."
                     />
                 </Field>
+            </div>
+
+            <div className="mb-6 relative bg-gradient-to-r from-slate-50/50 to-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                <Field label="Accompanying Person?">
+                    <div className="flex gap-2">
+                        {["yes", "no"].map((v) => (
+                            <label
+                                key={v}
+                                className={`flex-1 text-center border rounded-lg py-2.5 sm:py-2 text-xs sm:text-sm font-semibold cursor-pointer capitalize transition-colors min-h-[44px] flex items-center justify-center ${
+                                    form.accompanyingPerson === v ? "border-amber-400 bg-amber-50 text-slate-900 shadow-xs" : "border-slate-200 text-slate-500 hover:bg-slate-50 bg-white"
+                                }`}
+                            >
+                                <input 
+                                    type="radio" 
+                                    className="hidden" 
+                                    checked={form.accompanyingPerson === v} 
+                                    onChange={() => {
+                                        setForm((f) => ({
+                                            ...f,
+                                            accompanyingPerson: v,
+                                            accompanyingPersonsList: v === "yes" ? (f.accompanyingPersonsList?.length ? f.accompanyingPersonsList : [""]) : []
+                                        }));
+                                    }} 
+                                />
+                                {v}
+                            </label>
+                        ))}
+                    </div>
+                </Field>
+
+                {form.accompanyingPerson === "yes" && (
+                    <div className="mt-4 pt-4 border-t border-slate-200">
+                        <Field label="Number of Accompanying Persons">
+                            <select 
+                                className={inputCls} 
+                                value={form.accompanyingPersonsList?.length || 1} 
+                                onChange={handleAccompanyingCountChange}
+                            >
+                                <option value={1}>1 Person</option>
+                                <option value={2}>2 Persons</option>
+                                <option value={3}>3 Persons</option>
+                                <option value={4}>4 Persons</option>
+                            </select>
+                        </Field>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 mt-3">
+                            {(form.accompanyingPersonsList || []).map((name, index) => (
+                                <Field key={index} label={`Person ${index + 1} Name`}>
+                                    <input 
+                                        className={inputCls} 
+                                        value={name} 
+                                        onChange={(e) => {
+                                            const list = [...form.accompanyingPersonsList];
+                                            list[index] = e.target.value;
+                                            setForm(f => ({ ...f, accompanyingPersonsList: list }));
+                                        }} 
+                                        placeholder={`Name of person ${index + 1}`} 
+                                    />
+                                </Field>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
             <div className="mb-6 relative bg-gradient-to-r from-amber-50/50 to-white dark:from-slate-900 dark:to-slate-950 border border-amber-200 dark:border-amber-900/50 rounded-xl p-5 shadow-sm ring-4 ring-amber-50/50 dark:ring-0">
                 <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-400 dark:bg-amber-600 rounded-l-xl"></div>
