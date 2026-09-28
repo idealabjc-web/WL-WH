@@ -50,6 +50,7 @@ export const WORLD_COUNTRIES = [
     { code: "ng", name: "Nigeria" },
     { code: "ke", name: "Kenya" },
     { code: "gh", name: "Ghana" },
+    { code: "na", name: "Namibia" },
     { code: "ma", name: "Morocco" },
     { code: "dz", name: "Algeria" },
     { code: "tn", name: "Tunisia" },
