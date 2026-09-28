@@ -64,7 +64,8 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
         if (form.day && form.timeSlot) {
             const isBlocked = speakers.some(s => 
                 (s.day === form.day || (form.day === "November 25" && s.day === "Day 1") || (form.day === "November 26" && s.day === "Day 2")) && 
-                s.timeSlot === form.timeSlot
+                s.timeSlot === form.timeSlot &&
+                s.conferenceRoom === form.conferenceRoom
             );
             if (isBlocked) {
                 toast(`Time slot ${form.timeSlot} on ${form.day} is already booked.`);
