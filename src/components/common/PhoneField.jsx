@@ -63,6 +63,7 @@ const COUNTRIES = [
     { code: "nz", dial: "+64",  name: "New Zealand",          flag: "nz" },
     { code: "il", dial: "+972", name: "Israel",               flag: "il" },
     { code: "az", dial: "+994", name: "Azerbaijan",           flag: "az" },
+    { code: "cm", dial: "+237", name: "Southwest, Cameroon",  flag: "cm" },
 ];
 
 function FlagImg({ code }) {
