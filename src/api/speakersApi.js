@@ -96,7 +96,6 @@ export function speakerToRow(s) {
         team: s.team || null,
         portal_token: s.portalToken || null,
         speaker_tag: s.speakerTag || null,
-        id_card_position: s.idCardPosition || null,
         accompanying_persons: s.accompanyingPersonsList || [],
     };
 }
@@ -244,12 +243,12 @@ export async function updateSpeakerRecord(id, mergedRec, skipQueue = false) {
     if (mergedRec.sessions) {
         // Delete existing ones
         await supabase.from("sessions").delete().eq("speaker_id", id);
-        const sessionsToInsert = mergedRec.sessions.filter(s => s.day || s.timeSlot || s.conferenceRoom).map(s => ({
+        const sessionsToInsert = mergedRec.sessions.filter(s => s.day || s.timeSlot || s.time_slot || s.conferenceRoom || s.conference_room).map(s => ({
             speaker_id: id,
             session_title: mergedRec.sessionTitle || null,
             day: s.day || null,
-            time_slot: s.timeSlot || null,
-            conference_room: s.conferenceRoom || null
+            time_slot: s.timeSlot || s.time_slot || null,
+            conference_room: s.conferenceRoom || s.conference_room || s.room || null
         }));
         if (sessionsToInsert.length > 0) {
             const { error: sessInsError } = await supabase.from("sessions").insert(sessionsToInsert);

@@ -85,6 +85,18 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
         }
 
         let updatedForm = { ...form };
+        
+        // Sync top-level fields with the first session for immediate UI updates
+        if (updatedForm.sessions && updatedForm.sessions.length > 0) {
+            const firstSession = updatedForm.sessions[0];
+            updatedForm.day = firstSession.day || null;
+            updatedForm.timeSlot = firstSession.timeSlot || firstSession.time_slot || null;
+            updatedForm.conferenceRoom = firstSession.conferenceRoom || firstSession.conference_room || firstSession.room || null;
+        } else if (updatedForm.sessions && updatedForm.sessions.length === 0) {
+            updatedForm.day = null;
+            updatedForm.timeSlot = null;
+            updatedForm.conferenceRoom = null;
+        }
 
         // Upload abstract file if one was selected
         if (abstractFile) {
@@ -350,9 +362,17 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                                         onClick={() => {
                                             const currentSessions = form.sessions || [];
                                             if (isSelected) {
-                                                setForm(f => ({ ...f, sessions: currentSessions.filter(s => !(s.day === viewDay && s.conferenceRoom === viewRoom && s.timeSlot === slot)) }));
+                                                setForm(f => ({ ...f, sessions: currentSessions.filter(s => !(s.day === viewDay && (s.conferenceRoom === viewRoom || s.conference_room === viewRoom) && (s.timeSlot === slot || s.time_slot === slot))) }));
                                             } else {
-                                                setForm(f => ({ ...f, sessions: [...currentSessions, { day: viewDay, conferenceRoom: viewRoom, timeSlot: slot }] }));
+                                                // Find if there is an empty placeholder slot
+                                                const emptyIndex = currentSessions.findIndex(s => !s.day && !s.timeSlot && !s.time_slot);
+                                                if (emptyIndex !== -1) {
+                                                    const newSessions = [...currentSessions];
+                                                    newSessions[emptyIndex] = { ...newSessions[emptyIndex], day: viewDay, conferenceRoom: viewRoom, timeSlot: slot };
+                                                    setForm(f => ({ ...f, sessions: newSessions }));
+                                                } else {
+                                                    setForm(f => ({ ...f, sessions: [...currentSessions, { day: viewDay, conferenceRoom: viewRoom, timeSlot: slot }] }));
+                                                }
                                             }
                                         }}
                                         className={`py-2 px-1 text-xs font-semibold rounded-lg border transition-all flex items-center justify-center gap-1.5 min-h-[36px]
@@ -377,7 +397,7 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                                 <div className="flex flex-wrap gap-1.5">
                                     {form.sessions.map((s, idx) => (
                                         <div key={idx} className="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold px-2 py-1 rounded">
-                                            <span>{s.day} • {s.conferenceRoom || s.conference_room || s.room} • {s.timeSlot || s.time_slot}</span>
+                                            <span>{s.day ? `${s.day} • ${s.conferenceRoom || s.conference_room || s.room} • ${s.timeSlot || s.time_slot}` : 'Unassigned Slot'}</span>
                                             <button type="button" onClick={() => {
                                                 setForm(f => ({ ...f, sessions: f.sessions.filter((_, i) => i !== idx) }));
                                             }} className="text-emerald-600 hover:text-emerald-900"><X size={12} /></button>

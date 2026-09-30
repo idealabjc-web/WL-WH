@@ -26,11 +26,34 @@ export default function AnalysisPage({ speakers }) {
         let missingInfo = [];
 
         speakers.forEach(s => {
-            // Room filling
-            if (s.timeSlot && s.day && bookableTimeSlots.includes(s.timeSlot)) {
-                if (s.conferenceRoom === "Room 1") room1Filled++;
-                if (s.conferenceRoom === "Room 2") room2Filled++;
-            }
+            const validSessions = s.sessions && s.sessions.length > 0 
+                ? s.sessions 
+                : [{ timeSlot: s.timeSlot, day: s.day, conferenceRoom: s.conferenceRoom }];
+
+            // Room filling & Day-by-Day tracking
+            let daysScheduled = new Set();
+            let hasCompleteSession = false;
+
+            validSessions.forEach(sess => {
+                const time = sess.timeSlot || sess.time_slot;
+                const day = sess.day;
+                const room = sess.conferenceRoom || sess.conference_room || sess.room;
+
+                if (time && day && room) {
+                    hasCompleteSession = true;
+                }
+
+                const normTime = time ? time.trim() : "";
+                const normRoom = room ? room.trim() : "";
+
+                if (normTime && day && bookableTimeSlots.some(t => t.trim() === normTime)) {
+                    if (normRoom === "Room 1") room1Filled++;
+                    if (normRoom === "Room 2") room2Filled++;
+                    
+                    if (day === EVENT_DAYS[0] || day === "Day 1") daysScheduled.add(EVENT_DAYS[0]);
+                    if (day === EVENT_DAYS[1] || day === "Day 2") daysScheduled.add(EVENT_DAYS[1]);
+                }
+            });
 
             // Abstracts
             if (s.abstractStatus === "submitted" || s.abstractProvided === "yes") {
@@ -49,9 +72,9 @@ export default function AnalysisPage({ speakers }) {
                 tagsCount[s.speakerTag] = (tagsCount[s.speakerTag] || 0) + 1;
             }
 
-            // Day-by-Day Load
-            if (s.day === EVENT_DAYS[0]) day1Speakers++;
-            if (s.day === EVENT_DAYS[1]) day2Speakers++;
+            // Day-by-Day Load (count speaker if they are scheduled on that day)
+            if (daysScheduled.has(EVENT_DAYS[0])) day1Speakers++;
+            if (daysScheduled.has(EVENT_DAYS[1])) day2Speakers++;
 
             // Logistics
             if (s.accommodationStatus && s.accommodationStatus.toLowerCase() !== "no" && s.accommodationStatus.toLowerCase() !== "none") {
@@ -68,7 +91,7 @@ export default function AnalysisPage({ speakers }) {
             let issues = [];
             if (!s.photoUrl) issues.push("Missing Photo");
             if ((!s.abstractStatus || s.abstractStatus.toLowerCase() !== 'submitted') && s.abstractProvided !== 'yes') issues.push("Pending Abstract");
-            if (!s.timeSlot || !s.day || !s.conferenceRoom) issues.push("Not Scheduled");
+            if (!hasCompleteSession) issues.push("Not Scheduled");
 
             if (issues.length > 0) {
                 missingInfo.push({ id: s.id, name: s.name, issues });

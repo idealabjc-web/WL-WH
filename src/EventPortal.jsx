@@ -20,8 +20,9 @@ import AnnouncementsPage from "./pages/AnnouncementsPage";
 import AuditLogsPage from "./pages/AuditLogsPage";
 import AgendaPage from "./pages/AgendaPage";
 import AnalysisPage from "./pages/AnalysisPage";
+import AdvancedSlotManagement from "./pages/AdvancedSlotManagement";
 
-const VALID_TABS = ["dashboard", "register", "checkin", "idcards", "feedback", "broadcasts", "agenda", "analysis", "settings", "audit"];
+const VALID_TABS = ["dashboard", "register", "checkin", "idcards", "feedback", "broadcasts", "agenda", "analysis", "advanced-slots", "settings", "audit"];
 
 function getInitialTab() {
     const hash = window.location.hash.replace("#", "").toLowerCase();
@@ -270,6 +271,7 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
     if (userRole === "admin") {
         tabs.push({ id: "agenda", label: "Agenda", icon: Calendar });
         tabs.push({ id: "analysis", label: "Analysis", icon: BarChart2 });
+        tabs.push({ id: "advanced-slots", label: "Advanced Slots", icon: Calendar });
         tabs.push({ id: "audit", label: "Audit Logs", icon: Activity });
     }
 
@@ -395,6 +397,13 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
                             )}
                             {tab === "feedback" && <FeedbackPage feedback={feedback} onAdd={addFeedback} toast={toast} />}
                             {tab === "agenda" && userRole === "admin" && <AgendaPage speakers={speakers} onUpdate={updateSpeaker} toast={toast} />}
+                            {tab === "advanced-slots" && userRole === "admin" && (
+                                <AdvancedSlotManagement
+                                    speakers={speakers}
+                                    onUpdate={updateSpeaker}
+                                    onRefresh={refresh}
+                                />
+                            )}
                             {tab === "analysis" && userRole === "admin" && <AnalysisPage speakers={speakers} />}
                             {tab === "audit" && userRole === "admin" && <AuditLogsPage />}
                             {tab === "settings" && <SettingsPage userEmail={userEmail} />}

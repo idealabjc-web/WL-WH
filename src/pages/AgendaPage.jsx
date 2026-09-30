@@ -17,11 +17,30 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
     // Find speaker assigned to a specific slot
     const getSpeakerForSlot = (timeSlot, day, room = selectedRoom) => {
         const normRoom = (r) => (r || "").trim();
-        return speakers.find(s => 
-            normRoom(s.conferenceRoom) === normRoom(room) && 
-            (s.day === day || (day === "November 25" && s.day === "Day 1") || (day === "November 26" && s.day === "Day 2")) && 
-            s.timeSlot === timeSlot
-        );
+        return speakers.find(s => {
+            // Check sessions array first
+            if (s.sessions && s.sessions.length > 0) {
+                return s.sessions.some(sess => {
+                    const sessDay = sess.day;
+                    const sessTime = sess.timeSlot || sess.time_slot;
+                    const sessRoom = sess.conferenceRoom || sess.conference_room || sess.room;
+                    
+                    // Only match if the slot is fully populated
+                    if (!sessDay || !sessTime || !sessRoom) return false;
+                    
+                    return normRoom(sessRoom) === normRoom(room) && 
+                           (sessDay === day || (day === "November 25" && sessDay === "Day 1") || (day === "November 26" && sessDay === "Day 2")) && 
+                           sessTime === timeSlot;
+                });
+            }
+            
+            // Fallback for legacy top-level properties
+            if (!s.day || !s.timeSlot || !s.conferenceRoom) return false;
+            
+            return normRoom(s.conferenceRoom) === normRoom(room) && 
+                (s.day === day || (day === "November 25" && s.day === "Day 1") || (day === "November 26" && s.day === "Day 2")) && 
+                s.timeSlot === timeSlot;
+        });
     };
 
     const handleAssignClick = (timeSlot, day, room = selectedRoom) => {
@@ -34,17 +53,49 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
 
     const closeModal = () => setSlotAction(null);
 
-    // Filter unassigned speakers (those without a timeSlot or day or room)
+    // Filter unassigned speakers (those without any complete timeSlot/day/room)
     const unassignedSpeakers = useMemo(() => {
-        return speakers.filter(s => !s.timeSlot || !s.day || !s.conferenceRoom);
+        return speakers.filter(s => {
+            if (s.sessions && s.sessions.length > 0) {
+                // Return true only if they have NO complete slots
+                return !s.sessions.some(sess => sess.day && (sess.timeSlot || sess.time_slot) && (sess.conferenceRoom || sess.conference_room || sess.room));
+            }
+            return !s.timeSlot || !s.day || !s.conferenceRoom;
+        });
     }, [speakers]);
 
     const assignSpeakerToSlot = async (speaker) => {
-        const success = await onUpdate(speaker.id, {
-            ...speaker,
+        const updatedSessions = [...(speaker.sessions || [])];
+        
+        // Find an empty session, or the one matching the current top-level properties (if legacy)
+        let targetIndex = updatedSessions.findIndex(s => !s.time_slot && !s.day && !s.conference_room && !s.timeSlot && !s.conferenceRoom);
+        if (targetIndex === -1) {
+            targetIndex = 0; // fallback to 0 or append
+            if (updatedSessions.length === 0) {
+                updatedSessions.push({});
+                targetIndex = 0;
+            } else if (updatedSessions[0].time_slot || updatedSessions[0].timeSlot) {
+                // If 0 is already occupied and we are assigning, we probably should push a new one, 
+                // but since the UI mostly assumes 1 session for simple assignment, we'll append.
+                updatedSessions.push({});
+                targetIndex = updatedSessions.length - 1;
+            }
+        }
+
+        updatedSessions[targetIndex] = {
+            ...updatedSessions[targetIndex],
             day: slotAction.day,
             timeSlot: slotAction.timeSlot,
             conferenceRoom: slotAction.room || selectedRoom
+        };
+
+        const firstSession = updatedSessions[0] || {};
+        const success = await onUpdate(speaker.id, {
+            ...speaker,
+            sessions: updatedSessions,
+            day: firstSession.day || null,
+            timeSlot: firstSession.timeSlot || firstSession.time_slot || null,
+            conferenceRoom: firstSession.conferenceRoom || firstSession.conference_room || null
         });
         if (success) {
             toast(`${speaker.name} assigned to ${slotAction.timeSlot}`);
@@ -53,12 +104,35 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
     };
 
     const removeSpeakerFromSlot = async () => {
-        const { speaker } = slotAction;
+        const { speaker, timeSlot, day, room } = slotAction;
+        let updatedSessions = [...(speaker.sessions || [])];
+        
+        // Find the specific session we are removing
+        const targetIndex = updatedSessions.findIndex(s => 
+            (s.time_slot === timeSlot || s.timeSlot === timeSlot) && 
+            (s.day === day) && 
+            (s.conference_room === room || s.conferenceRoom === room)
+        );
+
+        if (targetIndex !== -1) {
+            updatedSessions.splice(targetIndex, 1);
+        } else if (updatedSessions.length > 0) {
+            // Fallback: just clear the first one if we couldn't match (shouldn't happen)
+            updatedSessions[0] = {
+                ...updatedSessions[0],
+                day: "",
+                timeSlot: "",
+                conferenceRoom: ""
+            };
+        }
+
+        const firstSession = updatedSessions[0] || {};
         const success = await onUpdate(speaker.id, {
             ...speaker,
-            day: "",
-            timeSlot: "",
-            conferenceRoom: ""
+            sessions: updatedSessions,
+            day: firstSession.day || null,
+            timeSlot: firstSession.timeSlot || firstSession.time_slot || null,
+            conferenceRoom: firstSession.conferenceRoom || firstSession.conference_room || null
         });
         if (success) {
             toast(`${speaker.name} removed from slot`);
@@ -76,12 +150,41 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
             toast("Please select an available time slot first.");
             return;
         }
-        const { speaker } = slotAction;
+        const { speaker, timeSlot: oldTime, day: oldDay, room: oldRoom } = slotAction;
+        const updatedSessions = [...(speaker.sessions || [])];
+        
+        // Find the exact session we are moving
+        const targetIndex = updatedSessions.findIndex(s => 
+            (s.time_slot === oldTime || s.timeSlot === oldTime) && 
+            (s.day === oldDay) && 
+            (s.conference_room === oldRoom || s.conferenceRoom === oldRoom || oldRoom === undefined)
+        );
+
+        if (targetIndex !== -1) {
+            updatedSessions[targetIndex] = {
+                ...updatedSessions[targetIndex],
+                day: moveState.day,
+                timeSlot: moveState.timeSlot,
+                conferenceRoom: moveState.room
+            };
+        } else {
+            // Fallback
+            if (updatedSessions.length === 0) updatedSessions.push({});
+            updatedSessions[0] = {
+                ...updatedSessions[0],
+                day: moveState.day,
+                timeSlot: moveState.timeSlot,
+                conferenceRoom: moveState.room
+            };
+        }
+
+        const firstSession = updatedSessions[0] || {};
         const success = await onUpdate(speaker.id, {
             ...speaker,
-            day: moveState.day,
-            timeSlot: moveState.timeSlot,
-            conferenceRoom: moveState.room
+            sessions: updatedSessions,
+            day: firstSession.day || null,
+            timeSlot: firstSession.timeSlot || firstSession.time_slot || null,
+            conferenceRoom: firstSession.conferenceRoom || firstSession.conference_room || null
         });
         if (success) {
             toast(`${speaker.name} moved to ${moveState.timeSlot} on ${moveState.day} in ${moveState.room}`);

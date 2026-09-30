@@ -23,8 +23,8 @@
 // 8. Dates "{{dates}} | {{city_country}}": center y=1340, bold, 44 px, #0B2A4A.
 // 9. QR code encoding {{qr_url}}: 185×185 px at x=448, y=1395 on white tile with 10 px padding.
 //    Small badge ID text below QR (16 px, grey, y=1590).
-
 import QRCode from "qrcode";
+import { WORLD_COUNTRIES } from "../components/common/CountryField";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -416,7 +416,24 @@ export async function generateIdCardJpeg(speaker) {
     const flagH = 125;
     const flagX = flagCardX + (flagCardW - flagW) / 2; // 795
     const flagY = flagCardY + (flagCardH - flagH) / 2; // 895
-    drawCountryFlag(ctx, flagX, flagY, flagW, flagH);
+    
+    let flagImg = null;
+    if (speaker.country) {
+        const ctry = WORLD_COUNTRIES.find(c => c.name.toLowerCase() === speaker.country.toLowerCase());
+        if (ctry) {
+            flagImg = await loadImage(`https://flagcdn.com/w320/${ctry.code.toLowerCase()}.png`);
+        }
+    }
+
+    if (flagImg) {
+        ctx.save();
+        roundRect(ctx, flagX, flagY, flagW, flagH, 8);
+        ctx.clip();
+        ctx.drawImage(flagImg, flagX, flagY, flagW, flagH);
+        ctx.restore();
+    } else {
+        drawCountryFlag(ctx, flagX, flagY, flagW, flagH);
+    }
 
     // ═══════════════════════════════════════════════════════════════════════════
     // 5. NAME "{{speaker_name}}": center y=1170, bold, 96 px, color #2E8FCB,
