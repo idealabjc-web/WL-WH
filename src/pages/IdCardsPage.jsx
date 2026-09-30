@@ -47,11 +47,11 @@ export default function IdCardsPage({
     useEffect(() => {
         if (!speakers || speakers.length === 0) return;
 
-        // Clear legacy purple cards from state
-        const cached = getLocalCachedCards();
-
         const initializeCards = async () => {
-            const currentCards = { ...cached };
+            const cached = getLocalCachedCards();
+            const storedCards = await fetchStoredIdCards(speakers);
+            const currentCards = { ...cached, ...storedCards };
+            
             let hasNewGenerations = false;
 
             for (const s of speakers) {
@@ -68,7 +68,7 @@ export default function IdCardsPage({
             }
 
             setCards(currentCards);
-            if (hasNewGenerations) {
+            if (hasNewGenerations || Object.keys(storedCards).length > 0) {
                 saveLocalCachedCards(currentCards);
             }
         };

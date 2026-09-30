@@ -90,7 +90,7 @@ export async function fetchStoredIdCards(speakers = []) {
                 publicUrl: s.idCardUrl,
                 dataUrl: s.idCardUrl,
                 isStored: true,
-                templateVersion: "v3_portrait"
+                templateVersion: "v4_dubai_famous"
             };
         }
     }
@@ -122,7 +122,7 @@ export async function fetchStoredIdCards(speakers = []) {
                             publicUrl: urlData.publicUrl,
                             dataUrl: urlData.publicUrl,
                             isStored: true,
-                            templateVersion: "v3_portrait"
+                            templateVersion: "v4_dubai_famous"
                         };
                     }
                 }
@@ -163,7 +163,7 @@ export function saveLocalCachedCards(cards) {
                 publicUrl: c.publicUrl || null,
                 dataUrl: c.dataUrl || c.publicUrl || null,
                 isStored: Boolean(c.publicUrl),
-                templateVersion: c.templateVersion || "v3_portrait"
+                templateVersion: c.templateVersion || "v4_dubai_famous"
             };
         }
         localStorage.setItem(CACHE_KEY, JSON.stringify(serialized));
