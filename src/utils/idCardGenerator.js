@@ -32,7 +32,9 @@ function loadImage(src) {
     return new Promise((resolve) => {
         if (!src) return resolve(null);
         const img = new Image();
-        img.crossOrigin = "anonymous";
+        if (!src.startsWith('data:') && !src.startsWith('blob:')) {
+            img.crossOrigin = "anonymous";
+        }
         img.onload = () => resolve(img);
         img.onerror = () => resolve(null);
         img.src = src;
@@ -112,10 +114,14 @@ function drawCountryFlag(ctx, x, y, w, h) {
 export async function generateIdCardJpeg(speaker) {
     const W = 1080;
     const H = 1800;
+    const scale = 2; // Optimal balance for high clarity (~2MB file size)
     const canvas = document.createElement("canvas");
-    canvas.width = W;
-    canvas.height = H;
+    canvas.width = W * scale;
+    canvas.height = H * scale;
     const ctx = canvas.getContext("2d");
+    ctx.scale(scale, scale);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
 
     // Pure white canvas background
     ctx.fillStyle = "#ffffff";
@@ -355,7 +361,9 @@ export async function generateIdCardJpeg(speaker) {
     // Photo circle clip
     const photoInnerR = photoOuterR - 14; // 331 px
     let speakerPhoto = null;
-    if (speaker.photoUrl || speaker.photo_url) {
+    if (speaker.croppedPhotoUrl) {
+        speakerPhoto = await loadImage(speaker.croppedPhotoUrl);
+    } else if (speaker.photoUrl || speaker.photo_url) {
         speakerPhoto = await loadImage(speaker.photoUrl || speaker.photo_url);
     }
 
@@ -495,7 +503,7 @@ export async function generateIdCardJpeg(speaker) {
     try {
         const qrUrl = speaker.qrUrl || (typeof window !== "undefined" ? `${window.location.origin}/check-in/${speaker.id}` : speaker.id || "SPEAKER");
         const qrDataUrl = await QRCode.toDataURL(qrUrl, {
-            width: 300,
+            width: 400 * scale,
             margin: 1,
             color: { dark: "#000000", light: "#ffffff" },
         });
@@ -522,13 +530,13 @@ export async function generateIdCardJpeg(speaker) {
     return new Promise((resolve) => {
         canvas.toBlob(
             (blob) => {
-                const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
+                const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
                 const safeName = (speaker.name || "speaker").replace(/[^a-zA-Z0-9_-]/g, "_");
                 const filename = `ID_Badge_${safeName}_${speaker.id}.jpg`;
                 resolve({ id: speaker.id, speaker, dataUrl, blob, filename, templateVersion: "v4_dubai_famous" });
             },
             "image/jpeg",
-            0.95
+            0.92
         );
     });
 }

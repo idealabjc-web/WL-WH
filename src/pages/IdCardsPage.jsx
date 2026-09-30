@@ -3,7 +3,7 @@ import JSZip from "jszip";
 import { jsPDF } from "jspdf";
 import {
     Download, RefreshCw, FileArchive, Search, Sparkles, CheckCircle2,
-    Eye, X, AlertTriangle, ExternalLink, Cloud
+    Eye, X, AlertTriangle, ExternalLink, Cloud, Edit
 } from "lucide-react";
 import { generateIdCardJpeg } from "../utils/idCardGenerator";
 import {
@@ -13,6 +13,9 @@ import {
     saveLocalCachedCards,
 } from "../api/idCardsStorage";
 import { inputCls } from "../components/common/UIAtoms";
+import Cropper from 'react-easy-crop';
+import 'react-easy-crop/react-easy-crop.css';
+import getCroppedImg from '../utils/cropUtils';
 
 export default function IdCardsPage({
     speakers = [],
@@ -29,6 +32,13 @@ export default function IdCardsPage({
     const [zipping, setZipping] = useState(false);
     const [search, setSearch] = useState("");
     const [previewCard, setPreviewCard] = useState(null);
+    
+    // Crop state
+    const [editingSpeaker, setEditingSpeaker] = useState(null);
+    const [crop, setCrop] = useState({ x: 0, y: 0 });
+    const [zoom, setZoom] = useState(1);
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+    const [savingCrop, setSavingCrop] = useState(false);
 
     const totalSpeakers = speakers.length;
     const generatedCount = Object.keys(cards).length;
@@ -129,6 +139,59 @@ export default function IdCardsPage({
         setGenerating(false);
         setProgress(null);
         toast(`Successfully generated and stored ${targetSpeakers.length} ID card(s) in cloud bucket.`);
+    };
+
+    const handleEditCard = (speaker) => {
+        setEditingSpeaker(speaker);
+        if (speaker.idCardPosition) {
+             setCrop(speaker.idCardPosition.crop || { x: 0, y: 0 });
+             setZoom(speaker.idCardPosition.zoom || 1);
+        } else {
+             setCrop({ x: 0, y: 0 });
+             setZoom(1);
+        }
+    };
+
+    const handleSaveCrop = async () => {
+        if (!editingSpeaker || !editingSpeaker.photoUrl) return;
+        setSavingCrop(true);
+        try {
+            const croppedImgUrl = await getCroppedImg(editingSpeaker.photoUrl, croppedAreaPixels);
+            
+            // Generate new card with cropped image
+            const updatedSpeaker = { ...editingSpeaker, croppedPhotoUrl: croppedImgUrl };
+            const card = await generateIdCardJpeg(updatedSpeaker);
+            
+            // Upload to storage
+            const uploadRes = await uploadIdCardToStorage(editingSpeaker, card.blob, card.filename);
+            if (uploadRes.publicUrl) {
+                card.publicUrl = uploadRes.publicUrl;
+                card.isStored = true;
+            }
+            
+            // Save position in DB
+            const idCardPosition = { crop, zoom };
+            const { supabase } = await import("../supabaseClient");
+            await supabase.from("speakers").update({ id_card_position: idCardPosition }).eq("id", editingSpeaker.id);
+            
+            // Update local speaker obj
+            editingSpeaker.idCardPosition = idCardPosition;
+            
+            // Update cards cache
+            setCards((prev) => {
+                const updated = { ...prev, [editingSpeaker.id]: card };
+                saveLocalCachedCards(updated);
+                return updated;
+            });
+            
+            toast(`ID Card saved successfully for ${editingSpeaker.name}.`);
+            setEditingSpeaker(null);
+        } catch (e) {
+            console.error("Save crop error:", e);
+            toast("Failed to save ID Card.");
+        } finally {
+            setSavingCrop(false);
+        }
     };
 
     // 4. Bundle all generated JPEG cards into a single ZIP file and trigger automatic download
@@ -401,17 +464,27 @@ export default function IdCardsPage({
                                             {s.sessionTitle || "Speaker"}
                                         </div>
 
-                                        {/* Download button for single JPEG */}
-                                        <div className="mt-3 pt-2.5 border-t border-slate-200 dark:border-slate-700/80 flex items-center justify-between">
-                                            {card ? (
+                                        {/* Download and Edit buttons */}
+                                        <div className="mt-3 pt-2.5 border-t border-slate-200 dark:border-slate-700/80 flex flex-col gap-2">
+                                            <div className="flex items-center justify-between gap-2">
+                                                {card ? (
+                                                    <button
+                                                        onClick={() => downloadSingleCard(card)}
+                                                        className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold border border-slate-300 hover:border-amber-400 hover:bg-amber-50 text-slate-800 dark:text-slate-200 transition-colors"
+                                                    >
+                                                        <Download size={13} /> Download JPEG
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-xs text-slate-400 italic">Not yet generated</span>
+                                                )}
+                                            </div>
+                                            {s.photoUrl && (
                                                 <button
-                                                    onClick={() => downloadSingleCard(card)}
-                                                    className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold border border-slate-300 hover:border-amber-400 hover:bg-amber-50 text-slate-800 dark:text-slate-200 transition-colors"
+                                                    onClick={() => handleEditCard(s)}
+                                                    className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
                                                 >
-                                                    <Download size={13} /> Download JPEG
+                                                    <Edit size={13} /> Edit ID Card
                                                 </button>
-                                            ) : (
-                                                <span className="text-xs text-slate-400 italic">Not yet generated</span>
                                             )}
                                         </div>
                                     </div>
@@ -466,6 +539,61 @@ export default function IdCardsPage({
                                 className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold hover:bg-slate-50 transition-colors min-h-[44px]"
                             >
                                 Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Modal for Cropping/Editing Speaker ID Card */}
+            {editingSpeaker && (
+                <div
+                    onClick={() => setEditingSpeaker(null)}
+                    className="fixed inset-0 z-[60] bg-slate-950/75 backdrop-blur-sm p-4 flex items-center justify-center animate-in fade-in duration-200"
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-2xl relative flex flex-col max-h-[90vh] overflow-y-auto"
+                    >
+                        <button
+                            onClick={() => setEditingSpeaker(null)}
+                            className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-slate-800 dark:text-slate-200 hover:bg-slate-100 transition-colors"
+                        >
+                            <X size={20} />
+                        </button>
+
+                        <h3 className="font-bold text-base text-slate-900 mb-4">
+                            Edit Image for {editingSpeaker.name}
+                        </h3>
+
+                        <div className="relative w-full h-[350px] sm:h-[450px] bg-slate-100 dark:bg-slate-900 rounded-xl overflow-hidden mb-5">
+                            <Cropper
+                                image={editingSpeaker.photoUrl}
+                                crop={crop}
+                                zoom={zoom}
+                                aspect={1} // The speaker photo is cropped as a circle (aspect ratio 1)
+                                onCropChange={setCrop}
+                                onCropComplete={(_, croppedAreaPixels) => setCroppedAreaPixels(croppedAreaPixels)}
+                                onZoomChange={setZoom}
+                                cropShape="round"
+                                showGrid={false}
+                            />
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-2.5">
+                            <button
+                                onClick={handleSaveCrop}
+                                disabled={savingCrop}
+                                className="w-full sm:flex-1 inline-flex items-center justify-center gap-2 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white font-semibold text-sm py-2.5 rounded-xl shadow-xs transition-colors min-h-[44px]"
+                            >
+                                {savingCrop ? <Sparkles size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+                                {savingCrop ? "Saving..." : "Save ID Card"}
+                            </button>
+                            <button
+                                onClick={() => setEditingSpeaker(null)}
+                                disabled={savingCrop}
+                                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold hover:bg-slate-50 transition-colors min-h-[44px]"
+                            >
+                                Cancel
                             </button>
                         </div>
                     </div>
