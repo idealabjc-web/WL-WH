@@ -28,6 +28,7 @@ export default function IdCardsPage({
     const cards = externalCards !== undefined ? externalCards : internalCards;
     const setCards = externalSetCards || setInternalCards;
     const [generating, setGenerating] = useState(false);
+    const [loadingCards, setLoadingCards] = useState(false);
     const [progress, setProgress] = useState(null);
     const [zipping, setZipping] = useState(false);
     const [search, setSearch] = useState("");
@@ -43,7 +44,7 @@ export default function IdCardsPage({
     const totalSpeakers = speakers.length;
     const generatedCount = Object.keys(cards).length;
 
-    // 1. On Mount & Speakers Change: Load from cache & auto-generate portrait cards for speakers if missing
+    // 1. On Mount & Speakers Change: Load from cache and cloud, but do NOT auto-generate
     useEffect(() => {
         if (!speakers || speakers.length === 0) return;
 
@@ -51,30 +52,34 @@ export default function IdCardsPage({
             const cached = getLocalCachedCards();
             const storedCards = await fetchStoredIdCards(speakers);
             const currentCards = { ...cached, ...storedCards };
-            
-            let hasNewGenerations = false;
-
-            for (const s of speakers) {
-                // If speaker has no card or has an old template card
-                if (!currentCards[s.id] || currentCards[s.id].templateVersion !== "v4_dubai_famous") {
-                    try {
-                        const card = await generateIdCardJpeg(s);
-                        currentCards[s.id] = card;
-                        hasNewGenerations = true;
-                    } catch (err) {
-                        console.error("Auto card generation failed for", s.name, err);
-                    }
-                }
-            }
 
             setCards(currentCards);
-            if (hasNewGenerations || Object.keys(storedCards).length > 0) {
+            if (Object.keys(storedCards).length > 0) {
                 saveLocalCachedCards(currentCards);
             }
         };
 
         initializeCards();
     }, [speakers]);
+
+    const handleLoadCards = async () => {
+        if (totalSpeakers === 0) return;
+        setLoadingCards(true);
+        // toast("Scanning cloud storage for ID cards..."); // Assuming toast might not be imported or available, but it's passed as prop
+        try {
+            const storedCards = await fetchStoredIdCards(speakers);
+            setCards(prev => {
+                const updated = { ...prev, ...storedCards };
+                saveLocalCachedCards(updated);
+                return updated;
+            });
+            const count = Object.keys(storedCards).length;
+        } catch (e) {
+            console.error("Failed to load cards:", e);
+        } finally {
+            setLoadingCards(false);
+        }
+    };
 
     // 2. Generate and store single card to Supabase bucket
     const generateAndStoreSingleCard = async (speaker) => {
@@ -337,8 +342,17 @@ export default function IdCardsPage({
                     {/* Action Buttons */}
                     <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:gap-2.5 w-full lg:w-auto">
                         <button
+                            onClick={handleLoadCards}
+                            disabled={loadingCards || generating || zipping || totalSpeakers === 0}
+                            className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-95 min-h-[44px]"
+                        >
+                            <Cloud size={16} className={loadingCards ? "animate-pulse" : ""} />
+                            {loadingCards ? "Loading..." : "Load ID Cards"}
+                        </button>
+
+                        <button
                             onClick={() => handleGenerateCards(false)}
-                            disabled={generating || zipping || totalSpeakers === 0}
+                            disabled={generating || zipping || loadingCards || totalSpeakers === 0}
                             className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-95 min-h-[44px]"
                         >
                             <Sparkles size={16} className={generating ? "animate-spin" : ""} />

@@ -23,8 +23,9 @@ export async function uploadIdCardToStorage(speaker, blob, filename) {
 
         if (!error) {
             const { data: urlData } = supabase.storage.from("id-cards").getPublicUrl(name);
-            const publicUrl = urlData?.publicUrl || null;
+            let publicUrl = urlData?.publicUrl || null;
             if (publicUrl) {
+                publicUrl = `${publicUrl}?t=${Date.now()}`;
                 try {
                     await supabase.from("speakers").update({ id_card_url: publicUrl }).eq("id", speaker.id);
                 } catch (colErr) {
@@ -45,8 +46,9 @@ export async function uploadIdCardToStorage(speaker, blob, filename) {
             if (fbError) throw fbError;
 
             const { data: urlData } = supabase.storage.from("qr-badges").getPublicUrl(fallbackPath);
-            const publicUrl = urlData?.publicUrl || null;
+            let publicUrl = urlData?.publicUrl || null;
             if (publicUrl) {
+                publicUrl = `${publicUrl}?t=${Date.now()}`;
                 try {
                     await supabase.from("speakers").update({ id_card_url: publicUrl }).eq("id", speaker.id);
                 } catch (colErr) {
