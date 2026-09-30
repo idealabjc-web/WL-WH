@@ -1,6 +1,6 @@
 import { supabase, isSupabaseConfigured } from "../supabaseClient";
 
-const CACHE_KEY = "wlwh_id_cards_cache_v4_dubai";
+const CACHE_KEY = "wlwh_id_cards_cache_v5_flags";
 
 /**
  * Uploads a generated ID card JPEG blob to Supabase storage.
@@ -145,6 +145,7 @@ export function getLocalCachedCards() {
         // Remove legacy cached cards from old purple template
         localStorage.removeItem("wlwh_id_cards_cache");
         localStorage.removeItem("wlwh_id_cards_cache_v2");
+        localStorage.removeItem("wlwh_id_cards_cache_v4_dubai");
         const raw = localStorage.getItem(CACHE_KEY);
         if (!raw) return {};
         return JSON.parse(raw);

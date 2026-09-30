@@ -418,12 +418,12 @@ export default function CheckinPage({
                                     }}
                                 >
                                     {/* FRONT FACE OF BADGE */}
-                                    <div className="card-face-front bg-[#0A1233] border border-[#1E2A5A] rounded-3xl p-5 sm:p-6 shadow-2xl text-white relative overflow-hidden transition-all duration-300 hover:border-[#4457F5]/50">
+                                    <div className="card-face-front bg-[#0A1233] border border-[#1E2A5A] rounded-3xl p-6 sm:p-8 shadow-2xl text-white relative overflow-hidden transition-all duration-300 hover:border-[#4457F5]/50">
                                         {/* Animated Gradient Accent Bar */}
                                         <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[#4457F5] via-[#3B6CF6] to-[#7A4DF0] animate-gradient-shift" />
 
-                                        {/* Top Countdown Row */}
-                                        <div className="flex flex-wrap items-center justify-start gap-3 pb-2.5 border-b border-[#1E2A5A]/80 text-xs">
+                                        {/* Top Countdown & Flip Action Row */}
+                                        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#1E2A5A]/80 text-xs">
                                             <div className="flex items-center gap-2">
                                                 <span className="relative flex h-2 w-2">
                                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -437,10 +437,18 @@ export default function CheckinPage({
                                                     <span className="text-emerald-400 font-black">{String(countdown.seconds).padStart(2, '0')}s</span>
                                                 </div>
                                             </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsBadgeFlipped(true)}
+                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1E2A5A]/70 hover:bg-[#4457F5] border border-[#4457F5]/40 hover:border-[#4457F5] text-white text-xs font-semibold transition-all duration-300 shadow-sm cursor-pointer active:scale-95 btn-shimmer"
+                                            >
+                                                <RotateCcw size={13} />
+                                                <span>Flip for Stage Access ↺</span>
+                                            </button>
                                         </div>
 
                                         {/* Pass Top Banner */}
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-2.5 border-b border-[#1E2A5A]">
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-3.5 border-b border-[#1E2A5A]">
                                             <div className="min-w-0">
                                                 <div className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.16em] text-[#8B9BFF]">
                                                     OFFICIAL SPEAKER PASS
@@ -480,7 +488,7 @@ export default function CheckinPage({
                                         </div>
 
                                         {/* Integrated Session Itinerary & Logistics Row */}
-                                        <div className="py-2.5 border-b border-[#1E2A5A]/80 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
+                                        <div className="py-3.5 border-b border-[#1E2A5A]/80 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
                                             <div className="min-w-0 group cursor-default transition-all duration-300 hover:translate-x-1">
                                                 <div className="text-[10px] font-bold uppercase tracking-wider text-[#8B9BFF] flex items-center gap-1.5 group-hover:text-white transition-colors">
                                                     <span className="w-1.5 h-1.5 rounded-full bg-[#4457F5] shadow-[0_0_6px_#4457F5]" />
@@ -525,7 +533,7 @@ export default function CheckinPage({
                                         </div>
 
                                         {/* Pass Main Grid: Left Side: Actions & Notes, Right Side: QR Pass */}
-                                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 pt-3">
+                                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 pt-4">
                                             {/* Left: Verification Status & Actions */}
                                             <div className="lg:col-span-2 space-y-4">
                                                 {/* Self Check-in / Check-out Action Card */}
@@ -652,7 +660,7 @@ export default function CheckinPage({
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        <div className="p-3 sm:p-4 rounded-2xl bg-[#050A1F] border border-amber-500/30 flex items-start sm:items-center gap-3 shadow-lg">
+                                                        <div className="p-4 sm:p-5 rounded-2xl bg-[#050A1F] border border-amber-500/30 flex items-start sm:items-center gap-3 shadow-lg">
                                                             <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 flex items-center justify-center shrink-0">
                                                                 <Clock size={22} />
                                                             </div>
@@ -691,16 +699,16 @@ export default function CheckinPage({
                                             </div>
 
                                             {/* Digital QR Code Box */}
-                                            <div className="flex flex-col items-center justify-center p-4 bg-[#050A1F] border border-[#1E2A5A] rounded-2xl text-center relative overflow-hidden group hover:border-[#4457F5]/70 transition-all duration-300 shadow-xl hover:shadow-[0_0_30px_rgba(68,87,245,0.25)]">
-                                                <div className="bg-white p-3 rounded-xl shadow-xl border border-blue-500/30 mb-3 relative overflow-hidden group-hover:scale-105 transition-transform duration-300">
+                                            <div className="flex flex-col items-center justify-center p-5 sm:p-6 bg-[#050A1F] border border-[#1E2A5A] rounded-2xl text-center relative overflow-hidden group hover:border-[#4457F5]/70 transition-all duration-300 shadow-xl hover:shadow-[0_0_30px_rgba(68,87,245,0.25)]">
+                                                <div className="bg-white p-3.5 sm:p-4 rounded-2xl shadow-xl border border-blue-500/30 mb-3 relative overflow-hidden group-hover:scale-105 transition-transform duration-300">
                                                     {qrDataUrl ? (
                                                         <img 
                                                             src={qrDataUrl} 
                                                             alt={`QR Badge for ${mySpeaker.name}`}
-                                                            className="w-32 h-32 sm:w-40 sm:h-40 object-contain rounded-lg"
+                                                            className="w-36 h-36 sm:w-44 sm:h-44 object-contain rounded-lg"
                                                         />
                                                     ) : (
-                                                        <div className="w-32 h-32 sm:w-40 sm:h-40 flex items-center justify-center text-slate-400 bg-slate-100 rounded-lg text-xs font-mono">
+                                                        <div className="w-36 h-36 sm:w-44 sm:h-44 flex items-center justify-center text-slate-400 bg-slate-100 rounded-lg text-xs font-mono">
                                                             Loading QR...
                                                         </div>
                                                     )}
@@ -709,6 +717,13 @@ export default function CheckinPage({
                                                     <span className="w-1.5 h-1.5 rounded-full bg-[#4457F5] animate-ping" />
                                                     <span>On-Site QR Pass</span>
                                                 </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsBadgeFlipped(true)}
+                                                    className="mt-2 text-[11px] text-[#8B9BFF] hover:text-white font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                                                >
+                                                    <RotateCcw size={11} /> Flip for Backstage Details
+                                                </button>
                                             </div>
                                         </div>
                                     </div>

@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { createPortal } from "react-dom";
 import { 
     Award, CheckCircle2, ShieldCheck, Share2, Download, 
     ExternalLink, Eye, X, Sparkles, Mail, Calendar, 
@@ -233,26 +232,23 @@ export default function SpeakerCertificatePage({ speaker = {} }) {
             </div>
 
             {/* Lightbox Inspection Modal */}
-            {lightboxOpen && typeof document !== 'undefined' && createPortal(
+            {lightboxOpen && (
                 <div 
                     onClick={() => setLightboxOpen(false)}
-                    className="fixed inset-0 z-[200] bg-[#050A1F]/90 backdrop-blur-md p-4 flex items-center justify-center animate-in fade-in duration-150"
+                    className="fixed inset-0 z-50 bg-[#050A1F]/90 backdrop-blur-md p-4 flex items-center justify-center animate-in fade-in duration-150"
                 >
                     <div 
                         onClick={(e) => e.stopPropagation()}
                         className="bg-[#0A1233] border border-[#1E2A5A] rounded-3xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl relative flex flex-col items-center max-h-[92vh] overflow-y-auto text-white"
-                        style={{
-                            background: "radial-gradient(ellipse at top right, rgba(68, 87, 245, 0.1), transparent), #0A1233"
-                        }}
                     >
                         <button
                             onClick={() => setLightboxOpen(false)}
-                            className="absolute top-4 right-4 p-2 rounded-xl text-[#9AA5CC] hover:text-white hover:bg-[#1E2A5A]/50 transition-colors cursor-pointer z-10"
+                            className="absolute top-4 right-4 p-2 rounded-xl text-[#9AA5CC] hover:text-white hover:bg-[#1E2A5A]/50 transition-colors cursor-pointer"
                         >
                             <X size={20} />
                         </button>
 
-                        <div className="text-center mb-4 relative z-10">
+                        <div className="text-center mb-4">
                             <h3 className="text-base font-bold text-white">
                                 Certopus Official Certificate Sample
                             </h3>
@@ -261,7 +257,7 @@ export default function SpeakerCertificatePage({ speaker = {} }) {
                             </p>
                         </div>
 
-                        <div className="w-full rounded-2xl overflow-hidden border border-[#1E2A5A] bg-[#050A1F] shadow-lg relative z-10">
+                        <div className="w-full rounded-2xl overflow-hidden border border-[#1E2A5A] bg-[#050A1F] shadow-lg">
                             {!imageError ? (
                                 <img
                                     src={certificateImgSrc}
@@ -277,18 +273,17 @@ export default function SpeakerCertificatePage({ speaker = {} }) {
                             )}
                         </div>
 
-                        <div className="mt-4 flex items-center justify-between w-full text-xs text-[#9AA5CC] px-1 relative z-10">
+                        <div className="mt-4 flex items-center justify-between w-full text-xs text-[#9AA5CC] px-1">
                             <span>Powered by Certopus™</span>
                             <button
                                 onClick={() => setLightboxOpen(false)}
-                                className="px-5 py-2 rounded-xl bg-[#4457F5] hover:bg-[#3B6CF6] text-white font-bold transition-colors cursor-pointer shadow-md shadow-blue-600/30 border border-transparent"
+                                className="px-5 py-2 rounded-xl bg-[#4457F5] hover:bg-[#3B6CF6] text-white font-bold transition-colors cursor-pointer shadow-md shadow-blue-600/30"
                             >
                                 Close
                             </button>
                         </div>
                     </div>
-                </div>,
-                document.body
+                </div>
             )}
         </div>
     );

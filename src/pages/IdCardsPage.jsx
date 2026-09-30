@@ -52,9 +52,23 @@ export default function IdCardsPage({
             const cached = getLocalCachedCards();
             const storedCards = await fetchStoredIdCards(speakers);
             const currentCards = { ...cached, ...storedCards };
+            let hasNewGenerations = false;
+
+            for (const s of speakers) {
+                // If speaker has no card or has an old template card
+                if (!currentCards[s.id] || currentCards[s.id].templateVersion !== "v5_country_flags") {
+                    try {
+                        const card = await generateIdCardJpeg(s);
+                        currentCards[s.id] = card;
+                        hasNewGenerations = true;
+                    } catch (err) {
+                        console.error("Auto card generation failed for", s.name, err);
+                    }
+                }
+            }
 
             setCards(currentCards);
-            if (Object.keys(storedCards).length > 0) {
+            if (Object.keys(storedCards).length > 0 || hasNewGenerations) {
                 saveLocalCachedCards(currentCards);
             }
         };
@@ -509,31 +523,41 @@ export default function IdCardsPage({
                 )}
             </div>
 
-            {/* Modal for full-size inspection */}
+            {/* Popup Modal for ID card preview */}
             {previewCard && (
                 <div
                     onClick={() => setPreviewCard(null)}
-                    className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm p-4 flex items-center justify-center animate-in fade-in duration-200"
+                    className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-start justify-center pt-8 sm:pt-12 overflow-y-auto"
+                    style={{ animation: "fadeIn 0.15s ease-out" }}
                 >
+                    <style>{`
+                        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                        @keyframes popIn { from { opacity: 0; transform: scale(0.92) translateY(12px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+                    `}</style>
                     <div
                         onClick={(e) => e.stopPropagation()}
-                        className="bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-2xl relative flex flex-col items-center max-h-[90vh] overflow-y-auto"
+                        className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-[92vw] max-w-sm p-4 sm:p-5 relative flex flex-col items-center mb-8"
+                        style={{ animation: "popIn 0.2s ease-out" }}
                     >
+                        {/* Close button */}
                         <button
                             onClick={() => setPreviewCard(null)}
-                            className="absolute top-4 right-4 p-2 rounded-xl text-slate-400 hover:text-slate-800 dark:text-slate-200 hover:bg-slate-100 transition-colors"
+                            className="absolute top-3 right-3 p-1.5 rounded-full text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-10"
+                            aria-label="Close preview"
                         >
-                            <X size={20} />
+                            <X size={18} />
                         </button>
 
-                        <h3 className="font-bold text-base text-slate-900 mb-1">
-                            {previewCard.speaker.name} · Official ID Badge
+                        {/* Header */}
+                        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-0.5 pr-8 text-center">
+                            {previewCard.speaker.name}
                         </h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 font-mono">
-                            {previewCard.filename} (JPEG 1080×1800)
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-3 font-mono text-center">
+                            {previewCard.filename}
                         </p>
 
-                        <div className="w-full max-w-[360px] aspect-[3/5] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-lg">
+                        {/* ID Card Image */}
+                        <div className="w-full max-w-[300px] aspect-[3/5] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-lg bg-slate-50 dark:bg-slate-950">
                             <img
                                 src={previewCard.dataUrl || previewCard.publicUrl}
                                 alt={previewCard.filename}
@@ -541,16 +565,17 @@ export default function IdCardsPage({
                             />
                         </div>
 
-                        <div className="flex flex-col sm:flex-row gap-2.5 mt-5 w-full max-w-[360px]">
+                        {/* Action buttons */}
+                        <div className="flex gap-2.5 mt-4 w-full max-w-[300px]">
                             <button
                                 onClick={() => downloadSingleCard(previewCard)}
-                                className="w-full sm:flex-1 inline-flex items-center justify-center gap-2 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white font-semibold text-sm py-2.5 rounded-xl shadow-xs transition-colors min-h-[44px]"
+                                className="flex-1 inline-flex items-center justify-center gap-2 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white font-semibold text-xs py-2.5 rounded-xl shadow-xs transition-colors min-h-[40px]"
                             >
-                                <Download size={16} /> Download JPEG
+                                <Download size={14} /> Download
                             </button>
                             <button
                                 onClick={() => setPreviewCard(null)}
-                                className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold hover:bg-slate-50 transition-colors min-h-[44px]"
+                                className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors min-h-[40px]"
                             >
                                 Close
                             </button>

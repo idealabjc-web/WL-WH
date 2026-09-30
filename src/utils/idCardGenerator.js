@@ -24,7 +24,7 @@
 // 9. QR code encoding {{qr_url}}: 185×185 px at x=448, y=1395 on white tile with 10 px padding.
 //    Small badge ID text below QR (16 px, grey, y=1590).
 import QRCode from "qrcode";
-import { WORLD_COUNTRIES } from "../components/common/CountryField";
+import { getCountryCode, getCountryFlagUrl, getCountryName } from "./countryFlags";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -75,31 +75,36 @@ function drawTaperedDivider(ctx, x1, x2, y) {
     ctx.restore();
 }
 
-/** Flag of country (default: UAE flag with red hoist and green/white/black fly) */
-function drawCountryFlag(ctx, x, y, w, h) {
+/** Draw country flag matching speaker's registered country (with high-res CDN and vector fallback) */
+async function drawCountryFlag(ctx, x, y, w, h, countryInput) {
     ctx.save();
     roundRect(ctx, x, y, w, h, 8);
     ctx.clip();
 
-    const hoistW = w * 0.28;
-    const flyW = w - hoistW;
-    const stripeH = h / 3;
+    const countryCode = getCountryCode(countryInput) || "ae";
+    const flagUrl = `https://flagcdn.com/w320/${countryCode}.png`;
+    const flagImg = await loadImage(flagUrl);
 
-    // Green stripe (top)
-    ctx.fillStyle = "#00732f";
-    ctx.fillRect(x + hoistW, y, flyW, stripeH);
+    if (flagImg) {
+        ctx.drawImage(flagImg, x, y, w, h);
+    } else {
+        // Fallback: UAE host flag
+        const hoistW = w * 0.28;
+        const flyW = w - hoistW;
+        const stripeH = h / 3;
 
-    // White stripe (mid)
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(x + hoistW, y + stripeH, flyW, stripeH);
+        ctx.fillStyle = "#00732f";
+        ctx.fillRect(x + hoistW, y, flyW, stripeH);
 
-    // Black stripe (bottom)
-    ctx.fillStyle = "#000000";
-    ctx.fillRect(x + hoistW, y + stripeH * 2, flyW, stripeH);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(x + hoistW, y + stripeH, flyW, stripeH);
 
-    // Red hoist (left)
-    ctx.fillStyle = "#d80027";
-    ctx.fillRect(x, y, hoistW, h);
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(x + hoistW, y + stripeH * 2, flyW, stripeH);
+
+        ctx.fillStyle = "#d80027";
+        ctx.fillRect(x, y, hoistW, h);
+    }
 
     // Subtle edge border
     ctx.strokeStyle = "rgba(0, 0, 0, 0.15)";
@@ -416,24 +421,7 @@ export async function generateIdCardJpeg(speaker) {
     const flagH = 125;
     const flagX = flagCardX + (flagCardW - flagW) / 2; // 795
     const flagY = flagCardY + (flagCardH - flagH) / 2; // 895
-    
-    let flagImg = null;
-    if (speaker.country) {
-        const ctry = WORLD_COUNTRIES.find(c => c.name.toLowerCase() === speaker.country.toLowerCase());
-        if (ctry) {
-            flagImg = await loadImage(`https://flagcdn.com/w320/${ctry.code.toLowerCase()}.png`);
-        }
-    }
-
-    if (flagImg) {
-        ctx.save();
-        roundRect(ctx, flagX, flagY, flagW, flagH, 8);
-        ctx.clip();
-        ctx.drawImage(flagImg, flagX, flagY, flagW, flagH);
-        ctx.restore();
-    } else {
-        drawCountryFlag(ctx, flagX, flagY, flagW, flagH);
-    }
+    await drawCountryFlag(ctx, flagX, flagY, flagW, flagH, speaker.country || "ae");
 
     // ═══════════════════════════════════════════════════════════════════════════
     // 5. NAME "{{speaker_name}}": center y=1170, bold, 96 px, color #2E8FCB,
@@ -550,7 +538,7 @@ export async function generateIdCardJpeg(speaker) {
                 const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
                 const safeName = (speaker.name || "speaker").replace(/[^a-zA-Z0-9_-]/g, "_");
                 const filename = `ID_Badge_${safeName}_${speaker.id}.jpg`;
-                resolve({ id: speaker.id, speaker, dataUrl, blob, filename, templateVersion: "v4_dubai_famous" });
+                resolve({ id: speaker.id, speaker, dataUrl, blob, filename, templateVersion: "v5_country_flags" });
             },
             "image/jpeg",
             0.92

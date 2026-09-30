@@ -83,6 +83,7 @@ export function speakerToRow(s) {
         name: s.name,
         email: s.email || null,
         phone: s.phone || null,
+        country: s.country || null,
         diet: s.diet || "No preference",
         allergy: s.allergy || null,
         tour: s.tour || "yes",
