@@ -32,6 +32,7 @@ export default function IdCardsPage({
     const [progress, setProgress] = useState(null);
     const [zipping, setZipping] = useState(false);
     const [search, setSearch] = useState("");
+    const [roomFilter, setRoomFilter] = useState("all");
     const [previewCard, setPreviewCard] = useState(null);
     
     // Crop state
@@ -322,6 +323,16 @@ export default function IdCardsPage({
 
     // Filter speakers for gallery display
     const filteredSpeakers = speakers.filter((s) => {
+        // Room filtering
+        if (roomFilter === "room1") {
+            if (s.conferenceRoom && s.conferenceRoom.trim().toLowerCase() !== "room 1" && s.conferenceRoom.trim() !== "1") return false;
+            if (!s.conferenceRoom) return false;
+        }
+        if (roomFilter === "room2") {
+            if (!s.conferenceRoom || (s.conferenceRoom.trim().toLowerCase() !== "room 2" && s.conferenceRoom.trim() !== "2")) return false;
+        }
+
+        // Search filtering
         const q = search.toLowerCase().trim();
         if (!q) return true;
         return (
@@ -413,15 +424,38 @@ export default function IdCardsPage({
                         <span className="text-xs text-slate-500 dark:text-slate-400">Every card exports as high-res JPEG image</span>
                     </div>
 
-                    {/* Search filter */}
-                    <div className="relative sm:w-72">
-                        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                        <input
-                            className={`${inputCls} !pl-10 sm:!pl-10 mb-0 text-xs sm:text-sm`}
-                            placeholder="Filter by name, badge ID..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
+                    {/* Search and Room Filter */}
+                    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                        <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-800 w-full sm:w-auto shrink-0">
+                            <button 
+                                onClick={() => setRoomFilter("all")}
+                                className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${roomFilter === "all" ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}
+                            >
+                                All Rooms
+                            </button>
+                            <button 
+                                onClick={() => setRoomFilter("room1")}
+                                className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${roomFilter === "room1" ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}
+                            >
+                                Room 1
+                            </button>
+                            <button 
+                                onClick={() => setRoomFilter("room2")}
+                                className={`flex-1 sm:flex-none px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${roomFilter === "room2" ? "bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}
+                            >
+                                Room 2
+                            </button>
+                        </div>
+                        
+                        <div className="relative w-full sm:w-72">
+                            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                            <input
+                                className={`${inputCls} !pl-10 sm:!pl-10 mb-0 text-xs sm:text-sm`}
+                                placeholder="Filter by name, badge ID..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </div>
                     </div>
                 </div>
 

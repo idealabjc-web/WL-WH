@@ -132,7 +132,19 @@ export default function CheckinPage({
     const current = selected ? speakers.find((s) => s.id === selected.id) || selected : null;
 
     const matchSpeaker = (rawId) => {
-        const val = rawId.trim();
+        let val = rawId.trim();
+        
+        // Extract ID if the QR contains a full URL (e.g. https://.../check-in/SPEAKER-123)
+        try {
+            if (val.startsWith("http")) {
+                const url = new URL(val);
+                const parts = url.pathname.split("/");
+                val = parts[parts.length - 1]; // get the last part of the path
+            }
+        } catch (e) {
+            // ignore if not a valid URL
+        }
+
         const found = speakersRef.current.find((s) => s.id.toLowerCase() === val.toLowerCase());
         if (found) {
             if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
@@ -979,6 +991,7 @@ export default function CheckinPage({
                                         muted
                                         className={`w-full h-full object-cover ${scanning ? "block" : "hidden"}`}
                                     />
+                                    <canvas ref={canvasRef} className="hidden" />
 
                                     {scanning ? (
                                         <>
