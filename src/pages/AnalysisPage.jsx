@@ -93,6 +93,7 @@ export default function AnalysisPage({ speakers }) {
             if ((!s.abstractStatus || s.abstractStatus.toLowerCase() !== 'submitted') && s.abstractProvided !== 'yes') issues.push("Pending Abstract");
             if (!hasCompleteSession) issues.push("Not Scheduled");
             if (!s.country || s.country.trim() === "") issues.push("Missing Country");
+            if (!s.whoseSpeaker || s.whoseSpeaker.trim() === "") issues.push("Missing Whose Speaker");
 
             if (issues.length > 0) {
                 missingInfo.push({ id: s.id, name: s.name, whoseSpeaker: s.whoseSpeaker, issues });

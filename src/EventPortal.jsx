@@ -119,6 +119,9 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
             .channel("event-portal-changes")
             .on("postgres_changes", { event: "*", schema: "public", table: "speakers" }, refresh)
             .on("postgres_changes", { event: "*", schema: "public", table: "feedback" }, refresh)
+            .on("postgres_changes", { event: "*", schema: "public", table: "sessions" }, refresh)
+            .on("postgres_changes", { event: "*", schema: "public", table: "accommodations" }, refresh)
+            .on("postgres_changes", { event: "*", schema: "public", table: "attendance" }, refresh)
             .subscribe();
         return () => supabase.removeChannel(channel);
     }, [refresh]);
@@ -137,8 +140,6 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
     };
 
     const updateSpeaker = async (id, updatedData) => {
-        setSpeakers((prev) => prev.map((s) => (s.id === id ? { ...s, ...updatedData } : s)));
-        
         const existing = speakers.find(s => s.id === id);
         if (!existing) return false;
         
@@ -147,6 +148,10 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
         
         try {
             await updateSpeakerRecord(id, merged);
+            
+            // Only update local state if DB update succeeds
+            setSpeakers((prev) => prev.map((s) => (s.id === id ? { ...s, ...updatedData } : s)));
+            
             if (changedFields.length > 0) {
                 logAction(userEmail, 'EDIT_SPEAKER_DETAILS', id, { updatedFields: changedFields });
             }

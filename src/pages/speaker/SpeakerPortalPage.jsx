@@ -140,6 +140,9 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
             .on("postgres_changes", { event: "*", schema: "public", table: "speakers" }, refresh)
             .on("postgres_changes", { event: "*", schema: "public", table: "feedback" }, refresh)
             .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, refresh)
+            .on("postgres_changes", { event: "*", schema: "public", table: "sessions" }, refresh)
+            .on("postgres_changes", { event: "*", schema: "public", table: "accommodations" }, refresh)
+            .on("postgres_changes", { event: "*", schema: "public", table: "attendance" }, refresh)
             .subscribe();
         return () => supabase.removeChannel(channel);
     }, [refresh]);

@@ -194,3 +194,12 @@ create policy "public upload abstracts" on storage.objects
 
 create policy "public overwrite abstracts" on storage.objects
   for update using (bucket_id = 'speaker-abstracts');
+alter table speakers add column if not exists country text;
+alter table speakers add column if not exists whose_speaker text;
+alter table speakers add column if not exists team text;
+alter table speakers add column if not exists portal_token text;
+alter table speakers add column if not exists speaker_tag text;
+alter table speakers add column if not exists accompanying_persons jsonb;
+alter table speakers add column if not exists abstract_status text;
+alter table speakers add column if not exists abstract_url text;
+alter table speakers add column if not exists photo_url text;
