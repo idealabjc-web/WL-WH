@@ -315,7 +315,14 @@ export default function AnalysisPage({ speakers }) {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {analysis.missingInfo.map(info => (
                             <div key={info.id} className="p-4 bg-rose-50 border border-rose-100 rounded-xl flex flex-col gap-3">
-                                <div className="font-bold text-slate-800">{info.name}</div>
+                                <div>
+                                    <div className="font-bold text-slate-800">{info.name}</div>
+                                    {info.whoseSpeaker && (
+                                        <div className="text-[11px] font-semibold text-slate-500 mt-1 uppercase tracking-wider">
+                                            Owner: <span className="text-slate-700">{info.whoseSpeaker}</span>
+                                        </div>
+                                    )}
+                                </div>
                                 <div className="flex flex-wrap gap-2">
                                     {info.issues.map((issue, idx) => (
                                         <span key={idx} className="bg-rose-100 text-rose-700 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">

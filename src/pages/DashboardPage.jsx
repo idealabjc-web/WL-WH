@@ -746,172 +746,6 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
         return true;
     });
 
-    const exportExcel = () => {
-        // Status is a computed first column; rest are data fields
-        const cols = [
-            { key: "_status",      label: "Status", width: 13 },
-            { key: "id",           label: "Badge ID", width: 11 },
-            { key: "name",         label: "Name", width: 24 },
-            { key: "email",        label: "Email", width: 26 },
-            { key: "phone",        label: "Phone", width: 16 },
-            { key: "country",      label: "Country", width: 20 },
-            { key: "whoseSpeaker", label: "Whose Speaker", width: 20 },
-            { key: "speakerTag",   label: "Speaker Tag", width: 15 },
-            { key: "accompanyingPersons", label: "Accompanying Persons", get: s => (s.accompanyingPersonsList || []).join(", "), width: 30 },
-            { key: "sessionTitle", label: "Session Title", width: 34 },
-            { key: "abstractProvided", label: "Abstract Provided", width: 15 },
-            { key: "day",          label: "Day", width: 10 },
-            { key: "timeSlot",     label: "Time Slot", width: 16 },
-            { key: "conferenceRoom", label: "Room", get: s => s.conferenceRoom || s.conference_room || s.room || "", width: 15 },
-            { key: "accommodationStatus", label: "Accommodation", width: 22 },
-            { key: "hotelRoom",    label: "Hotel Room", width: 12 },
-            { key: "checkinDate",  label: "Hotel Check-in", width: 14 },
-            { key: "checkoutDate", label: "Hotel Check-out", width: 14 },
-            { key: "nights",       label: "Nights", width: 8 },
-            { key: "diet",         label: "Diet", width: 18 },
-            { key: "allergy",      label: "Allergy", width: 18 },
-            { key: "tour",         label: "Tour", width: 8 },
-            { key: "concerns",     label: "Concerns", width: 30 },
-            { key: "checkedInAt",  label: "Check-in Time", get: s => {
-                const time = s.checkedInAt || s.checked_in_at;
-                if (time) return time;
-                if (s.checkedIn || s.checked_in) return "Time not recorded";
-                return "";
-            }, width: 20 },
-            { key: "checkedOutAt", label: "Check-out Time", get: s => {
-                const time = s.checkedOutAt || s.checked_out_at;
-                if (time) return time;
-                if (s.checkedOut || s.checked_out) return "Time not recorded";
-                return "";
-            }, width: 20 },
-            { key: "checkoutNotes",label: "Checkout Notes", width: 30 },
-        ];
-
-        // ── Styles ────────────────────────────────────────────────
-        const border = {
-            top:    { style: "thin", color: { rgb: "E2E8F0" } },
-            bottom: { style: "thin", color: { rgb: "E2E8F0" } },
-            left:   { style: "thin", color: { rgb: "E2E8F0" } },
-            right:  { style: "thin", color: { rgb: "E2E8F0" } },
-        };
-
-        const headerStyle = {
-            font:      { bold: true, color: { rgb: "FFFFFF" }, sz: 10, name: "Calibri" },
-            fill:      { fgColor: { rgb: "1E293B" } },   // slate-900
-            alignment: { horizontal: "center", vertical: "center" },
-            border,
-        };
-
-        const getStatus = (s) => {
-            if (s.checkedOut)               return "Checked Out";
-            if (s.checkedIn)                return "On-Site";
-            if (s.allergy || s.concerns)    return "Flagged";
-            return "Pending";
-        };
-
-        const cellStyle = (s, isAltRow) => ({
-            font:      { sz: 10, color: { rgb: "334155" }, name: "Calibri" },
-            fill:      { fgColor: { rgb: isAltRow ? "F8FAFC" : "FFFFFF" } },  // alternating
-            alignment: { vertical: "center" },
-            border,
-        });
-
-        const statusCellStyle = (s, isAltRow) => {
-            const status = getStatus(s);
-            const colors = {
-                "On-Site":     { font: "166534", fill: isAltRow ? "DCFCE7" : "F0FDF4" },
-                "Checked Out": { font: "6B21A8", fill: isAltRow ? "EDE9FE" : "F5F3FF" },
-                "Flagged":     { font: "92400E", fill: isAltRow ? "FEF3C7" : "FFFBEB" },
-                "Pending":     { font: "475569", fill: isAltRow ? "F8FAFC" : "FFFFFF" },
-            };
-            const c = colors[status];
-            return {
-                font:      { sz: 10, bold: true, color: { rgb: c.font }, name: "Calibri" },
-                fill:      { fgColor: { rgb: c.fill } },
-                alignment: { horizontal: "center", vertical: "center" },
-                border,
-            };
-        };
-
-        // ── Build worksheet ────────────────────────────────────────
-        const wsData = [];
-
-        // Header row
-        wsData.push(cols.map(c => ({ v: c.label, t: "s", s: headerStyle })));
-
-        // Data rows with alternating background
-        speakers.forEach((s, i) => {
-            const isAlt = i % 2 === 1;
-            wsData.push(cols.map(c => {
-                const { key, get } = c;
-                if (key === "_status") {
-                    return { v: getStatus(s), t: "s", s: statusCellStyle(s, isAlt) };
-                }
-                let v = get ? get(s) : s[key];
-                if ((key === "checkedInAt" || key === "checkedOutAt") && v && typeof v === "number") {
-                    v = new Date(v).toLocaleString();
-                } else if ((key === "checkedInAt" || key === "checkedOutAt") && v && typeof v === "string" && v !== "Time not recorded") {
-                    const parsed = new Date(v);
-                    if (!isNaN(parsed)) v = parsed.toLocaleString();
-                }
-                return { v: v ?? "", t: "s", s: cellStyle(s, isAlt) };
-            }));
-        });
-
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-        // Column widths
-        ws["!cols"] = cols.map(c => ({ wch: c.width || 15 }));
-
-        // Header row height + data row heights
-        ws["!rows"] = [{ hpt: 24 }, ...speakers.map(() => ({ hpt: 18 }))];
-
-        // Freeze the header row so it stays visible when scrolling
-        ws["!freeze"] = { xSplit: 0, ySplit: 1 };
-
-
-        // ── Summary sheet ─────────────────────────────────────────
-        const smHeaderStyle = {
-            font:  { bold: true, sz: 10, color: { rgb: "FFFFFF" }, name: "Calibri" },
-            fill:  { fgColor: { rgb: "1E293B" } },
-            alignment: { horizontal: "left", vertical: "center" },
-            border: { top: { style: "thin", color: { rgb: "E2E8F0" } }, bottom: { style: "thin", color: { rgb: "E2E8F0" } }, left: { style: "thin", color: { rgb: "E2E8F0" } }, right: { style: "thin", color: { rgb: "E2E8F0" } } },
-        };
-        const smValueStyle = {
-            font:  { sz: 10, bold: true, color: { rgb: "92400E" }, name: "Calibri" },
-            fill:  { fgColor: { rgb: "FEF3C7" } },   // warm mustard / amber-100
-            alignment: { horizontal: "right", vertical: "center" },
-            border: { top: { style: "thin", color: { rgb: "FCD34D" } }, bottom: { style: "thin", color: { rgb: "FCD34D" } }, left: { style: "thin", color: { rgb: "FCD34D" } }, right: { style: "thin", color: { rgb: "FCD34D" } } },
-        };
-
-        const summaryRows = [
-            ["Total Speakers",        speakers.length],
-            ["On-Site (Checked In)",  speakers.filter(s => s.checkedIn && !s.checkedOut).length],
-            ["Checked Out",           speakers.filter(s => s.checkedOut).length],
-            ["Awaiting Arrival",      speakers.filter(s => !s.checkedIn).length],
-            ["Dietary / Allergy",     speakers.filter(s => s.allergy || (s.diet && s.diet !== "No preference")).length],
-            ["Tour Interest",         speakers.filter(s => s.tour === "yes").length],
-            ["Exported At",           new Date().toLocaleString()],
-        ];
-
-        const summaryWsData = summaryRows.map(([metric, value]) => [
-            { v: metric, t: "s", s: smHeaderStyle },
-            { v: value,  t: typeof value === "number" ? "n" : "s", s: smValueStyle },
-        ]);
-
-        const summaryWs = XLSX.utils.aoa_to_sheet(summaryWsData);
-        summaryWs["!cols"] = [{ wch: 24 }, { wch: 20 }];
-        summaryWs["!rows"] = summaryRows.map(() => ({ hpt: 20 }));
-
-        // ── Workbook ──────────────────────────────────────────────
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Speakers");
-        XLSX.utils.book_append_sheet(wb, summaryWs, "Summary");
-
-        const date = new Date().toISOString().slice(0, 10);
-        XLSX.writeFile(wb, `speakers-export-${date}.xlsx`);
-    };
-
 
     return (
         <div>
@@ -1063,14 +897,6 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                             </div>
                         </div>
                         <div className="flex gap-2 shrink-0">
-                            {!isSpeaker && (
-                                    <button
-                                    onClick={exportExcel}
-                                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs transition-all min-h-[42px]"
-                                >
-                                    <Download size={15} /> Excel
-                                </button>
-                            )}
                             <button
                                 onClick={onRefresh}
                                 className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-300/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700 text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-xl shadow-xs transition-all min-h-[42px]"
@@ -1286,6 +1112,8 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                     </table>
                 </div>
             </div>
+
+
         </div>
     );
 }
