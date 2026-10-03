@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import JSZip from "jszip";
 import { jsPDF } from "jspdf";
 import {
@@ -57,7 +58,7 @@ export default function IdCardsPage({
 
             for (const s of speakers) {
                 // If speaker has no card or has an old template card
-                if (!currentCards[s.id] || currentCards[s.id].templateVersion !== "v5_country_flags") {
+                if (!currentCards[s.id] || currentCards[s.id].templateVersion !== "v6_dubai_bg") {
                     try {
                         const card = await generateIdCardJpeg(s);
                         currentCards[s.id] = card;
@@ -586,10 +587,10 @@ export default function IdCardsPage({
             </div>
 
             {/* Popup Modal for ID card preview */}
-            {previewCard && (
+            {previewCard && createPortal(
                 <div
                     onClick={() => setPreviewCard(null)}
-                    className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-start justify-center pt-8 sm:pt-12 overflow-y-auto"
+                    className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
                     style={{ animation: "fadeIn 0.15s ease-out" }}
                 >
                     <style>{`
@@ -598,37 +599,29 @@ export default function IdCardsPage({
                     `}</style>
                     <div
                         onClick={(e) => e.stopPropagation()}
-                        className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-[92vw] max-w-sm p-4 sm:p-5 relative flex flex-col items-center mb-8"
+                        className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-auto max-w-[90vw] max-h-[92vh] p-3 relative flex flex-col items-center"
                         style={{ animation: "popIn 0.2s ease-out" }}
                     >
                         {/* Close button */}
                         <button
                             onClick={() => setPreviewCard(null)}
-                            className="absolute top-3 right-3 p-1.5 rounded-full text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors z-10"
+                            className="absolute -top-3 -right-3 p-1.5 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700 transition-colors z-10 shadow-sm"
                             aria-label="Close preview"
                         >
                             <X size={18} />
                         </button>
 
-                        {/* Header */}
-                        <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-0.5 pr-8 text-center">
-                            {previewCard.speaker.name}
-                        </h3>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-3 font-mono text-center">
-                            {previewCard.filename}
-                        </p>
-
                         {/* ID Card Image */}
-                        <div className="w-full max-w-[300px] aspect-[3/5] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-lg bg-slate-50 dark:bg-slate-950">
+                        <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-lg bg-slate-50 dark:bg-slate-950">
                             <img
                                 src={previewCard.dataUrl || previewCard.publicUrl}
                                 alt={previewCard.filename}
-                                className="w-full h-full object-contain"
+                                className="block w-auto h-auto max-w-[260px] max-h-[72vh] object-contain"
                             />
                         </div>
 
                         {/* Action buttons */}
-                        <div className="flex gap-2.5 mt-4 w-full max-w-[300px]">
+                        <div className="flex gap-2 mt-3 w-full">
                             <button
                                 onClick={() => downloadSingleCard(previewCard)}
                                 className="flex-1 inline-flex items-center justify-center gap-2 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white font-semibold text-xs py-2.5 rounded-xl shadow-xs transition-colors min-h-[40px]"
@@ -643,10 +636,11 @@ export default function IdCardsPage({
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
             {/* Modal for Cropping/Editing Speaker ID Card */}
-            {editingSpeaker && (
+            {editingSpeaker && createPortal(
                 <div
                     onClick={() => setEditingSpeaker(null)}
                     className="fixed inset-0 z-[60] bg-slate-950/75 backdrop-blur-sm p-4 flex items-center justify-center animate-in fade-in duration-200"
@@ -698,7 +692,8 @@ export default function IdCardsPage({
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );

@@ -133,7 +133,7 @@ async function generateRoom2IdCardJpeg(speaker) {
     ctx.fillRect(0, 0, W, H);
 
     // Background Image (same as Room 1)
-    const topBgImg = (await loadImage(`/top_bg.jpg?v=dubai_${Date.now()}`)) || (await loadImage("/dubai_bg.jpg"));
+    const topBgImg = (await loadImage(`/id_card_background.jpg?v=${Date.now()}`)) || (await loadImage("/id_card_background.jpg"));
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(0, 0);
@@ -469,9 +469,7 @@ async function generateRoom2IdCardJpeg(speaker) {
 }
 
 export async function generateIdCardJpeg(speaker) {
-    if (speaker.conferenceRoom && (speaker.conferenceRoom.toLowerCase().includes("room 2") || speaker.conferenceRoom === "2")) {
-        return await generateRoom2IdCardJpeg(speaker);
-    }
+    const isRoom2 = speaker.conferenceRoom && (speaker.conferenceRoom.toLowerCase().includes("room 2") || speaker.conferenceRoom === "2");
     const W = 1080;
     const H = 1800;
     const scale = 2; // Optimal balance for high clarity (~2MB file size)
@@ -492,7 +490,7 @@ export async function generateIdCardJpeg(speaker) {
     // x=0, y=0, width 1080, height ~800, object-fit: cover.
     // Bottom edge is a soft curved wave fading into white (around y=780–810).
     // ═══════════════════════════════════════════════════════════════════════════
-    const topBgImg = (await loadImage(`/top_bg.jpg?v=dubai_${Date.now()}`)) || (await loadImage("/dubai_bg.jpg"));
+    const topBgImg = (await loadImage(`/id_card_background.jpg?v=${Date.now()}`)) || (await loadImage("/id_card_background.jpg"));
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(0, 0);
@@ -537,8 +535,8 @@ export async function generateIdCardJpeg(speaker) {
         ctx.lineTo(0, H);
         ctx.closePath();
         const wave1Grad = ctx.createLinearGradient(0, 1430, W, H);
-        wave1Grad.addColorStop(0, "#166534"); // green-800
-        wave1Grad.addColorStop(1, "#22c55e"); // green-500
+        wave1Grad.addColorStop(0, isRoom2 ? "#c2410c" : "#166534"); // orange-700 / green-800
+        wave1Grad.addColorStop(1, isRoom2 ? "#f97316" : "#22c55e"); // orange-500 / green-500
         ctx.fillStyle = wave1Grad;
         ctx.fill();
         ctx.restore();
@@ -552,8 +550,8 @@ export async function generateIdCardJpeg(speaker) {
         ctx.lineTo(0, H);
         ctx.closePath();
         const wave2Grad = ctx.createLinearGradient(0, 1510, W, H);
-        wave2Grad.addColorStop(0, "#14532d"); // green-900
-        wave2Grad.addColorStop(1, "#052e16"); // green-950
+        wave2Grad.addColorStop(0, isRoom2 ? "#7c2d12" : "#14532d"); // orange-900 / green-900
+        wave2Grad.addColorStop(1, isRoom2 ? "#431407" : "#052e16"); // orange-950 / green-950
         ctx.fillStyle = wave2Grad;
         ctx.fill();
         ctx.restore();
@@ -595,7 +593,7 @@ export async function generateIdCardJpeg(speaker) {
     // ═══════════════════════════════════════════════════════════════════════════
     ctx.save();
     ctx.font = "italic bold 30px 'Red Hat Display', Montserrat, Inter, -apple-system, sans-serif";
-    ctx.fillStyle = "#064e3b"; // emerald-900
+    ctx.fillStyle = isRoom2 ? "#7c2d12" : "#064e3b"; // orange-900 / emerald-900
 
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
@@ -653,8 +651,8 @@ export async function generateIdCardJpeg(speaker) {
     ctx.shadowOffsetY = 6;
     roundRect(ctx, bannerX, bannerY, bannerW, bannerH, bannerR);
     const bannerGrad = ctx.createLinearGradient(bannerX, bannerY, bannerX + bannerW, bannerY);
-    bannerGrad.addColorStop(0, "#15803d"); // green-700
-    bannerGrad.addColorStop(1, "#22c55e"); // green-500
+    bannerGrad.addColorStop(0, isRoom2 ? "#ea580c" : "#15803d"); // orange-600 / green-700
+    bannerGrad.addColorStop(1, isRoom2 ? "#f97316" : "#22c55e"); // orange-500 / green-500
     ctx.fillStyle = bannerGrad;
     ctx.fill();
     ctx.restore();
@@ -787,7 +785,7 @@ export async function generateIdCardJpeg(speaker) {
         nameFontSize -= 2;
         ctx.font = `bold ${nameFontSize}px 'Red Hat Display', Montserrat, Inter, -apple-system, sans-serif`;
     }
-    ctx.fillStyle = "#16a34a"; // green-600
+    ctx.fillStyle = isRoom2 ? "#c2410c" : "#16a34a"; // orange-700 / green-600
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(speakerDisplayName, 540, 1170);
@@ -829,7 +827,7 @@ export async function generateIdCardJpeg(speaker) {
 
     ctx.save();
     ctx.font = "bold 44px 'Red Hat Display', Montserrat, Inter, -apple-system, sans-serif";
-    ctx.fillStyle = "#064e3b"; // emerald-900
+    ctx.fillStyle = isRoom2 ? "#7c2d12" : "#064e3b"; // orange-900 / emerald-900
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.letterSpacing = "0.5px";
@@ -898,7 +896,7 @@ export async function generateIdCardJpeg(speaker) {
                 const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
                 const safeName = (speaker.name || "speaker").replace(/[^a-zA-Z0-9_-]/g, "_");
                 const filename = `ID_Badge_${safeName}_${speaker.id}.jpg`;
-                resolve({ id: speaker.id, speaker, dataUrl, blob, filename, templateVersion: "v5_country_flags" });
+                resolve({ id: speaker.id, speaker, dataUrl, blob, filename, templateVersion: "v7_orange_room2" });
             },
             "image/jpeg",
             0.92
