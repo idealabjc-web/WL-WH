@@ -248,7 +248,7 @@ export default function IdCardsPage({
             const zip = new JSZip();
             const cardList = Object.values(currentCards);
 
-            // Add every JPEG image to the zip (fetching remote blob if not in memory)
+            // Add every generated card to the zip as a PDF
             for (const c of cardList) {
                 let blob = c.blob;
                 if (!blob && (c.publicUrl || c.dataUrl)) {
@@ -260,7 +260,29 @@ export default function IdCardsPage({
                     }
                 }
                 if (blob) {
-                    zip.file(c.filename, blob);
+                    try {
+                        const dataUrl = await new Promise((resolve) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => resolve(reader.result);
+                            reader.readAsDataURL(blob);
+                        });
+                        
+                        const pdf = new jsPDF({
+                            orientation: "portrait",
+                            unit: "px",
+                            format: [1080, 1800]
+                        });
+                        
+                        pdf.addImage(dataUrl, "JPEG", 0, 0, 1080, 1800);
+                        const pdfBlob = pdf.output('blob');
+                        
+                        const timestamp = Date.now();
+                        const pdfFilename = c.filename.replace(".jpg", "").replace(".jpeg", "") + `_${timestamp}.pdf`;
+                        
+                        zip.file(pdfFilename, pdfBlob);
+                    } catch (err) {
+                        console.error("Failed to generate PDF for", c.filename, err);
+                    }
                 }
             }
 
@@ -280,7 +302,7 @@ export default function IdCardsPage({
             document.body.removeChild(link);
             URL.revokeObjectURL(link.href);
 
-            toast(`Downloaded ZIP with ${cardList.length} JPEG ID card(s).`);
+            toast(`Downloaded ZIP with ${cardList.length} PDF ID card(s).`);
         } catch (err) {
             console.error("ZIP creation failed:", err);
             toast("Failed to build ZIP file. Please try again.");
@@ -289,31 +311,37 @@ export default function IdCardsPage({
         }
     };
 
-    // 5. Download a single card as a JPEG
+    // 5. Download a single card as a PDF
     const downloadSingleCard = async (card) => {
         try {
             const downloadUrl = card.dataUrl || card.publicUrl;
             if (!downloadUrl) return;
 
+            let dataUrlToUse = downloadUrl;
+
             if (downloadUrl.startsWith("http")) {
                 const res = await fetch(downloadUrl);
                 const blob = await res.blob();
-                const link = document.createElement("a");
-                link.href = URL.createObjectURL(blob);
-                link.download = card.filename;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(link.href);
-            } else {
-                const link = document.createElement("a");
-                link.href = downloadUrl;
-                link.download = card.filename;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+                dataUrlToUse = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
             }
-            toast(`Downloaded ${card.filename}`);
+            
+            const pdf = new jsPDF({
+                orientation: "portrait",
+                unit: "px",
+                format: [1080, 1800]
+            });
+            
+            pdf.addImage(dataUrlToUse, "JPEG", 0, 0, 1080, 1800);
+            
+            const timestamp = Date.now();
+            const pdfFilename = card.filename.replace(".jpg", "").replace(".jpeg", "") + `_${timestamp}.pdf`;
+            
+            pdf.save(pdfFilename);
+            toast(`Downloaded ${pdfFilename}`);
         } catch (err) {
             console.error("Download failed:", err);
             toast("Download failed. Please try again.");
@@ -571,7 +599,7 @@ export default function IdCardsPage({
                                 onClick={() => downloadSingleCard(previewCard)}
                                 className="flex-1 inline-flex items-center justify-center gap-2 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white font-semibold text-xs py-2.5 rounded-xl shadow-xs transition-colors min-h-[40px]"
                             >
-                                <Download size={14} /> Download
+                                <Download size={14} /> Download PDF
                             </button>
                             <button
                                 onClick={() => setPreviewCard(null)}
