@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { BarChart2, Users, FileText, FileX, CalendarDays, CheckCircle, Clock, AlertTriangle, Hotel, Utensils, MapPin, Activity } from 'lucide-react';
+import { BarChart2, Users, FileText, FileX, CalendarDays, CheckCircle, Clock, AlertTriangle, Hotel, Utensils, MapPin, Activity, Copy } from 'lucide-react';
 import { TIME_SLOTS, EVENT_DAYS } from '../api/speakersApi';
 
 export default function AnalysisPage({ speakers }) {
@@ -92,9 +92,10 @@ export default function AnalysisPage({ speakers }) {
             if (!s.photoUrl) issues.push("Missing Photo");
             if ((!s.abstractStatus || s.abstractStatus.toLowerCase() !== 'submitted') && s.abstractProvided !== 'yes') issues.push("Pending Abstract");
             if (!hasCompleteSession) issues.push("Not Scheduled");
+            if (!s.country || s.country.trim() === "") issues.push("Missing Country");
 
             if (issues.length > 0) {
-                missingInfo.push({ id: s.id, name: s.name, issues });
+                missingInfo.push({ id: s.id, name: s.name, whoseSpeaker: s.whoseSpeaker, issues });
             }
         });
 
@@ -123,6 +124,22 @@ export default function AnalysisPage({ speakers }) {
             missingInfo
         };
     }, [speakers, bookableTimeSlots, totalSlots, totalSlotsPerRoom]);
+
+    const handleCopyMissingInfo = () => {
+        if (!analysis.missingInfo || analysis.missingInfo.length === 0) return;
+
+        const textToCopy = analysis.missingInfo.map(info => {
+            const whoseSpeaker = info.whoseSpeaker ? ` - ${info.whoseSpeaker}` : "";
+            const issues = info.issues.join(", ");
+            return `${info.name}${whoseSpeaker}\n${issues}`;
+        }).join("\n\n");
+
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            console.log("Copied missing info to clipboard!");
+        }).catch(err => {
+            console.error("Failed to copy text: ", err);
+        });
+    };
 
     const statCard = (title, value, icon, color) => (
         <div className={`p-5 rounded-2xl border bg-white shadow-sm flex items-center gap-4 ${color.border}`}>
@@ -270,10 +287,22 @@ export default function AnalysisPage({ speakers }) {
 
             {/* Action Items / Missing Info Alerts */}
             <div className="bg-white p-6 rounded-2xl border border-rose-200 shadow-sm mt-6">
-                <h2 className="text-lg font-bold text-rose-700 mb-2 flex items-center gap-2">
-                    <AlertTriangle size={20} className="text-rose-500" />
-                    Action Items & Missing Information
-                </h2>
+                <div className="flex justify-between items-start mb-2">
+                    <h2 className="text-lg font-bold text-rose-700 flex items-center gap-2">
+                        <AlertTriangle size={20} className="text-rose-500" />
+                        Action Items & Missing Information
+                    </h2>
+                    {analysis.missingInfo.length > 0 && (
+                        <button 
+                            onClick={handleCopyMissingInfo}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-lg text-sm font-semibold transition-colors"
+                            title="Copy to clipboard"
+                        >
+                            <Copy size={16} />
+                            Copy
+                        </button>
+                    )}
+                </div>
                 <p className="text-slate-500 text-sm mb-6">Speakers requiring attention (missing schedules, photos, or abstracts).</p>
 
                 {analysis.missingInfo.length === 0 ? (

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Calendar, UserPlus, X, ArrowRightLeft, UserMinus, Clock, LayoutList, Table as TableIcon, Download } from "lucide-react";
+import { Calendar, UserPlus, X, ArrowRightLeft, UserMinus, Clock, LayoutList, Table as TableIcon, Download, ClipboardList, ClipboardCopy, ChevronDown, ChevronRight } from "lucide-react";
 import { TIME_SLOTS, EVENT_DAYS } from "../api/speakersApi";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
 import AgendaPoster from "../components/AgendaPoster";
@@ -7,6 +7,10 @@ import AgendaPoster from "../components/AgendaPoster";
 export default function AgendaPage({ speakers, onUpdate, toast }) {
     const [selectedRoom, setSelectedRoom] = useState("Room 1");
     const [viewMode, setViewMode] = useState("calendar"); // "list" | "calendar"
+    
+    // Stats view state
+    const [statsAvailableOpen, setStatsAvailableOpen] = useState(true);
+    const [statsFilledOpen, setStatsFilledOpen] = useState(false);
 
     // Modal state
     const [slotAction, setSlotAction] = useState(null); // { type: 'assign', timeSlot } OR { type: 'manage', timeSlot, speaker } OR { type: 'move', timeSlot, speaker }
@@ -258,11 +262,172 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
                     >
                         <Download size={16} /> Poster Export
                     </button>
+                    <button
+                        onClick={() => setViewMode("stats")}
+                        className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
+                            viewMode === "stats" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                        }`}
+                    >
+                        <ClipboardList size={16} /> Copy Stats
+                    </button>
                 </div>
             </div>
 
             {/* Agenda Grid */}
-            {viewMode === "poster" ? (
+            {viewMode === "stats" ? (
+                <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 overflow-hidden">
+                    <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+                        <h2 className="text-xl font-bold text-slate-900">Agenda Statistics - {selectedRoom}</h2>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => {
+                                    let text = `Available Slots - ${selectedRoom}\n=========================\n\n`;
+                                    let total = 0;
+                                    EVENT_DAYS.forEach(day => {
+                                        text += `--- ${day} ---\n`;
+                                        let dayAvailable = [];
+                                        TIME_SLOTS.forEach(slot => {
+                                            if (slot.toLowerCase().includes("lunch")) return;
+                                            if (!getSpeakerForSlot(slot, day, selectedRoom)) {
+                                                dayAvailable.push(slot);
+                                                total++;
+                                            }
+                                        });
+                                        if (dayAvailable.length > 0) {
+                                            dayAvailable.forEach(s => text += `  ○ ${s}\n`);
+                                        } else {
+                                            text += `  None\n`;
+                                        }
+                                        text += `\n`;
+                                    });
+                                    text += `=========================\nTotal Available: ${total}\n`;
+                                    navigator.clipboard.writeText(text);
+                                    toast("Available slots copied to clipboard!");
+                                }}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-colors shadow-sm"
+                            >
+                                <ClipboardCopy size={16} /> Copy Available (Text)
+                            </button>
+                            <button
+                                onClick={() => {
+                                    let text = `Filled Slots - ${selectedRoom}\n=========================\n\n`;
+                                    let total = 0;
+                                    EVENT_DAYS.forEach(day => {
+                                        text += `--- ${day} ---\n`;
+                                        let dayFilled = [];
+                                        TIME_SLOTS.forEach(slot => {
+                                            if (slot.toLowerCase().includes("lunch")) return;
+                                            const speaker = getSpeakerForSlot(slot, day, selectedRoom);
+                                            if (speaker) {
+                                                dayFilled.push(`${slot} - ${speaker.name}`);
+                                                total++;
+                                            }
+                                        });
+                                        if (dayFilled.length > 0) {
+                                            dayFilled.forEach(s => text += `  ✓ ${s}\n`);
+                                        } else {
+                                            text += `  None\n`;
+                                        }
+                                        text += `\n`;
+                                    });
+                                    text += `=========================\nTotal Filled: ${total}\n`;
+                                    navigator.clipboard.writeText(text);
+                                    toast("Filled slots copied to clipboard!");
+                                }}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-colors shadow-sm"
+                            >
+                                <ClipboardCopy size={16} /> Copy Filled (Text)
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div className="flex flex-col gap-8">
+                        {/* Beautiful Available Slots Panel */}
+                        <div className="flex flex-col bg-emerald-50/50 rounded-2xl p-6 border border-emerald-100">
+                            <button 
+                                onClick={() => setStatsAvailableOpen(!statsAvailableOpen)}
+                                className="text-xl font-extrabold text-emerald-900 mb-2 flex items-center justify-between w-full border-b border-emerald-200/60 pb-3 hover:opacity-80 transition-opacity cursor-pointer"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <span className="w-4 h-4 rounded-full bg-emerald-500 shadow-sm shadow-emerald-200"></span>
+                                    Available Slots
+                                </div>
+                                {statsAvailableOpen ? <ChevronDown size={24} className="text-emerald-700" /> : <ChevronRight size={24} className="text-emerald-700" />}
+                            </button>
+                            
+                            {statsAvailableOpen && (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                                    {EVENT_DAYS.map(day => {
+                                    const available = TIME_SLOTS.filter(slot => !slot.toLowerCase().includes("lunch") && !getSpeakerForSlot(slot, day, selectedRoom));
+                                    return (
+                                        <div key={day} className="bg-white rounded-xl p-4 shadow-sm border border-emerald-100">
+                                            <h4 className="font-bold text-emerald-800 mb-3 text-sm uppercase tracking-wider">{day}</h4>
+                                            {available.length > 0 ? (
+                                                <div className="flex flex-wrap gap-2">
+                                                    {available.map(slot => (
+                                                        <span key={slot} className="bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-lg border border-emerald-200">
+                                                            {slot}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-slate-400 text-sm italic">Fully booked!</p>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Beautiful Filled Slots Panel */}
+                        <div className="flex flex-col bg-blue-50/50 rounded-2xl p-6 border border-blue-100">
+                            <button 
+                                onClick={() => setStatsFilledOpen(!statsFilledOpen)}
+                                className="text-xl font-extrabold text-blue-900 mb-2 flex items-center justify-between w-full border-b border-blue-200/60 pb-3 hover:opacity-80 transition-opacity cursor-pointer"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <span className="w-4 h-4 rounded-full bg-blue-500 shadow-sm shadow-blue-200"></span>
+                                    Filled Slots
+                                </div>
+                                {statsFilledOpen ? <ChevronDown size={24} className="text-blue-700" /> : <ChevronRight size={24} className="text-blue-700" />}
+                            </button>
+                            
+                            {statsFilledOpen && (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                                    {EVENT_DAYS.map(day => {
+                                    const filled = TIME_SLOTS.filter(slot => !slot.toLowerCase().includes("lunch") && getSpeakerForSlot(slot, day, selectedRoom));
+                                    return (
+                                        <div key={day} className="bg-white rounded-xl p-4 shadow-sm border border-blue-100">
+                                            <h4 className="font-bold text-blue-800 mb-3 text-sm uppercase tracking-wider">{day}</h4>
+                                            {filled.length > 0 ? (
+                                                <div className="flex flex-col gap-2">
+                                                    {filled.map(slot => {
+                                                        const speaker = getSpeakerForSlot(slot, day, selectedRoom);
+                                                        return (
+                                                            <div key={slot} className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg border border-slate-100 hover:bg-white hover:shadow-sm transition-all">
+                                                                <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded-md shrink-0">
+                                                                    {slot}
+                                                                </span>
+                                                                <span className="text-sm font-semibold text-slate-700 truncate">
+                                                                    {speaker.name}
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            ) : (
+                                                <p className="text-slate-400 text-sm italic">No slots filled yet.</p>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            ) : viewMode === "poster" ? (
                 <AgendaPoster speakers={speakers} room={selectedRoom} />
             ) : viewMode === "list" ? (
                 <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">

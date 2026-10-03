@@ -118,6 +118,7 @@ export function rowToSpeaker(r) {
             parsedTeam = teamMatch[2].trim() || null;
         } else if (TEAMS.includes(r.whose_speaker)) {
             parsedTeam = r.whose_speaker;
+            parsedWhoseSpeaker = null;
         }
     }
 

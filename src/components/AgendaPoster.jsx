@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import html2canvas from 'html2canvas';
-import { Download } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import { Download, FileText } from 'lucide-react';
 import { TIME_SLOTS, EVENT_DAYS } from '../api/speakersApi';
 
 export default function AgendaPoster({ speakers, room }) {
@@ -29,8 +30,8 @@ export default function AgendaPoster({ speakers, room }) {
     const downloadJPEG = async () => {
         if (!posterRef.current) return;
         try {
-            const canvas = await html2canvas(posterRef.current, { scale: 2, useCORS: true });
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            const canvas = await html2canvas(posterRef.current, { scale: 4, useCORS: true });
+            const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
             const link = document.createElement('a');
             link.download = `Agenda_${room.replace(/\s+/g, '_')}.jpg`;
             link.href = dataUrl;
@@ -38,6 +39,31 @@ export default function AgendaPoster({ speakers, room }) {
         } catch (error) {
             console.error("Failed to generate poster:", error);
             alert("Failed to download JPEG. Check console for details.");
+        }
+    };
+
+    const downloadPDF = async () => {
+        if (!posterRef.current) return;
+        try {
+            const canvas = await html2canvas(posterRef.current, { scale: 4, useCORS: true });
+            const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
+            
+            const pdfWidth = canvas.width / 2;
+            const pdfHeight = canvas.height / 2;
+            
+            const pdf = new jsPDF({
+                orientation: pdfWidth > pdfHeight ? "landscape" : "portrait",
+                unit: "px",
+                format: [pdfWidth, pdfHeight]
+            });
+            
+            pdf.addImage(dataUrl, "JPEG", 0, 0, pdfWidth, pdfHeight);
+            const timestamp = Date.now();
+            
+            pdf.save(`Agenda_${room.replace(/\s+/g, '_')}_${timestamp}.pdf`);
+        } catch (error) {
+            console.error("Failed to generate PDF:", error);
+            alert("Failed to download PDF. Check console for details.");
         }
     };
 
@@ -56,7 +82,7 @@ export default function AgendaPoster({ speakers, room }) {
         if (isLunch) {
             return (
                 <div key={timeSlot} className="flex items-center w-full mb-1.5 rounded-full overflow-hidden border-[1.5px] border-black bg-[#c00000] shadow-sm relative h-[36px]">
-                    <div className="flex-1 text-center font-bold text-white text-[13px] tracking-wide pl-2 uppercase font-sans block" style={{ lineHeight: "33px" }}>LUNCH BREAK</div>
+                    <div className="flex-1 text-center font-bold text-white text-[13px] tracking-wide pl-2 uppercase font-sans block" style={{ lineHeight: "33px" }}>{"LUNCH BREAK".replace(/ /g, '\u00A0')}</div>
                     <div className="bg-white text-black font-bold text-[11px] rounded-full border-[1.5px] border-[#c00000] px-3 mx-1 flex items-center justify-center shrink-0 min-w-[86px] h-[28px] font-sans">
                         {timeSlot.replace(" (Lunch)", "")}
                     </div>
@@ -71,7 +97,7 @@ export default function AgendaPoster({ speakers, room }) {
             return (
                 <div key={timeSlot} className="flex items-center w-full mb-1.5 rounded-full overflow-hidden border-[1.5px] border-black bg-[#059669] shadow-sm relative h-[36px]">
                     <div className="w-[34px] h-[34px] bg-black/40 rounded-md shrink-0 -ml-[1.5px] border-[1.5px] border-black flex items-center justify-center text-white/80 text-[14px]">?</div>
-                    <div className="flex-1 text-left font-bold text-white text-[13px] px-3 font-sans overflow-hidden whitespace-nowrap block uppercase" style={{ lineHeight: "33px" }}>SLOT AVAILABLE</div>
+                    <div className="flex-1 text-left font-bold text-white text-[13px] px-3 font-sans overflow-hidden whitespace-nowrap block uppercase" style={{ lineHeight: "33px" }}>{"SLOT AVAILABLE".replace(/ /g, '\u00A0')}</div>
                     <div className="bg-white text-black font-bold text-[11px] rounded-full border-[1.5px] border-[#059669] px-3 mx-1 flex items-center justify-center shrink-0 min-w-[86px] h-[28px] font-sans z-10">
                         {timeSlot}
                     </div>
@@ -102,7 +128,7 @@ export default function AgendaPoster({ speakers, room }) {
                         {initial}
                     </div>
                 )}
-                <div className="flex-1 text-left font-bold text-white text-[13px] px-3 font-sans overflow-hidden whitespace-nowrap uppercase block" style={{ lineHeight: "33px" }}>{speaker.name}</div>
+                <div className="flex-1 text-left font-bold text-white text-[13px] px-3 font-sans overflow-hidden whitespace-nowrap uppercase block" style={{ lineHeight: "33px" }}>{speaker.name.replace(/ /g, '\u00A0')}</div>
                 <div className="bg-white text-black font-bold text-[11px] rounded-full border-[1.5px] border-[#c00000] px-3 mx-1 flex items-center justify-center shrink-0 min-w-[86px] h-[28px] font-sans z-10">
                     {timeSlot}
                 </div>
@@ -114,12 +140,20 @@ export default function AgendaPoster({ speakers, room }) {
 
     return (
         <div className="flex flex-col items-center py-4 w-full">
-            <button 
-                onClick={downloadJPEG} 
-                className="mb-6 flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold px-6 py-2.5 rounded-xl shadow-sm transition-all"
-            >
-                <Download size={18} /> Download High-Res JPEG
-            </button>
+            <div className="flex gap-4 mb-6">
+                <button 
+                    onClick={downloadJPEG} 
+                    className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-bold px-6 py-2.5 rounded-xl shadow-sm transition-all"
+                >
+                    <Download size={18} /> Download JPEG
+                </button>
+                <button 
+                    onClick={downloadPDF} 
+                    className="flex items-center gap-2 bg-red-700 hover:bg-red-800 text-white font-bold px-6 py-2.5 rounded-xl shadow-sm transition-all"
+                >
+                    <FileText size={18} /> Download High-Res PDF
+                </button>
+            </div>
             
             <div className="w-full flex justify-center" ref={containerRef} style={{ zoom: scale }}>
                 <div 
@@ -130,12 +164,12 @@ export default function AgendaPoster({ speakers, room }) {
                     {/* Header blocks */}
                     <div className="w-full flex flex-col mb-1.5">
                         <div className="bg-[#c00000] text-white text-center py-2.5 font-bold text-[40px] tracking-wider mb-1 border-b-2 border-white">
-                            WL-WH GLOBAL CONGRESS 2026
+                            {"WL-WH GLOBAL CONGRESS 2026".replace(/ /g, '\u00A0')}
                         </div>
                         <div className="bg-[#c00000] text-white flex justify-between px-8 py-2 font-bold text-[24px] border-b-2 border-white">
-                            <div className="uppercase tracking-wide">TENTATIVE AGENDA</div>
-                            <div className="uppercase tracking-wide">{room.toUpperCase()}</div>
-                            <div className="uppercase tracking-wide">DUBAI, UAE</div>
+                            <div className="uppercase tracking-wide">{"TENTATIVE AGENDA".replace(/ /g, '\u00A0')}</div>
+                            <div className="uppercase tracking-wide">{room.toUpperCase().replace(/ /g, '\u00A0')}</div>
+                            <div className="uppercase tracking-wide">{"DUBAI, UAE".replace(/ /g, '\u00A0')}</div>
                         </div>
                     </div>
 
@@ -145,7 +179,7 @@ export default function AgendaPoster({ speakers, room }) {
                         {/* Day 1 Column */}
                         <div className="flex-1 flex flex-col">
                             <div className="bg-[#c00000] text-white text-center py-1.5 font-bold text-[15px] mb-2 border border-[#900000]">
-                                {EVENT_DAYS[0] ? EVENT_DAYS[0].toUpperCase() + ", 2026" : "NOVEMBER-25, 2026"}
+                                {EVENT_DAYS[0] ? (EVENT_DAYS[0].toUpperCase() + ", 2026").replace(/ /g, '\u00A0') : "NOVEMBER-25,\u00A02026"}
                             </div>
                             
                             <div className="flex flex-col flex-1">
@@ -154,7 +188,7 @@ export default function AgendaPoster({ speakers, room }) {
                                     <div className="w-[34px] h-[34px] bg-black rounded-md shrink-0 -ml-[1.5px] border-[1.5px] border-black flex items-center justify-center text-white text-[14px] font-sans">
                                         🎤
                                     </div>
-                                    <div className="flex-1 text-left font-bold text-white text-[13px] uppercase px-3 font-sans overflow-hidden whitespace-nowrap block" style={{ lineHeight: "33px" }}>OPENING CEREMONY</div>
+                                    <div className="flex-1 text-left font-bold text-white text-[13px] uppercase px-3 font-sans overflow-hidden whitespace-nowrap block" style={{ lineHeight: "33px" }}>{"OPENING CEREMONY".replace(/ /g, '\u00A0')}</div>
                                 </div>
                                 {bookableSlots.map(slot => renderSlot(slot, EVENT_DAYS[0]))}
                             </div>
@@ -163,7 +197,7 @@ export default function AgendaPoster({ speakers, room }) {
                         {/* Day 2 Column */}
                         <div className="flex-1 flex flex-col">
                             <div className="bg-[#c00000] text-white text-center py-1.5 font-bold text-[15px] mb-2 border border-[#900000]">
-                                {EVENT_DAYS[1] ? EVENT_DAYS[1].toUpperCase() + ", 2026" : "NOVEMBER-26, 2026"}
+                                {EVENT_DAYS[1] ? (EVENT_DAYS[1].toUpperCase() + ", 2026").replace(/ /g, '\u00A0') : "NOVEMBER-26,\u00A02026"}
                             </div>
                             
                             <div className="flex flex-col flex-1">
@@ -172,7 +206,7 @@ export default function AgendaPoster({ speakers, room }) {
                                     <div className="w-[34px] h-[34px] bg-black rounded-md shrink-0 -ml-[1.5px] border-[1.5px] border-black flex items-center justify-center text-white text-[14px] font-sans">
                                         🎤
                                     </div>
-                                    <div className="flex-1 text-left font-bold text-white text-[13px] uppercase px-3 font-sans overflow-hidden whitespace-nowrap block" style={{ lineHeight: "33px" }}>OPENING CEREMONY</div>
+                                    <div className="flex-1 text-left font-bold text-white text-[13px] uppercase px-3 font-sans overflow-hidden whitespace-nowrap block" style={{ lineHeight: "33px" }}>{"OPENING CEREMONY".replace(/ /g, '\u00A0')}</div>
                                 </div>
                                 {bookableSlots.map(slot => renderSlot(slot, EVENT_DAYS[1]))}
                             </div>
@@ -182,7 +216,7 @@ export default function AgendaPoster({ speakers, room }) {
                         <div className="flex-1 flex flex-col relative bg-slate-900 border-[1.5px] border-black overflow-hidden mb-1.5">
                             {/* Decorative column header inside the frame */}
                             <div className="w-full bg-[#c00000] text-white text-center py-1.5 font-bold text-[15px] border-b border-[#900000] z-30">
-                                NOVEMBER-27, 2026
+                                {"NOVEMBER 27, 2026".replace(/ /g, '\u00A0')}
                             </div>
                             
                             <div className="flex-1 relative">
@@ -191,14 +225,14 @@ export default function AgendaPoster({ speakers, room }) {
                                 {/* Text overlay */}
                                 <div className="absolute top-0 inset-x-0 flex flex-col items-center justify-start z-10 text-center pt-8 bg-gradient-to-b from-black/60 to-transparent pb-16 px-4">
                                     <h1 className="text-white text-[4rem] italic drop-shadow-md leading-none mb-[-15px] z-20 w-full" style={{ textShadow: "3px 3px 6px rgba(0,0,0,0.4)"}}>Speakers</h1>
-                                    <h1 className="text-[#c00000] text-[4.5rem] font-sans font-black tracking-widest drop-shadow-xl z-10 w-full" style={{ textShadow: "3px 3px 6px rgba(0,0,0,0.5)"}}>TOUR</h1>
+                                    <h1 className="text-[#c00000] text-[4.5rem] font-sans font-black tracking-widest drop-shadow-xl z-10 w-full" style={{ textShadow: "3px 3px 6px rgba(0,0,0,0.5)"}}>{"TOUR".replace(/ /g, '\u00A0')}</h1>
                                 </div>
                                 
                                 {/* Center Event Highlights */}
                                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 mt-10 px-8 text-center">
                                     <div className="bg-black/40 backdrop-blur-sm border-[1px] border-white/20 p-8 rounded-2xl shadow-xl w-full">
                                         <h4 className="text-white font-serif italic text-3xl mb-4 drop-shadow-md">
-                                            Leisure & Networking
+                                            {"Leisure \u00A0&\u00A0 Networking"}
                                         </h4>
                                         <div className="w-16 h-[2px] bg-[#c00000] mx-auto mb-4"></div>
                                         <p className="text-white/90 font-sans text-[13px] font-semibold leading-relaxed tracking-wide shadow-black drop-shadow-sm">
@@ -209,8 +243,8 @@ export default function AgendaPoster({ speakers, room }) {
                                 
                                 {/* Bottom Text */}
                                 <div className="absolute bottom-0 inset-x-0 p-6 flex flex-col items-center justify-end z-10 text-center bg-gradient-to-t from-black/90 via-black/50 to-transparent pt-28 pb-8">
-                                    <h3 className="text-white font-serif italic text-[1.6rem] mb-1 leading-tight" style={{ textShadow: "2px 2px 4px rgba(0,0,0,0.8)" }}>Discover Innovation.</h3>
-                                    <p className="text-white/95 text-[0.85rem] font-sans tracking-[0.2em] uppercase font-bold" style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.8)" }}>An unforgettable experience in Dubai</p>
+                                    <h3 className="text-white font-serif italic text-[1.6rem] mb-1 leading-tight" style={{ textShadow: "2px 2px 4px rgba(0,0,0,0.8)" }}>{"Discover\u00A0Innovation."}</h3>
+                                    <p className="text-white/95 text-[0.85rem] font-sans tracking-[0.2em] uppercase font-bold" style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.8)" }}>{"An unforgettable experience in Dubai".replace(/ /g, '\u00A0')}</p>
                                 </div>
                             </div>
                         </div>
