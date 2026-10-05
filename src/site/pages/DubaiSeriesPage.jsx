@@ -436,7 +436,7 @@ export default function DubaiSeriesPage({ onAdminClick }) {
                     </div>
 
                     {/* Toolbar: Search input & counter */}
-                    <div className="sc-speaker-toolbar sc-reveal">
+                    <div className="sc-speaker-toolbar">
                         <div className="sc-search">
                             <Search size={18} />
                             <input
@@ -456,13 +456,13 @@ export default function DubaiSeriesPage({ onAdminClick }) {
 
                     {/* Speaker Cards Grid */}
                     {loadingSpeakers ? (
-                        <div className="sc-speakers sc-reveal">
+                        <div className="sc-speakers">
                             {Array.from({ length: 8 }).map((_, i) => (
                                 <div key={i} className="sc-skeleton" />
                             ))}
                         </div>
                     ) : filteredSpeakers.length === 0 ? (
-                        <div className="sc-empty sc-reveal">
+                        <div className="sc-empty">
                             <Users size={36} style={{ color: "var(--sc-gold)", margin: "0 auto 12px" }} />
                             <h3>No speakers match "{search}"</h3>
                             <p>Try searching with another keyword or clear the search input.</p>
@@ -476,7 +476,7 @@ export default function DubaiSeriesPage({ onAdminClick }) {
                             </button>
                         </div>
                     ) : (
-                        <div className="sc-speakers sc-reveal">
+                        <div className="sc-speakers">
                             {filteredSpeakers.map((spk) => {
                                 const slug = spk.slug || speakerSlug(spk);
                                 const initials = spk.name
@@ -495,7 +495,11 @@ export default function DubaiSeriesPage({ onAdminClick }) {
                                     >
                                         <div className="sc-speaker-photo">
                                             {spk.photoUrl ? (
-                                                <img src={spk.photoUrl} alt={spk.name} loading="lazy" />
+                                                <img
+                                                    src={spk.photoUrl}
+                                                    alt={spk.name}
+                                                    loading="lazy"
+                                                />
                                             ) : (
                                                 <div className="sc-speaker-initials">{initials}</div>
                                             )}
