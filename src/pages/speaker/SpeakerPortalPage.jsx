@@ -447,11 +447,15 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                                         <span>CONFIRMED KEYNOTE SPEAKER</span>
                                     </div>
                                     {currentSpeaker?.country && (
-                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 border border-white/20 text-xs font-semibold text-white shadow-xs backdrop-blur-xs">
+                                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold shadow-xs backdrop-blur-xs border ${
+                                            isActuallyLightMode 
+                                                ? 'bg-slate-900/5 border-slate-900/15 text-slate-700' 
+                                                : 'bg-white/10 border-white/20 text-white'
+                                        }`}>
                                             <img 
                                                 src={getCountryFlagUrl(currentSpeaker.country, "w40")} 
                                                 alt={currentSpeaker.country} 
-                                                className="w-4 h-3 rounded-xs object-cover border border-white/20 shrink-0" 
+                                                className="w-4 h-3 rounded-xs object-cover border border-black/10 shrink-0" 
                                             />
                                             <span>{getCountryName(currentSpeaker.country)}</span>
                                         </div>
@@ -475,11 +479,15 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                                 <div className="mt-4 flex flex-wrap items-center gap-3 animate-fade-in-up" style={{ animationDelay: "0.25s" }}>
                                     <button
                                         onClick={() => handleTabChange("abstract")}
-                                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 transition-all backdrop-blur-md cursor-pointer active:scale-95 group shadow-sm"
+                                        className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer active:scale-95 group shadow-sm ${
+                                            isActuallyLightMode
+                                                ? 'bg-indigo-50/95 hover:bg-indigo-100 text-indigo-950 border-indigo-200/90 shadow-indigo-100/50'
+                                                : 'bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur-md'
+                                        }`}
                                     >
-                                        <FileText size={14} className="text-[#8B9BFF] group-hover:scale-110 transition-transform" />
+                                        <FileText size={15} className={`${isActuallyLightMode ? 'text-indigo-600' : 'text-[#8B9BFF]'} group-hover:scale-110 transition-transform`} />
                                         <span>View Presentation Abstract</span>
-                                        <span className="text-[#8B9BFF] group-hover:translate-x-0.5 transition-transform">→</span>
+                                        <span className={`${isActuallyLightMode ? 'text-indigo-600' : 'text-[#8B9BFF]'} group-hover:translate-x-0.5 transition-transform`}>→</span>
                                     </button>
                                 </div>
                             </div>
