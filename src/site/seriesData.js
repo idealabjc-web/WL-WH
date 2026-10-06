@@ -8,6 +8,7 @@ export const BRAND = {
     domain: "speakerchapters.com",
     tagline: "Every voice writes a new chapter.",
     email: "hello@speakerchapters.com",
+    logo: "/Speaker%20Chapters%20Global%20Series%20Logo%20(2).png",
 };
 
 // Series shown in the header dropdown + home page.

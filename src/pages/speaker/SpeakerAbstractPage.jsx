@@ -16,8 +16,16 @@ export default function SpeakerAbstractPage({
     const sessionTitle = speaker?.sessionTitle || speaker?.session_title || "Keynote Presentation";
     const speakerRole = speaker?.speakerTag || "Keynote Speaker";
     const affiliation = speaker?.team || speaker?.whoseSpeaker || "Official Delegation";
-    const presentationDay = speaker?.day || "October 25, 2026";
-    const timeSlot = speaker?.timeSlot || "10:30 – 10:55";
+    const presentationDay = speaker?.day || "November 25, 2026";
+    const rawTime = speaker?.timeSlot || "10:30 – 10:55";
+    const timeSlot = rawTime.replace(/(\b\d{1,2}):(\d{2})\b/g, (match, h, m) => {
+        let hour = parseInt(h, 10);
+        if (isNaN(hour)) return match;
+        const ampm = hour >= 12 ? "PM" : "AM";
+        const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+        const padHour = String(hour12).padStart(2, "0");
+        return `${padHour}:${m} ${ampm}`;
+    });
     const conferenceRoom = speaker?.conferenceRoom || speaker?.room || "Room 1 - Main Stage";
     const speakerCountry = speaker?.country;
     const abstractUrl = speaker?.abstractUrl || "";
@@ -371,7 +379,7 @@ Keywords: Leadership, Healthcare Innovation, Clinical Governance, Patient Outcom
                                     <span>Peer-reviewed for official publication</span>
                                 </div>
                                 <div className="font-mono text-[11px]">
-                                    WL‑WH Dubai · October 24–26, 2026
+                                    WL‑WH Dubai · November 24–26, 2026
                                 </div>
                             </div>
                         </div>

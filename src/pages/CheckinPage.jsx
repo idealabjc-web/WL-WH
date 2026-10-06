@@ -13,6 +13,54 @@ import { inputCls } from "../components/common/UIAtoms";
 import ProfileCard from "../components/ProfileCard";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
 
+export function formatTimeAmPm(timeStr) {
+    if (!timeStr) return "";
+    if (/am|pm/i.test(timeStr)) return timeStr;
+    return timeStr.replace(/(\b\d{1,2}):(\d{2})\b/g, (match, h, m) => {
+        const hour = parseInt(h, 10);
+        if (isNaN(hour)) return match;
+        const ampm = hour >= 12 ? "PM" : "AM";
+        const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+        const padHour = String(hour12).padStart(2, "0");
+        return `${padHour}:${m} ${ampm}`;
+    });
+}
+
+export function formatFullDate(d) {
+    if (!d) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+        const [y, m, day] = d.split("-").map(Number);
+        const dt = new Date(y, m - 1, day);
+        return dt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    }
+    return d;
+}
+
+export function formatStayDates(inDate, outDate, accommodationStatus) {
+    if (accommodationStatus === "Without Accommodation") {
+        return "Without Accommodation";
+    }
+    const parse = (d) => {
+        if (!d) return null;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+            const [y, m, day] = d.split("-").map(Number);
+            const dt = new Date(y, m - 1, day);
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            return `${monthNames[dt.getMonth()]} ${dt.getDate()}`;
+        }
+        return d;
+    };
+    const checkinFormatted = parse(inDate);
+    const checkoutFormatted = parse(outDate);
+
+    if (checkinFormatted && checkoutFormatted) {
+        return `${checkinFormatted} – ${checkoutFormatted}`;
+    }
+    if (checkinFormatted) return `In: ${checkinFormatted}`;
+    if (checkoutFormatted) return `Out: ${checkoutFormatted}`;
+    return "Nov 24 – Nov 27";
+}
+
 export default function CheckinPage({ 
     speakers, 
     onConfirm, 
@@ -505,8 +553,11 @@ export default function CheckinPage({
                                                     <span className="w-1.5 h-1.5 rounded-full bg-[#4457F5] shadow-[0_0_6px_#4457F5]" />
                                                     <span>Day &amp; Time</span>
                                                 </div>
-                                                <div className="text-xs sm:text-sm font-bold text-white mt-1 truncate">
-                                                    {mySpeaker.day ? `${mySpeaker.day}${mySpeaker.timeSlot || mySpeaker.time_slot ? ` · ${mySpeaker.timeSlot || mySpeaker.time_slot}` : ""}` : "November 25 · 10:30 – 10:55"}
+                                                <div 
+                                                    className="text-xs sm:text-sm font-bold text-white mt-1 truncate"
+                                                    title={mySpeaker.day ? `${mySpeaker.day}${mySpeaker.timeSlot || mySpeaker.time_slot ? ` · ${formatTimeAmPm(mySpeaker.timeSlot || mySpeaker.time_slot)}` : ""}` : "November 25 · 10:30 AM – 10:55 AM"}
+                                                >
+                                                    {mySpeaker.day ? `${mySpeaker.day}${mySpeaker.timeSlot || mySpeaker.time_slot ? ` · ${formatTimeAmPm(mySpeaker.timeSlot || mySpeaker.time_slot)}` : ""}` : "November 25 · 10:30 AM – 10:55 AM"}
                                                 </div>
                                             </div>
 
@@ -515,7 +566,7 @@ export default function CheckinPage({
                                                     <span className="w-1.5 h-1.5 rounded-full bg-[#3B6CF6] shadow-[0_0_6px_#3B6CF6]" />
                                                     <span>Venue / Stage</span>
                                                 </div>
-                                                <div className="text-xs sm:text-sm font-bold text-white mt-1 truncate">
+                                                <div className="text-xs sm:text-sm font-bold text-white mt-1 truncate" title={`${mySpeaker.conferenceRoom || mySpeaker.room || "Room 1"} · Holiday Inn Express`}>
                                                     {mySpeaker.conferenceRoom || mySpeaker.room || "Room 1"} · Holiday Inn Express
                                                 </div>
                                             </div>
@@ -525,20 +576,52 @@ export default function CheckinPage({
                                                     <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shadow-[0_0_6px_#c084fc]" />
                                                     <span>Hotel Stay</span>
                                                 </div>
-                                                <div className="text-xs sm:text-sm font-bold text-white mt-1 truncate">
-                                                    {mySpeaker.accommodationStatus === "Without Accommodation" ? "Without Accommodation" : 
-                                                     (mySpeaker.hotelRoom ? (mySpeaker.hotelRoom.toLowerCase().startsWith("room") ? mySpeaker.hotelRoom : `Room ${mySpeaker.hotelRoom}`) : 
-                                                     (mySpeaker.nights ? `Stay: ${mySpeaker.nights} nights` : (mySpeaker.room || "Room 1999")))}
+                                                <div 
+                                                    className="text-xs sm:text-sm font-bold text-white mt-1 truncate"
+                                                    title={(() => {
+                                                        if (mySpeaker.accommodationStatus === "Without Accommodation") return "Without Accommodation";
+                                                        const rawRoom = mySpeaker.hotelRoom || mySpeaker.hotel_room;
+                                                        const roomPart = rawRoom 
+                                                            ? (rawRoom.toLowerCase().startsWith("room") ? rawRoom : `Room ${rawRoom}`)
+                                                            : "Room Assigned at Check-in";
+                                                        const stayPart = mySpeaker.nights ? `Stay: ${mySpeaker.nights} nights` : "Stay: Confirmed";
+                                                        return `${roomPart} / ${stayPart}`;
+                                                    })()}
+                                                >
+                                                    {(() => {
+                                                        if (mySpeaker.accommodationStatus === "Without Accommodation") return "Without Accommodation";
+                                                        const rawRoom = mySpeaker.hotelRoom || mySpeaker.hotel_room;
+                                                        const roomPart = rawRoom 
+                                                            ? (rawRoom.toLowerCase().startsWith("room") ? rawRoom : `Room ${rawRoom}`)
+                                                            : "Room Assigned at Check-in";
+                                                        const stayPart = mySpeaker.nights ? `Stay: ${mySpeaker.nights} nights` : "Stay: Confirmed";
+                                                        return `${roomPart} / ${stayPart}`;
+                                                    })()}
                                                 </div>
                                             </div>
 
                                             <div className="min-w-0 border-t border-[#1E2A5A]/60 pt-2.5 sm:pt-0 sm:border-t-0 md:border-l md:border-[#1E2A5A]/80 md:pl-5 group cursor-default transition-all duration-300 hover:translate-x-1">
                                                 <div className="text-[10px] font-bold uppercase tracking-wider text-[#8B9BFF] flex items-center gap-1.5 group-hover:text-white transition-colors">
                                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
-                                                    <span>Dietary</span>
+                                                    <span>Check-in / Check-out</span>
                                                 </div>
-                                                <div className="text-xs sm:text-sm font-bold text-white mt-1 truncate">
-                                                    {mySpeaker.diet || "Standard (No restrictions)"}
+                                                <div 
+                                                    className="text-xs sm:text-sm font-bold text-white mt-1 truncate"
+                                                    title={(() => {
+                                                        if (mySpeaker.accommodationStatus === "Without Accommodation") return "Accommodation not included";
+                                                        const inD = mySpeaker.checkinDate || mySpeaker.checkin_date;
+                                                        const outD = mySpeaker.checkoutDate || mySpeaker.checkout_date;
+                                                        if (inD || outD) {
+                                                            return `Check-in: ${formatFullDate(inD) || "Nov 24, 2026"} · Check-out: ${formatFullDate(outD) || "Nov 27, 2026"}`;
+                                                        }
+                                                        return "Check-in: Nov 24, 2026 · Check-out: Nov 27, 2026";
+                                                    })()}
+                                                >
+                                                    {formatStayDates(
+                                                        mySpeaker.checkinDate || mySpeaker.checkin_date,
+                                                        mySpeaker.checkoutDate || mySpeaker.checkout_date,
+                                                        mySpeaker.accommodationStatus
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>

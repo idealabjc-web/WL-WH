@@ -124,7 +124,7 @@ export default function SpeakerCertificatePage({ speaker = {} }) {
                                 <div className="text-right">
                                     <div className="h-0.5 w-28 bg-[#4457F5] mb-1 ml-auto"></div>
                                     <div className="text-[10px] font-bold text-white">DATE OF ISSUANCE</div>
-                                    <div className="text-[9px] text-[#9AA5CC]">October 26, 2026</div>
+                                    <div className="text-[9px] text-[#9AA5CC]">November 26, 2026</div>
                                 </div>
                             </div>
                         </div>

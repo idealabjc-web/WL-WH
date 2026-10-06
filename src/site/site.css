@@ -99,7 +99,29 @@
   border-bottom-color: var(--sc-border);
 }
 .sc-header-inner { display: flex; align-items: center; justify-content: space-between; height: 78px; gap: 24px; }
-.sc-logo { display: flex; align-items: center; gap: 12px; }
+.sc-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+.sc-logo-img {
+  height: 58px;
+  width: auto;
+  max-width: 210px;
+  object-fit: contain;
+  display: block;
+  transition: transform 0.3s var(--sc-ease), filter 0.3s;
+  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.35));
+}
+.sc-logo:hover .sc-logo-img {
+  transform: scale(1.04);
+}
+.sc-logo-img-footer {
+  height: 72px;
+  max-width: 240px;
+}
+@media (max-width: 640px) {
+  .sc-logo-img {
+    height: 46px;
+    max-width: 160px;
+  }
+}
 .sc-logo-mark {
   position: relative; width: 42px; height: 42px; border-radius: 12px;
   display: grid; place-items: center;

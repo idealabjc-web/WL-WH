@@ -8,7 +8,7 @@ import {
     Camera, Upload, Image as ImageIcon, X, FileText
 } from "lucide-react";
 
-import CheckinPage from "../CheckinPage";
+import CheckinPage, { formatStayDates } from "../CheckinPage";
 import DashboardPage from "../DashboardPage";
 import FeedbackPage from "../FeedbackPage";
 import Toast from "../../components/common/Toast";
@@ -266,7 +266,11 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
     const eventDay = currentSpeaker.day ? `${currentSpeaker.day}${currentSpeaker.timeSlot ? ` · ${currentSpeaker.timeSlot}` : ""}` : "November 25 · 10:30 – 10:55";
     const venueText = `${currentSpeaker.conferenceRoom || currentSpeaker.room || "Room 1"} · Holiday Inn Express Dubai Airport`;
     const hotelRoomText = currentSpeaker.hotelRoom ? (currentSpeaker.hotelRoom.toLowerCase().startsWith("room") ? currentSpeaker.hotelRoom : `Room ${currentSpeaker.hotelRoom}`) : (currentSpeaker.room || "Room 1999");
-    const dietaryText = currentSpeaker.diet || "No preference";
+    const stayDatesText = formatStayDates(
+        currentSpeaker.checkinDate || currentSpeaker.checkin_date,
+        currentSpeaker.checkoutDate || currentSpeaker.checkout_date,
+        currentSpeaker.accommodationStatus
+    );
 
     const isActuallyLightMode = !isDarkMode && currentTheme === 'theme-default';
 
@@ -516,7 +520,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                         <div className="relative z-10 w-full max-w-7xl mx-auto pb-4 pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 text-xs font-semibold text-[#B4BEE6]">
                             <div className="flex items-center gap-2">
                                 <Calendar size={14} className="text-[#8B9BFF]" />
-                                <span>October 24–26, 2026</span>
+                                <span>November 24–26, 2026</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <MapPin size={14} className="text-[#8B9BFF]" />

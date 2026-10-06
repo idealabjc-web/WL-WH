@@ -224,6 +224,126 @@ export default function DubaiSeriesPage({ onAdminClick }) {
                 </div>
             </section>
 
+            {/* ─── CONFIRMED SPEAKERS DIRECTORY & LOGIN ────────── */}
+            <section id="speakers" className="sc-section">
+                <div className="sc-container">
+                    <div style={{ textAlign: "center", marginBottom: "30px" }} className="sc-reveal">
+                        <span className="sc-eyebrow">KEYNOTE VOICES</span>
+                        <h2 className="sc-section-title sc-display">
+                            Confirmed <span className="sc-gold-text">Speakers</span>
+                        </h2>
+                        <p className="sc-section-lead" style={{ margin: "0 auto" }}>
+                            Click on your speaker card to open your dedicated individual portal. Sign in with the
+                            credentials provided by our team to view your presentation slot timings, hotel room number,
+                            presentation abstract, and digital credentials.
+                        </p>
+                    </div>
+
+                    {/* Toolbar: Search input & counter */}
+                    <div className="sc-speaker-toolbar">
+                        <div className="sc-search">
+                            <Search size={18} />
+                            <input
+                                type="text"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Search by speaker name, topic, or country..."
+                            />
+                        </div>
+
+                        <div style={{ fontSize: "14px", color: "var(--sc-muted)", display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span>Showing</span>
+                            <b style={{ color: "var(--sc-gold)" }}>{filteredSpeakers.length}</b>
+                            <span>of {speakers.length} confirmed speakers</span>
+                        </div>
+                    </div>
+
+                    {/* Speaker Cards Grid */}
+                    {loadingSpeakers ? (
+                        <div className="sc-speakers">
+                            {Array.from({ length: 8 }).map((_, i) => (
+                                <div key={i} className="sc-skeleton" />
+                            ))}
+                        </div>
+                    ) : filteredSpeakers.length === 0 ? (
+                        <div className="sc-empty">
+                            <Users size={36} style={{ color: "var(--sc-gold)", margin: "0 auto 12px" }} />
+                            <h3>No speakers match "{search}"</h3>
+                            <p>Try searching with another keyword or clear the search input.</p>
+                            <button
+                                type="button"
+                                onClick={() => setSearch("")}
+                                className="sc-btn sc-btn-ghost"
+                                style={{ marginTop: "16px", height: "40px", padding: "0 20px", fontSize: "13px" }}
+                            >
+                                Clear Search
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="sc-speakers">
+                            {filteredSpeakers.map((spk) => {
+                                const slug = spk.slug || speakerSlug(spk);
+                                const initials = spk.name
+                                    .split(" ")
+                                    .map((n) => n[0])
+                                    .slice(0, 2)
+                                    .join("")
+                                    .toUpperCase();
+
+                                return (
+                                    <div
+                                        key={spk.id}
+                                        className="sc-speaker"
+                                        onClick={() => navigate(`/dubai-series/${slug}`)}
+                                        title={`Open portal for ${spk.name}`}
+                                    >
+                                        <div className="sc-speaker-photo">
+                                            {spk.photoUrl ? (
+                                                <img
+                                                    src={spk.photoUrl}
+                                                    alt={spk.name}
+                                                    loading="lazy"
+                                                />
+                                            ) : (
+                                                <div className="sc-speaker-initials">{initials}</div>
+                                            )}
+
+                                            {/* Country flag pill */}
+                                            {spk.country && (
+                                                <div className="sc-speaker-flag" title={getCountryName(spk.country)}>
+                                                    <img
+                                                        src={getCountryFlagUrl(spk.country, "w80")}
+                                                        alt={spk.country}
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {/* Hover lock badge */}
+                                            <div className="sc-speaker-lock">
+                                                <Lock size={12} />
+                                                <span>Access Portal</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="sc-speaker-body">
+                                            <div className="sc-speaker-name">{spk.name}</div>
+                                            <div className="sc-speaker-talk">
+                                                {spk.talk || "Confirmed Keynote Presentation"}
+                                            </div>
+
+                                            <div style={{ marginTop: "12px", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "12px", color: "var(--sc-gold)", fontWeight: 600 }}>
+                                                <span>Personal Portal</span>
+                                                <ArrowRight size={13} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            </section>
+
             {/* ─── ABOUT THE EVENT ─────────────────────────────── */}
             <section id="event-details" className="sc-section">
                 <div className="sc-container">
@@ -417,126 +537,6 @@ export default function DubaiSeriesPage({ onAdminClick }) {
                             </figure>
                         ))}
                     </div>
-                </div>
-            </section>
-
-            {/* ─── CONFIRMED SPEAKERS DIRECTORY & LOGIN ────────── */}
-            <section id="speakers" className="sc-section">
-                <div className="sc-container">
-                    <div style={{ textAlign: "center", marginBottom: "30px" }} className="sc-reveal">
-                        <span className="sc-eyebrow">KEYNOTE VOICES</span>
-                        <h2 className="sc-section-title sc-display">
-                            Confirmed <span className="sc-gold-text">Speakers</span>
-                        </h2>
-                        <p className="sc-section-lead" style={{ margin: "0 auto" }}>
-                            Click on your speaker card to open your dedicated individual portal. Sign in with the
-                            credentials provided by our team to view your presentation slot timings, hotel room number,
-                            presentation abstract, and digital credentials.
-                        </p>
-                    </div>
-
-                    {/* Toolbar: Search input & counter */}
-                    <div className="sc-speaker-toolbar">
-                        <div className="sc-search">
-                            <Search size={18} />
-                            <input
-                                type="text"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Search by speaker name, topic, or country..."
-                            />
-                        </div>
-
-                        <div style={{ fontSize: "14px", color: "var(--sc-muted)", display: "flex", alignItems: "center", gap: "8px" }}>
-                            <span>Showing</span>
-                            <b style={{ color: "var(--sc-gold)" }}>{filteredSpeakers.length}</b>
-                            <span>of {speakers.length} confirmed speakers</span>
-                        </div>
-                    </div>
-
-                    {/* Speaker Cards Grid */}
-                    {loadingSpeakers ? (
-                        <div className="sc-speakers">
-                            {Array.from({ length: 8 }).map((_, i) => (
-                                <div key={i} className="sc-skeleton" />
-                            ))}
-                        </div>
-                    ) : filteredSpeakers.length === 0 ? (
-                        <div className="sc-empty">
-                            <Users size={36} style={{ color: "var(--sc-gold)", margin: "0 auto 12px" }} />
-                            <h3>No speakers match "{search}"</h3>
-                            <p>Try searching with another keyword or clear the search input.</p>
-                            <button
-                                type="button"
-                                onClick={() => setSearch("")}
-                                className="sc-btn sc-btn-ghost"
-                                style={{ marginTop: "16px", height: "40px", padding: "0 20px", fontSize: "13px" }}
-                            >
-                                Clear Search
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="sc-speakers">
-                            {filteredSpeakers.map((spk) => {
-                                const slug = spk.slug || speakerSlug(spk);
-                                const initials = spk.name
-                                    .split(" ")
-                                    .map((n) => n[0])
-                                    .slice(0, 2)
-                                    .join("")
-                                    .toUpperCase();
-
-                                return (
-                                    <div
-                                        key={spk.id}
-                                        className="sc-speaker"
-                                        onClick={() => navigate(`/dubai-series/${slug}`)}
-                                        title={`Open portal for ${spk.name}`}
-                                    >
-                                        <div className="sc-speaker-photo">
-                                            {spk.photoUrl ? (
-                                                <img
-                                                    src={spk.photoUrl}
-                                                    alt={spk.name}
-                                                    loading="lazy"
-                                                />
-                                            ) : (
-                                                <div className="sc-speaker-initials">{initials}</div>
-                                            )}
-
-                                            {/* Country flag pill */}
-                                            {spk.country && (
-                                                <div className="sc-speaker-flag" title={getCountryName(spk.country)}>
-                                                    <img
-                                                        src={getCountryFlagUrl(spk.country, "w80")}
-                                                        alt={spk.country}
-                                                    />
-                                                </div>
-                                            )}
-
-                                            {/* Hover lock badge */}
-                                            <div className="sc-speaker-lock">
-                                                <Lock size={12} />
-                                                <span>Access Portal</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="sc-speaker-body">
-                                            <div className="sc-speaker-name">{spk.name}</div>
-                                            <div className="sc-speaker-talk">
-                                                {spk.talk || "Confirmed Keynote Presentation"}
-                                            </div>
-
-                                            <div style={{ marginTop: "12px", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "12px", color: "var(--sc-gold)", fontWeight: 600 }}>
-                                                <span>Personal Portal</span>
-                                                <ArrowRight size={13} />
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
                 </div>
             </section>
 

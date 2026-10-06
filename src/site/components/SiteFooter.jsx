@@ -12,15 +12,13 @@ export default function SiteFooter({ onAdminClick }) {
                 <div className="sc-footer-grid">
                     {/* Brand Column */}
                     <div>
-                        <div className="sc-logo" style={{ marginBottom: "16px" }}>
-                            <div className="sc-logo-mark">
-                                <span>S</span>
-                            </div>
-                            <div className="sc-logo-text">
-                                <strong>Speaker Chapters</strong>
-                                <span>Global Series</span>
-                            </div>
-                        </div>
+                        <Link to="/" className="sc-logo" style={{ marginBottom: "18px", display: "inline-block" }}>
+                            <img
+                                src="/Speaker%20Chapters%20Global%20Series%20Logo%20(2).png"
+                                alt="Speaker Chapters Global Series"
+                                className="sc-logo-img sc-logo-img-footer"
+                            />
+                        </Link>
                         <p style={{ color: "var(--sc-muted)", fontSize: "15px", lineHeight: "1.7", maxWidth: "360px" }}>
                             {BRAND.tagline} Empowering international thought leaders, researchers, and pioneers across premier global summit chapters.
                         </p>

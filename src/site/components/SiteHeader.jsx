@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, navigate } from "../router";
 import { BRAND, SERIES } from "../seriesData";
-import { ChevronDown, Sparkles, Menu, X, ArrowRight, Shield } from "lucide-react";
+import { ChevronDown, Sparkles, Menu, X, ArrowRight } from "lucide-react";
 
 export default function SiteHeader({ activeSeries = null, onAdminClick }) {
     const [scrolled, setScrolled] = useState(false);
@@ -29,13 +29,11 @@ export default function SiteHeader({ activeSeries = null, onAdminClick }) {
                 <div className="sc-header-inner">
                     {/* Brand Logo */}
                     <Link to="/" className="sc-logo" aria-label="Speaker Chapters Home">
-                        <div className="sc-logo-mark">
-                            <span>S</span>
-                        </div>
-                        <div className="sc-logo-text">
-                            <strong>Speaker Chapters</strong>
-                            <span>Global Series</span>
-                        </div>
+                        <img
+                            src="/Speaker%20Chapters%20Global%20Series%20Logo%20(2).png"
+                            alt="Speaker Chapters Global Series"
+                            className="sc-logo-img"
+                        />
                     </Link>
 
                     {/* Desktop Navigation */}
@@ -107,19 +105,6 @@ export default function SiteHeader({ activeSeries = null, onAdminClick }) {
 
                     {/* Right Action buttons */}
                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        {onAdminClick && (
-                            <button
-                                type="button"
-                                onClick={onAdminClick}
-                                className="sc-btn sc-btn-ghost"
-                                style={{ height: "42px", padding: "0 16px", fontSize: "13px" }}
-                                title="Staff & Organizers Login"
-                            >
-                                <Shield size={14} />
-                                <span className="hidden sm:inline">Staff Portal</span>
-                            </button>
-                        )}
-
                         <Link
                             to="/dubai-series"
                             className="sc-btn sc-btn-gold sc-header-cta"
@@ -186,16 +171,6 @@ export default function SiteHeader({ activeSeries = null, onAdminClick }) {
                         <Link to="/dubai-series" className="sc-btn sc-btn-gold" onClick={() => setMobileOpen(false)}>
                             Explore Dubai Series
                         </Link>
-                        {onAdminClick && (
-                            <button
-                                type="button"
-                                onClick={() => { setMobileOpen(false); onAdminClick(); }}
-                                className="sc-btn sc-btn-ghost"
-                            >
-                                <Shield size={15} />
-                                Staff & Admin Login
-                            </button>
-                        )}
                     </div>
                 </div>
             </div>
