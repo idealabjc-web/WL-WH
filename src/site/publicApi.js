@@ -36,41 +36,53 @@ export async function fetchPublicSpeakers() {
 }
 
 // Speaker login: identifier = email OR Speaker ID; password = access code (portal token) or set password.
-export async function loginSpeaker(identifier, password) {
+export async function loginSpeaker(identifier, password, targetSpeakerId = null) {
     if (!supabase) throw new Error("Database is not connected.");
     const id = identifier.trim();
     const pw = password.trim();
     if (!id || !pw) throw new Error("Please enter your credentials.");
 
     let query = supabase.from("speakers").select("*, sessions(*), accommodations(*), attendance(*)");
-    query = id.includes("@") ? query.ilike("email", id) : query.eq("id", id.toUpperCase());
-    const { data, error } = await query.limit(1).maybeSingle();
+    if (targetSpeakerId) {
+        query = query.eq("id", targetSpeakerId);
+    } else if (id.includes("@")) {
+        query = query.ilike("email", id);
+    } else {
+        query = query.eq("id", id.toUpperCase());
+    }
+    const { data, error } = await query;
 
     if (error) throw new Error("Unable to sign in right now. Please try again.");
-    if (!data) throw new Error("We couldn't find a speaker with those details.");
+    const records = Array.isArray(data) ? data : (data ? [data] : []);
+    if (records.length === 0) throw new Error("We couldn't find a speaker with those details.");
 
     const DEFAULT_SPEAKER_PASS = (import.meta.env.VITE_SPEAKER_DEFAULT_PASSWORD || "dubai2026").toLowerCase();
 
-    // 1. Check if password matches their unique portal_token
-    const tokenOk = !!data.portal_token && pw.toUpperCase() === String(data.portal_token).toUpperCase();
+    // Check credentials against returned records (handles multiple accounts with same email)
+    let matchedRecord = null;
+    for (const r of records) {
+        const tokenOk = !!r.portal_token && pw.toUpperCase() === String(r.portal_token).toUpperCase();
+        const idOk = pw.toUpperCase() === String(r.id).toUpperCase();
+        const defaultOk = pw.toLowerCase() === DEFAULT_SPEAKER_PASS;
+        let hashOk = false;
+        if (r.password_hash) {
+            try { hashOk = bcrypt.compareSync(pw, r.password_hash); } catch { hashOk = false; }
+        }
 
-    // 2. Check if password matches their Speaker ID (e.g., SPK01)
-    const idOk = pw.toUpperCase() === String(data.id).toUpperCase();
-
-    // 3. Check if password matches event default password (dubai2026)
-    const defaultOk = pw.toLowerCase() === DEFAULT_SPEAKER_PASS;
-
-    // 4. Check custom hashed password (if any)
-    let hashOk = false;
-    if (data.password_hash) {
-        try { hashOk = bcrypt.compareSync(pw, data.password_hash); } catch { hashOk = false; }
+        if (tokenOk || idOk || hashOk) {
+            matchedRecord = r;
+            break;
+        }
+        if (defaultOk && !matchedRecord) {
+            matchedRecord = r;
+        }
     }
 
-    if (!tokenOk && !idOk && !defaultOk && !hashOk) {
+    if (!matchedRecord) {
         throw new Error("Incorrect access code. Please use your portal token, Speaker ID, or the event password (dubai2026).");
     }
 
-    return rowToSpeaker(data);
+    return rowToSpeaker(matchedRecord);
 }
 
 // Magic-link login (?s=ID&t=TOKEN) — kept for links already sent to speakers.

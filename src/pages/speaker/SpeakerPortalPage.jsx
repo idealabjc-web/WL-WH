@@ -5,7 +5,7 @@ import {
     ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, 
     Sparkles, CheckCircle2, Megaphone, Award,
     Sun, Moon, BookOpen, TrendingUp, Star,
-    Camera, Upload, Image as ImageIcon, X, FileText
+    Camera, Upload, Image as ImageIcon, X, FileText, Bus
 } from "lucide-react";
 
 import CheckinPage, { formatStayDates } from "../CheckinPage";
@@ -149,7 +149,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
 
     // Derived active speaker from live list or fallback to initial speaker prop
     const currentSpeaker = (speakers && speakers.length > 0
-        ? speakers.find(s => s.id === speaker?.id || (s.email && speaker?.email && s.email.toLowerCase() === speaker.email.toLowerCase()))
+        ? (speakers.find(s => s.id === speaker?.id) || speaker)
         : null) || speaker || {};
 
     const confirmCheckin = async (id, notes) => {
@@ -468,9 +468,9 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
 
                                 {/* Compact Balanced Headline without large gap */}
                                 <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight text-white leading-tight animate-fade-in-up">
-                                    Welcome,{" "}
-                                    <span className="bg-gradient-to-r from-white via-slate-100 to-[#8B9BFF] bg-clip-text text-transparent">
-                                        {firstName}
+                                    Welcome,
+                                    <span className="block mt-1 sm:mt-1.5 bg-gradient-to-r from-white via-slate-100 to-[#8B9BFF] bg-clip-text text-transparent">
+                                        {speakerName}
                                     </span>
                                 </h1>
 
@@ -628,6 +628,16 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                                             loading="lazy" 
                                             referrerPolicy="no-referrer-when-downgrade"
                                         />
+                                    </div>
+
+                                    {/* Shuttle Service Notice below Map */}
+                                    <div className="mt-3.5 p-3 rounded-xl bg-[#050A1F]/70 border border-[#1E2A5A] flex items-center gap-2.5 text-xs text-[#d2d6ea]">
+                                        <span className="w-6 h-6 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+                                            <Bus size={13} />
+                                        </span>
+                                        <span className="leading-snug">
+                                            <b className="text-white font-semibold">Note:</b> Complimentary shuttle service will be available from Dubai International Airport to the hotel.
+                                        </span>
                                     </div>
                                 </div>
 

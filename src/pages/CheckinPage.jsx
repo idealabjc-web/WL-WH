@@ -97,7 +97,7 @@ export default function CheckinPage({
     const speakersRef = useRef(speakers);
 
     const mySpeaker = currentSpeaker 
-        ? (speakers.find(s => s.id === currentSpeaker.id || (s.email && currentSpeaker.email && s.email.toLowerCase() === currentSpeaker.email.toLowerCase())) || currentSpeaker) 
+        ? (speakers.find(s => s.id === currentSpeaker.id) || currentSpeaker) 
         : null;
 
     const [qrDataUrl, setQrDataUrl] = useState(mySpeaker?.qrUrl || "");

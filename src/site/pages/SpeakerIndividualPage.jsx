@@ -58,7 +58,7 @@ export default function SpeakerIndividualPage({
                     if (matched) {
                         const speakerObj = rowToSpeaker(matched);
                         setTargetSpeaker(speakerObj);
-                        // Pre-populate identifier with their email or ID if available
+                        // Pre-populate identifier with their registered email if available, otherwise their ID
                         if (speakerObj.email) setIdentifier(speakerObj.email);
                         else if (speakerObj.id) setIdentifier(speakerObj.id);
                     }
@@ -81,14 +81,14 @@ export default function SpeakerIndividualPage({
         session &&
         (session.type === "admin" ||
             (session.type === "speaker" &&
-                (slugify(session.user?.name) === slug ||
-                    session.user?.id?.toLowerCase() === slug.toLowerCase() ||
-                    (targetSpeaker && session.user?.id === targetSpeaker.id))));
+                (targetSpeaker
+                    ? session.user?.id === targetSpeaker.id
+                    : (slugify(session.user?.name) === slug || session.user?.id?.toLowerCase() === slug.toLowerCase())
+                )));
 
     // If authorized, show the full speaker portal directly!
     if (isAuthorized) {
-        const activeSpeaker =
-            session.type === "speaker" ? session.user : targetSpeaker || session.user;
+        const activeSpeaker = targetSpeaker || session.user;
         return (
             <div className="sc-page">
                 {/* Notice bar showing current personalized URL */}
@@ -138,7 +138,7 @@ export default function SpeakerIndividualPage({
         setLoadingLogin(true);
 
         try {
-            const speakerData = await loginSpeaker(identifier, password);
+            const speakerData = await loginSpeaker(identifier, password, targetSpeaker?.id);
 
             // Save session
             const newSession = { type: "speaker", user: speakerData };
