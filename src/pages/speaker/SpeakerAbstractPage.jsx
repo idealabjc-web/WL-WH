@@ -5,6 +5,7 @@ import {
     Award, Tag, Share2, Check, Calendar, Clock, MapPin, User
 } from "lucide-react";
 import { getCountryFlagUrl, getCountryName } from "../../utils/countryFlags";
+import { formatTimeAmPm } from "../CheckinPage";
 
 export default function SpeakerAbstractPage({ 
     speaker = {}, 
@@ -29,6 +30,20 @@ export default function SpeakerAbstractPage({
     const conferenceRoom = speaker?.conferenceRoom || speaker?.room || "Room 1 - Main Stage";
     const speakerCountry = speaker?.country;
     const abstractUrl = speaker?.abstractUrl || "";
+
+    const abstractSessions = useMemo(() => {
+        if (Array.isArray(speaker?.sessions) && speaker.sessions.length > 0) {
+            return speaker.sessions;
+        }
+        if (speaker?.day || speaker?.timeSlot || speaker?.conferenceRoom) {
+            return [{
+                day: presentationDay,
+                timeSlot,
+                conferenceRoom
+            }];
+        }
+        return [];
+    }, [speaker, presentationDay, timeSlot, conferenceRoom]);
 
     // URLs to guarantee opening strictly in PDF format (handles both direct PDF and docx/doc via high-performance viewer)
     const isDirectPdf = abstractUrl.toLowerCase().endsWith(".pdf");
@@ -258,36 +273,70 @@ Keywords: Leadership, Healthcare Innovation, Clinical Governance, Patient Outcom
                             </>
                         )}
 
-                        <div className="hidden md:flex items-center gap-3 pl-2 border-l border-slate-300 dark:border-slate-700 text-xs">
-                            <span className="flex items-center gap-1.5 text-indigo-400">
-                                <Calendar size={13} />
-                                <span className={isDarkMode ? 'text-[#B4BEE6]' : 'text-slate-700'}>{presentationDay}</span>
-                            </span>
-                            <span className="flex items-center gap-1.5 text-indigo-400">
-                                <Clock size={13} />
-                                <span className={isDarkMode ? 'text-[#B4BEE6]' : 'text-slate-700'}>{timeSlot}</span>
-                            </span>
-                            <span className="flex items-center gap-1.5 text-indigo-400">
-                                <MapPin size={13} />
-                                <span className={isDarkMode ? 'text-[#B4BEE6]' : 'text-slate-700'}>{conferenceRoom}</span>
-                            </span>
-                        </div>
+                        {abstractSessions.length > 1 ? (
+                            <div className="hidden lg:flex flex-wrap items-center gap-2 pl-2 border-l border-slate-300 dark:border-slate-700 text-xs">
+                                <span className="font-bold text-[#8B9BFF] uppercase text-[10px] tracking-wider mr-1">
+                                    {abstractSessions.length} Slots:
+                                </span>
+                                {abstractSessions.map((s, idx) => (
+                                    <span key={idx} className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg border text-[11px] font-semibold ${isDarkMode ? 'bg-[#050A1F] border-[#1E2A5A] text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-800'}`}>
+                                        <span className="text-[#8B9BFF] font-bold">Slot {idx + 1}:</span>
+                                        <span>{s.day}</span>
+                                        <span className="text-emerald-400 font-medium">{formatTimeAmPm(s.timeSlot || s.time_slot)}</span>
+                                        <span className="opacity-75">({s.conferenceRoom || s.conference_room || "Room 1"})</span>
+                                    </span>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="hidden md:flex items-center gap-3 pl-2 border-l border-slate-300 dark:border-slate-700 text-xs">
+                                <span className="flex items-center gap-1.5 text-indigo-400">
+                                    <Calendar size={13} />
+                                    <span className={isDarkMode ? 'text-[#B4BEE6]' : 'text-slate-700'}>{presentationDay}</span>
+                                </span>
+                                <span className="flex items-center gap-1.5 text-indigo-400">
+                                    <Clock size={13} />
+                                    <span className={isDarkMode ? 'text-[#B4BEE6]' : 'text-slate-700'}>{timeSlot}</span>
+                                </span>
+                                <span className="flex items-center gap-1.5 text-indigo-400">
+                                    <MapPin size={13} />
+                                    <span className={isDarkMode ? 'text-[#B4BEE6]' : 'text-slate-700'}>{conferenceRoom}</span>
+                                </span>
+                            </div>
+                        )}
                     </div>
 
                     {/* Mobile Schedule Row */}
-                    <div className="flex md:hidden flex-wrap items-center gap-3 mt-3 pt-3 border-t border-slate-200 dark:border-[#1E2A5A] text-xs">
-                        <span className="flex items-center gap-1.5 text-indigo-400">
-                            <Calendar size={13} />
-                            <span className={isDarkMode ? 'text-[#B4BEE6]' : 'text-slate-700'}>{presentationDay}</span>
-                        </span>
-                        <span className="flex items-center gap-1.5 text-indigo-400">
-                            <Clock size={13} />
-                            <span className={isDarkMode ? 'text-[#B4BEE6]' : 'text-slate-700'}>{timeSlot}</span>
-                        </span>
-                        <span className="flex items-center gap-1.5 text-indigo-400">
-                            <MapPin size={13} />
-                            <span className={isDarkMode ? 'text-[#B4BEE6]' : 'text-slate-700'}>{conferenceRoom}</span>
-                        </span>
+                    <div className="flex lg:hidden flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-200 dark:border-[#1E2A5A] text-xs">
+                        {abstractSessions.length > 1 ? (
+                            <>
+                                <div className="w-full text-[10px] font-bold uppercase tracking-wider text-[#8B9BFF] mb-1">
+                                    All Allocated Presentation Slots ({abstractSessions.length}):
+                                </div>
+                                {abstractSessions.map((s, idx) => (
+                                    <div key={idx} className={`w-full flex items-center justify-between p-2 rounded-xl border text-xs font-semibold ${isDarkMode ? 'bg-[#050A1F] border-[#1E2A5A] text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-800'}`}>
+                                        <span className="text-[#8B9BFF] font-bold">Slot {idx + 1}</span>
+                                        <span>{s.day}</span>
+                                        <span className="text-emerald-400 font-medium">{formatTimeAmPm(s.timeSlot || s.time_slot)}</span>
+                                        <span className="opacity-75">({s.conferenceRoom || s.conference_room || "Room 1"})</span>
+                                    </div>
+                                ))}
+                            </>
+                        ) : (
+                            <>
+                                <span className="flex items-center gap-1.5 text-indigo-400">
+                                    <Calendar size={13} />
+                                    <span className={isDarkMode ? 'text-[#B4BEE6]' : 'text-slate-700'}>{presentationDay}</span>
+                                </span>
+                                <span className="flex items-center gap-1.5 text-indigo-400">
+                                    <Clock size={13} />
+                                    <span className={isDarkMode ? 'text-[#B4BEE6]' : 'text-slate-700'}>{timeSlot}</span>
+                                </span>
+                                <span className="flex items-center gap-1.5 text-indigo-400">
+                                    <MapPin size={13} />
+                                    <span className={isDarkMode ? 'text-[#B4BEE6]' : 'text-slate-700'}>{conferenceRoom}</span>
+                                </span>
+                            </>
+                        )}
                     </div>
                 </div>
 

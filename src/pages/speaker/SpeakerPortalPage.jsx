@@ -19,12 +19,14 @@ import { fetchAnnouncements } from "../../api/announcementsApi";
 import SpeakerCheckoutPage from "./SpeakerCheckoutPage";
 import SpeakerAnnouncementsPage from "./SpeakerAnnouncementsPage";
 import SpeakerAbstractPage from "./SpeakerAbstractPage";
+import PeerCiteProceedingsPage from "./PeerCiteProceedingsPage";
 import HangingBadgePull from "../../components/HangingBadgePull";
 import { getCountryFlagUrl, getCountryName } from "../../utils/countryFlags";
 
 const TABS = [
     { id: "home", label: "Home", icon: BadgeCheck },
     { id: "abstract", label: "Abstract", icon: FileText },
+    { id: "proceedings", label: "PeerCite Proceedings", icon: BookOpen, mobileLabel: "Proceedings" },
     { id: "announcements", label: "Announcements", icon: Megaphone },
     { id: "feedback", label: "Feedback", icon: MessageSquare },
 ];
@@ -462,6 +464,16 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                                                 className="w-4 h-3 rounded-xs object-cover border border-black/10 shrink-0" 
                                             />
                                             <span>{getCountryName(currentSpeaker.country)}</span>
+                                        </div>
+                                    )}
+                                    {currentSpeaker?.sessions?.length > 1 && (
+                                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold shadow-xs backdrop-blur-xs border ${
+                                            isActuallyLightMode 
+                                                ? 'bg-blue-900/5 border-blue-900/15 text-blue-700' 
+                                                : 'bg-blue-500/15 border-blue-400/30 text-[#8B9BFF]'
+                                        }`}>
+                                            <Sparkles size={11} className="text-[#8B9BFF]" />
+                                            <span>{currentSpeaker.sessions.length} Presentation Slots</span>
                                         </div>
                                     )}
                                 </div>
@@ -965,6 +977,13 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                             toast={toast}
                         />
                     )}
+                    {tab === "proceedings" && (
+                        <PeerCiteProceedingsPage 
+                            speaker={currentSpeaker} 
+                            isDarkMode={isDarkMode} 
+                            toast={toast} 
+                        />
+                    )}
                     {tab === "announcements" && <SpeakerAnnouncementsPage announcements={announcements} />}
                     {tab === "feedback" && (
                         <FeedbackPage 
@@ -989,7 +1008,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
 
             {/* Mobile Bottom Navigation Bar */}
             <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#050A1F]/95 backdrop-blur-xl border-t border-[#1E2A5A] pb-safe shadow-2xl">
-                <div className="grid grid-cols-4 w-full items-center px-1 py-1">
+                <div className="grid grid-cols-5 w-full items-center px-1 py-1">
                     {TABS.map(t => (
                         <button
                             key={t.id}

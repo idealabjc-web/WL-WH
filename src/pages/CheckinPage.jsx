@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { 
     Camera, CameraOff, Search, SwitchCamera, BadgeCheck, 
-    CheckCircle2, Clock, 
+    CheckCircle2, Clock, Calendar,
     QrCode as QrIcon, ChevronDown, ChevronUp, Sparkles, Send,
     Home, UserCheck, X, Users, Eye, ArrowRight, ShieldCheck,
     SlidersHorizontal, Check, AlertTriangle, Smartphone, ListFilter,
@@ -99,6 +99,23 @@ export default function CheckinPage({
     const mySpeaker = currentSpeaker 
         ? (speakers.find(s => s.id === currentSpeaker.id) || currentSpeaker) 
         : null;
+
+    const mySpeakerSessions = useMemo(() => {
+        if (!mySpeaker) return [];
+        if (Array.isArray(mySpeaker.sessions) && mySpeaker.sessions.length > 0) {
+            return mySpeaker.sessions;
+        }
+        if (mySpeaker.day || mySpeaker.timeSlot || mySpeaker.time_slot || mySpeaker.conferenceRoom || mySpeaker.conference_room) {
+            return [{
+                id: 'primary',
+                day: mySpeaker.day || 'November 25',
+                timeSlot: mySpeaker.timeSlot || mySpeaker.time_slot || '10:30 – 10:55',
+                conferenceRoom: mySpeaker.conferenceRoom || mySpeaker.conference_room || mySpeaker.room || 'Room 1',
+                sessionTitle: mySpeaker.sessionTitle || mySpeaker.session_title
+            }];
+        }
+        return [];
+    }, [mySpeaker]);
 
     const [qrDataUrl, setQrDataUrl] = useState(mySpeaker?.qrUrl || "");
     const [noteInput, setNoteInput] = useState(mySpeaker?.concerns || "");
@@ -551,23 +568,36 @@ export default function CheckinPage({
                                             <div className="min-w-0 group cursor-default transition-all duration-300 hover:translate-x-1">
                                                 <div className="text-[10px] font-bold uppercase tracking-wider text-[#8B9BFF] flex items-center gap-1.5 group-hover:text-white transition-colors">
                                                     <span className="w-1.5 h-1.5 rounded-full bg-[#4457F5] shadow-[0_0_6px_#4457F5]" />
-                                                    <span>Day &amp; Time</span>
+                                                    <span>{mySpeakerSessions.length > 1 ? `Allocated Slots (${mySpeakerSessions.length})` : "Day & Time"}</span>
                                                 </div>
                                                 <div 
                                                     className="text-xs sm:text-sm font-bold text-white mt-1 truncate"
-                                                    title={mySpeaker.day ? `${mySpeaker.day}${mySpeaker.timeSlot || mySpeaker.time_slot ? ` · ${formatTimeAmPm(mySpeaker.timeSlot || mySpeaker.time_slot)}` : ""}` : "November 25 · 10:30 AM – 10:55 AM"}
+                                                    title={mySpeakerSessions.length > 1 
+                                                        ? mySpeakerSessions.map((s, i) => `Slot ${i + 1}: ${s.day} · ${formatTimeAmPm(s.timeSlot || s.time_slot)} (${s.conferenceRoom || s.conference_room || "Room 1"})`).join("\n")
+                                                        : (mySpeaker.day ? `${mySpeaker.day}${mySpeaker.timeSlot || mySpeaker.time_slot ? ` · ${formatTimeAmPm(mySpeaker.timeSlot || mySpeaker.time_slot)}` : ""}` : "November 25 · 10:30 AM – 10:55 AM")
+                                                    }
                                                 >
-                                                    {mySpeaker.day ? `${mySpeaker.day}${mySpeaker.timeSlot || mySpeaker.time_slot ? ` · ${formatTimeAmPm(mySpeaker.timeSlot || mySpeaker.time_slot)}` : ""}` : "November 25 · 10:30 AM – 10:55 AM"}
+                                                    {mySpeakerSessions.length > 1 
+                                                        ? `${mySpeakerSessions.length} Confirmed Slots (${[...new Set(mySpeakerSessions.map(s => s.day?.replace('November ', 'Nov ')))].join(' & ')})` 
+                                                        : (mySpeaker.day ? `${mySpeaker.day}${mySpeaker.timeSlot || mySpeaker.time_slot ? ` · ${formatTimeAmPm(mySpeaker.timeSlot || mySpeaker.time_slot)}` : ""}` : "November 25 · 10:30 AM – 10:55 AM")}
                                                 </div>
                                             </div>
 
                                             <div className="min-w-0 md:border-l md:border-[#1E2A5A]/80 md:pl-5 group cursor-default transition-all duration-300 hover:translate-x-1">
                                                 <div className="text-[10px] font-bold uppercase tracking-wider text-[#8B9BFF] flex items-center gap-1.5 group-hover:text-white transition-colors">
                                                     <span className="w-1.5 h-1.5 rounded-full bg-[#3B6CF6] shadow-[0_0_6px_#3B6CF6]" />
-                                                    <span>Venue / Stage</span>
+                                                    <span>{mySpeakerSessions.length > 1 ? "Stages / Rooms" : "Venue / Stage"}</span>
                                                 </div>
-                                                <div className="text-xs sm:text-sm font-bold text-white mt-1 truncate" title={`${mySpeaker.conferenceRoom || mySpeaker.room || "Room 1"} · Holiday Inn Express`}>
-                                                    {mySpeaker.conferenceRoom || mySpeaker.room || "Room 1"} · Holiday Inn Express
+                                                <div 
+                                                    className="text-xs sm:text-sm font-bold text-white mt-1 truncate" 
+                                                    title={mySpeakerSessions.length > 1 
+                                                        ? [...new Set(mySpeakerSessions.map(s => s.conferenceRoom || s.conference_room || s.room).filter(Boolean))].join(", ") + " · Holiday Inn Express" 
+                                                        : `${mySpeaker.conferenceRoom || mySpeaker.room || "Room 1"} · Holiday Inn Express`
+                                                    }
+                                                >
+                                                    {mySpeakerSessions.length > 1 
+                                                        ? `${[...new Set(mySpeakerSessions.map(s => s.conferenceRoom || s.conference_room || s.room).filter(Boolean))].join(" & ")} · Holiday Inn Express` 
+                                                        : `${mySpeaker.conferenceRoom || mySpeaker.room || "Room 1"} · Holiday Inn Express`}
                                                 </div>
                                             </div>
 
@@ -625,6 +655,72 @@ export default function CheckinPage({
                                                 </div>
                                             </div>
                                         </div>
+
+                                        {/* Multi-Slot Keynote Presentation Itinerary Grid */}
+                                        {mySpeakerSessions.length > 0 && (
+                                            <div className="py-3 border-b border-[#1E2A5A]/80">
+                                                <div className="flex items-center justify-between mb-2.5">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="w-2 h-2 rounded-full bg-[#4457F5] animate-pulse" />
+                                                        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.14em] text-[#8B9BFF]">
+                                                            {mySpeakerSessions.length > 1 
+                                                                ? `CONFIRMED PRESENTATION SLOTS (${mySpeakerSessions.length} TOTAL)` 
+                                                                : "CONFIRMED PRESENTATION SLOT"}
+                                                        </span>
+                                                    </div>
+                                                    {mySpeakerSessions.length > 1 && (
+                                                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#4457F5]/20 text-[#8B9BFF] border border-[#4457F5]/40 shadow-xs">
+                                                            All {mySpeakerSessions.length} Keynote Sessions
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <div className={`grid gap-2.5 ${mySpeakerSessions.length > 1 ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" : "grid-cols-1"}`}>
+                                                    {mySpeakerSessions.map((sess, idx) => {
+                                                        const sDay = sess.day || "November 25";
+                                                        const sTime = formatTimeAmPm(sess.timeSlot || sess.time_slot);
+                                                        const sRoom = sess.conferenceRoom || sess.conference_room || sess.room || "Room 1";
+                                                        const sTitle = sess.sessionTitle || sess.session_title || mySpeaker.sessionTitle;
+
+                                                        return (
+                                                            <div 
+                                                                key={sess.id || idx}
+                                                                className="p-3.5 rounded-2xl bg-[#050A1F]/90 border border-[#1E2A5A] hover:border-[#4457F5]/70 hover:bg-[#070e28] transition-all flex flex-col justify-between group shadow-sm"
+                                                            >
+                                                                <div>
+                                                                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#1E2A5A]/70">
+                                                                        <span className="text-[10px] font-black uppercase tracking-wider text-[#8B9BFF] flex items-center gap-1.5">
+                                                                            <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#4457F5] to-purple-500" />
+                                                                            Slot {idx + 1}
+                                                                        </span>
+                                                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#0A1233] border border-[#1E2A5A] text-white font-mono shadow-xs">
+                                                                            {sRoom}
+                                                                        </span>
+                                                                    </div>
+
+                                                                    <div className="space-y-1">
+                                                                        <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                                                                            <Calendar size={13} className="text-[#8B9BFF] shrink-0" />
+                                                                            <span>{sDay}</span>
+                                                                        </div>
+                                                                        <div className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                                                                            <Clock size={13} className="shrink-0" />
+                                                                            <span>{sTime}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                {sTitle && (
+                                                                    <div className="mt-2.5 pt-2 border-t border-[#1E2A5A]/50 text-[11px] text-[#B4BEE6] line-clamp-1 group-hover:text-white transition-colors" title={sTitle}>
+                                                                        {sTitle}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
 
                                         {/* Pass Main Grid: Left Side: Actions & Notes, Right Side: QR Pass */}
                                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 pt-3">
