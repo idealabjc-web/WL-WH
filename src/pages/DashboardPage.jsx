@@ -3,11 +3,12 @@ import {
     Download, RefreshCw, Search, Filter, AlertTriangle, 
     LayoutList, Table as TableIcon, X, ChevronDown, ChevronUp,
     Calendar, Clock, MapPin, Sparkles, BadgeCheck,
-    Users, CheckCircle2, Utensils, Map, LogOut, RotateCcw, Link
+    Users, CheckCircle2, Utensils, Map, LogOut, RotateCcw, Link,
+    BookOpen, Upload, FileText, Trash2
 } from "lucide-react";
 import { StatCard, StatusBadge, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
-import { TIME_SLOTS, EVENT_DAYS, generatePortalToken, uploadSpeakerAbstract, uploadSpeakerPhoto, TEAMS, getAbstractsMap } from "../api/speakersApi";
+import { TIME_SLOTS, EVENT_DAYS, generatePortalToken, uploadSpeakerAbstract, uploadSpeakerPhoto, uploadSpeakerPeerCitePdf, getSpeakerPeerCitePdf, TEAMS, getAbstractsMap } from "../api/speakersApi";
 import { supabase } from "../supabaseClient";
 import * as XLSX from "xlsx-js-style";
 import { slugify } from "../site/publicApi";
@@ -26,6 +27,53 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
     const [photoFile, setPhotoFile] = useState(null);
     const [photoUploading, setPhotoUploading] = useState(false);
     const photoInputRef = useRef(null);
+
+    // PeerCite Proceeding PDF state
+    const [peerciteUploading, setPeerciteUploading] = useState(false);
+    const [peerciteDragActive, setPeerciteDragActive] = useState(false);
+    const [peerciteData, setPeerciteData] = useState(null);
+    const peerciteInputRef = useRef(null);
+
+    useEffect(() => {
+        let isMounted = true;
+        getSpeakerPeerCitePdf(speaker.id).then(data => {
+            if (isMounted) setPeerciteData(data);
+        });
+        return () => { isMounted = false; };
+    }, [speaker.id]);
+
+    const handlePeerciteUpload = async (file) => {
+        if (!file) return;
+        if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+            alert("Please select a valid PDF document.");
+            return;
+        }
+        if (file.size > 50 * 1024 * 1024) {
+            alert("PDF size exceeds 50MB limit.");
+            return;
+        }
+        setPeerciteUploading(true);
+        const res = await uploadSpeakerPeerCitePdf(speaker.id, file);
+        setPeerciteUploading(false);
+        if (res) {
+            setPeerciteData(res);
+            if (peerciteInputRef.current) peerciteInputRef.current.value = "";
+            if (onRefresh) onRefresh();
+        } else {
+            alert("Failed to upload PeerCite proceeding PDF. Please try again.");
+        }
+    };
+
+    const handleRemovePeercite = () => {
+        if (window.confirm("Are you sure you want to remove the PeerCite proceedings PDF for this speaker?")) {
+            try {
+                localStorage.removeItem(`peercite_proceedings_${speaker.id}`);
+            } catch (e) {}
+            setPeerciteData(null);
+            if (peerciteInputRef.current) peerciteInputRef.current.value = "";
+            if (onRefresh) onRefresh();
+        }
+    };
 
     const isSelf = currentSpeaker && (
         speaker.id === currentSpeaker.id || 
@@ -573,6 +621,113 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                             );
                         })()}
                     </div>
+
+                    {/* PeerCite Proceeding PDF Section */}
+                    <div className="sm:col-span-2 pt-3 border-t border-slate-200">
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="text-xs font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-1.5 uppercase tracking-wider">
+                                <BookOpen size={14} className="text-indigo-600" />
+                                <span>PeerCite Proceeding PDF</span>
+                            </label>
+                            {peerciteData?.url && (
+                                <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                    ✓ Active Document
+                                </span>
+                            )}
+                        </div>
+
+                        <div
+                            onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setPeerciteDragActive(true); }}
+                            onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setPeerciteDragActive(false); }}
+                            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setPeerciteDragActive(true); }}
+                            onDrop={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setPeerciteDragActive(false);
+                                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                                    handlePeerciteUpload(e.dataTransfer.files[0]);
+                                }
+                            }}
+                            onClick={() => !peerciteUploading && peerciteInputRef.current?.click()}
+                            className={`p-4 rounded-xl border-2 border-dashed transition-all cursor-pointer text-center relative ${
+                                peerciteDragActive
+                                    ? "border-indigo-500 bg-indigo-50/80 scale-[1.01]"
+                                    : "border-indigo-200 hover:border-indigo-400 bg-indigo-50/30 hover:bg-indigo-50/60"
+                            }`}
+                        >
+                            <input
+                                ref={peerciteInputRef}
+                                type="file"
+                                accept="application/pdf,.pdf"
+                                className="hidden"
+                                onChange={(e) => {
+                                    if (e.target.files && e.target.files[0]) {
+                                        handlePeerciteUpload(e.target.files[0]);
+                                    }
+                                }}
+                            />
+
+                            {peerciteUploading ? (
+                                <div className="py-2 flex flex-col items-center gap-2">
+                                    <div className="w-7 h-7 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
+                                    <span className="text-xs font-bold text-indigo-800">Uploading PeerCite PDF to Cloud...</span>
+                                </div>
+                            ) : peerciteData?.url ? (
+                                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="w-10 h-10 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                                            <FileText size={20} />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <div className="text-xs font-bold text-slate-900 truncate" title={peerciteData.fileName}>
+                                                {peerciteData.fileName || "PeerCite_Proceedings.pdf"}
+                                            </div>
+                                            <div className="text-[11px] text-slate-500">
+                                                {peerciteData.fileSize} • Uploaded {peerciteData.uploadedAt}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                        <a
+                                            href={peerciteData.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition-colors flex items-center gap-1"
+                                        >
+                                            View PDF ↗
+                                        </a>
+                                        <button
+                                            type="button"
+                                            onClick={() => peerciteInputRef.current?.click()}
+                                            className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs transition-colors"
+                                        >
+                                            Replace
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleRemovePeercite}
+                                            className="px-2.5 py-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold transition-colors"
+                                            title="Remove"
+                                        >
+                                            <Trash2 size={13} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="py-2">
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto mb-2">
+                                        <Upload size={20} />
+                                    </div>
+                                    <div className="text-xs font-bold text-slate-800">
+                                        Drag &amp; drop PeerCite proceeding PDF here, or <span className="text-indigo-600 underline">browse</span>
+                                    </div>
+                                    <div className="text-[11px] text-slate-500 mt-0.5">
+                                        Accepts PDF up to 50MB. Will be automatically displayed when the speaker opens the PeerCite Proceedings page.
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
                 <div className="flex flex-col-reverse sm:flex-row gap-2 justify-end pt-2 border-t border-slate-200">
                     <button onClick={() => setIsEditing(false)} className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-lg hover:bg-slate-200 text-slate-700 min-h-[42px] transition-colors">Cancel</button>
@@ -697,6 +852,114 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                     })()}
                 </div>
             </div>
+
+            {/* PeerCite Proceeding PDF Section in View Mode */}
+            <div className="mt-4 pt-3.5 border-t border-slate-200">
+                <div className="flex items-center justify-between mb-2">
+                    <div className="text-xs font-bold text-indigo-700 dark:text-indigo-400 tracking-wide flex items-center gap-1.5 uppercase">
+                        <BookOpen size={14} className="text-indigo-600" />
+                        <span>PEERCITE PROCEEDING PDF</span>
+                    </div>
+                    {peerciteData?.url && (
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                            Published &amp; Active
+                        </span>
+                    )}
+                </div>
+
+                <div
+                    onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setPeerciteDragActive(true); }}
+                    onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setPeerciteDragActive(false); }}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setPeerciteDragActive(true); }}
+                    onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setPeerciteDragActive(false);
+                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                            handlePeerciteUpload(e.dataTransfer.files[0]);
+                        }
+                    }}
+                    onClick={() => !peerciteUploading && peerciteInputRef.current?.click()}
+                    className={`p-3.5 rounded-xl border-2 border-dashed transition-all cursor-pointer relative ${
+                        peerciteDragActive
+                            ? "border-indigo-500 bg-indigo-50/90 scale-[1.01]"
+                            : "border-indigo-200/90 hover:border-indigo-400 bg-indigo-50/20 hover:bg-indigo-50/50"
+                    }`}
+                >
+                    <input
+                        ref={peerciteInputRef}
+                        type="file"
+                        accept="application/pdf,.pdf"
+                        className="hidden"
+                        onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                                handlePeerciteUpload(e.target.files[0]);
+                            }
+                        }}
+                    />
+
+                    {peerciteUploading ? (
+                        <div className="py-2 text-center flex flex-col items-center gap-1.5">
+                            <div className="w-6 h-6 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
+                            <span className="text-xs font-bold text-indigo-700">Uploading PeerCite Proceeding PDF...</span>
+                        </div>
+                    ) : peerciteData?.url ? (
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-9 h-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                                    <FileText size={18} />
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="text-xs font-bold text-slate-900 truncate" title={peerciteData.fileName}>
+                                        {peerciteData.fileName || "PeerCite_Proceedings.pdf"}
+                                    </div>
+                                    <div className="text-[11px] text-slate-500">
+                                        {peerciteData.fileSize} • Uploaded {peerciteData.uploadedAt}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end" onClick={(e) => e.stopPropagation()}>
+                                <a
+                                    href={peerciteData.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition-colors flex items-center gap-1"
+                                >
+                                    View PDF ↗
+                                </a>
+                                <button
+                                    type="button"
+                                    onClick={() => peerciteInputRef.current?.click()}
+                                    className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs transition-colors"
+                                >
+                                    Replace
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleRemovePeercite}
+                                    className="px-2.5 py-1.5 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold transition-colors"
+                                    title="Remove"
+                                >
+                                    <Trash2 size={13} />
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="py-2 text-center">
+                            <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto mb-1.5">
+                                <Upload size={16} />
+                            </div>
+                            <div className="text-xs font-bold text-slate-800">
+                                Drag &amp; drop PeerCite proceeding PDF here, or <span className="text-indigo-600 underline">browse</span>
+                            </div>
+                            <div className="text-[11px] text-slate-500 mt-0.5">
+                                Accepts PDF up to 50MB. Will be automatically displayed when this speaker opens their PeerCite Proceedings page.
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
             <div className="mt-4 pt-3 border-t border-slate-200 flex flex-wrap items-center gap-2.5">
                 {!isSpeaker && (speaker.checkedOut || speaker.checked_out) && onUndoCheckout && (
                     <button
