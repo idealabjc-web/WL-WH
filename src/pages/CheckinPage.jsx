@@ -353,8 +353,10 @@ export default function CheckinPage({
             if (!streamRef.current) return;
             const canvas = canvasRef.current;
             if (video && canvas && video.readyState >= 2 && video.videoWidth > 0) {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
+                // Scale down for performance
+                const scale = Math.min(1, 640 / video.videoWidth);
+                canvas.width = video.videoWidth * scale;
+                canvas.height = video.videoHeight * scale;
                 const ctx = canvas.getContext("2d", { willReadFrequently: true });
                 if (ctx) {
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -1253,7 +1255,7 @@ export default function CheckinPage({
                                         </button>
                                     </div>
                                     <ProfileCard 
-                                        speaker={selected} 
+                                        speaker={current} 
                                         onConfirm={onConfirm} 
                                         onCheckout={onCheckout}
                                         onUndoCheckout={onUndoCheckout}
