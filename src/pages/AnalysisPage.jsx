@@ -13,7 +13,7 @@ const TRACKABLE_FIELDS = [
         for (let i = 0; i < validSessions.length; i++) {
             const sess = validSessions[i];
             const sessionId = sess.id || `session_${i}`;
-            if (!currentAbstracts[sessionId] && !currentAbstracts.legacy) return true;
+            if (!currentAbstracts[sessionId] && !(i === 0 && currentAbstracts.legacy)) return true;
         }
         return false;
     }},
@@ -95,7 +95,7 @@ export default function AnalysisPage({ speakers, toast }) {
                 for (let i = 0; i < validSessions.length; i++) {
                     const sess = validSessions[i];
                     const sessionId = sess.id || `session_${i}`;
-                    if (!currentAbstracts[sessionId] && !currentAbstracts.legacy) {
+                    if (!currentAbstracts[sessionId] && !(i === 0 && currentAbstracts.legacy)) {
                         hasPendingAbstract = true;
                         break;
                     }

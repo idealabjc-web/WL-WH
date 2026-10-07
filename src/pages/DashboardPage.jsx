@@ -500,7 +500,8 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                                     {sessionsToRender.map((sess, idx) => {
                                         const sessionId = sess._isLegacy ? 'legacy' : (sess.id || `session_${idx}`);
                                         const file = abstractFiles[sessionId];
-                                        const currentUrl = currentAbstracts[sessionId] || (sess._isLegacy ? currentAbstracts.legacy : null);
+                                        // Allow first session to inherit legacy abstract if it exists
+                                        const currentUrl = currentAbstracts[sessionId] || (idx === 0 ? currentAbstracts.legacy : null) || (sess._isLegacy ? currentAbstracts.legacy : null);
                                         const labelTitle = sess._isLegacy 
                                             ? "Abstract File" 
                                             : `Abstract for Slot ${idx + 1}: ${sess.day || 'TBA'} • ${sess.timeSlot || 'TBA'}`;

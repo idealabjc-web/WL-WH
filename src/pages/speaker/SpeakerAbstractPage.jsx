@@ -53,7 +53,7 @@ export default function SpeakerAbstractPage({
     // Resolve specific abstract URL for this session
     const abstractsMap = useMemo(() => getAbstractsMap(speaker?.abstractUrl), [speaker?.abstractUrl]);
     const sessionIdKey = currentSession.id || `session_${selectedSessionIndex}`;
-    const abstractUrl = abstractsMap[sessionIdKey] || abstractsMap.legacy || "";
+    const abstractUrl = abstractsMap[sessionIdKey] || (selectedSessionIndex === 0 ? abstractsMap.legacy : "") || "";
 
     // URLs to guarantee opening strictly in PDF format (handles both direct PDF and docx/doc via high-performance viewer)
     const isDirectPdf = abstractUrl.toLowerCase().endsWith(".pdf");
