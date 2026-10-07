@@ -23,6 +23,51 @@ export default function SiteHeader({ activeSeries = null, onAdminClick }) {
         return () => document.removeEventListener("click", close);
     }, []);
 
+    const handleNavigateToSpeakers = (e) => {
+        e.preventDefault();
+        setMobileOpen(false);
+        const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
+        if (currentPath === "/dubai-series") {
+            const el = document.getElementById("speakers");
+            if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "start" });
+                window.history.pushState({}, "", "/dubai-series#speakers");
+                return;
+            }
+        }
+        navigate("/dubai-series#speakers");
+    };
+
+    const handleSectionNav = (hash) => (e) => {
+        e.preventDefault();
+        setMobileOpen(false);
+        const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
+        if (currentPath === "/dubai-series") {
+            const el = document.getElementById(hash);
+            if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "start" });
+                window.history.pushState({}, "", `/dubai-series#${hash}`);
+                return;
+            }
+        }
+        navigate(`/dubai-series#${hash}`);
+    };
+
+    const handlePartnersNav = (e) => {
+        e.preventDefault();
+        setMobileOpen(false);
+        const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
+        if (currentPath === "/") {
+            const el = document.getElementById("partners");
+            if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "start" });
+                window.history.pushState({}, "", "/#partners");
+                return;
+            }
+        }
+        navigate("/#partners");
+    };
+
     return (
         <header className={`sc-header ${scrolled ? "is-scrolled" : ""}`}>
             <div className="sc-container">
@@ -89,16 +134,15 @@ export default function SiteHeader({ activeSeries = null, onAdminClick }) {
                             </div>
                         </div>
 
-                        <a href="#partners" className="sc-nav-link" onClick={(e) => {
-                            if (window.location.pathname !== "/") {
-                                e.preventDefault();
-                                navigate("/#partners");
-                            }
-                        }}>
+                        <a href="#partners" className="sc-nav-link" onClick={handlePartnersNav}>
                             Supporting Partners
                         </a>
 
-                        <Link to="/dubai-series#speakers" className="sc-nav-link">
+                        <Link
+                            to="/dubai-series#speakers"
+                            className="sc-nav-link"
+                            onClick={handleNavigateToSpeakers}
+                        >
                             Speakers Directory
                         </Link>
                     </nav>
@@ -151,19 +195,19 @@ export default function SiteHeader({ activeSeries = null, onAdminClick }) {
                     ))}
 
                     <h4>Event Navigation</h4>
-                    <Link to="/dubai-series#event-details" className="sc-nav-link" onClick={() => setMobileOpen(false)}>
+                    <Link to="/dubai-series#event-details" className="sc-nav-link" onClick={handleSectionNav("event-details")}>
                         Event Details & What's Provided
                     </Link>
-                    <Link to="/dubai-series#hotel" className="sc-nav-link" onClick={() => setMobileOpen(false)}>
+                    <Link to="/dubai-series#hotel" className="sc-nav-link" onClick={handleSectionNav("hotel")}>
                         Speaker Hotel & Stay
                     </Link>
-                    <Link to="/dubai-series#speakers" className="sc-nav-link" onClick={() => setMobileOpen(false)}>
-                        Confirmed Speakers
+                    <Link to="/dubai-series#speakers" className="sc-nav-link" onClick={handleNavigateToSpeakers}>
+                        Speakers Directory
                     </Link>
-                    <Link to="/dubai-series#gallery" className="sc-nav-link" onClick={() => setMobileOpen(false)}>
+                    <Link to="/dubai-series#gallery" className="sc-nav-link" onClick={handleSectionNav("gallery")}>
                         Dubai Experience Gallery
                     </Link>
-                    <a href="#partners" className="sc-nav-link" onClick={() => setMobileOpen(false)}>
+                    <a href="#partners" className="sc-nav-link" onClick={handlePartnersNav}>
                         Supporting Partners
                     </a>
 

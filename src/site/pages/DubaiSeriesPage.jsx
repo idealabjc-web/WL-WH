@@ -86,6 +86,31 @@ export default function DubaiSeriesPage({ onAdminClick }) {
         };
     }, []);
 
+    // Smooth scroll to anchor section if hash present in URL (e.g. #speakers)
+    useEffect(() => {
+        const scrollToHash = () => {
+            const hash = window.location.hash;
+            if (hash) {
+                const targetId = hash.startsWith("#") ? hash.slice(1) : hash;
+                const attemptScroll = (attemptsLeft = 12) => {
+                    const el = document.getElementById(targetId);
+                    if (el) {
+                        el.scrollIntoView({ behavior: "smooth", block: "start" });
+                        return;
+                    }
+                    if (attemptsLeft > 0) {
+                        setTimeout(() => attemptScroll(attemptsLeft - 1), 60);
+                    }
+                };
+                attemptScroll();
+            }
+        };
+
+        scrollToHash();
+        window.addEventListener("hashchange", scrollToHash);
+        return () => window.removeEventListener("hashchange", scrollToHash);
+    }, []);
+
     // Scroll reveal observer
     const pageRef = useRef(null);
     useEffect(() => {
@@ -183,11 +208,33 @@ export default function DubaiSeriesPage({ onAdminClick }) {
 
                             {/* Action Buttons */}
                             <div style={{ marginTop: "32px", display: "flex", flexWrap: "wrap", gap: "12px" }}>
-                                <a href="#speakers" className="sc-btn sc-btn-gold">
-                                    <span>Confirmed Speakers & Login</span>
+                                <a
+                                    href="#speakers"
+                                    className="sc-btn sc-btn-gold"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        const el = document.getElementById("speakers");
+                                        if (el) {
+                                            el.scrollIntoView({ behavior: "smooth", block: "start" });
+                                            window.history.pushState({}, "", "#speakers");
+                                        }
+                                    }}
+                                >
+                                    <span>Speakers Directory & Login</span>
                                     <ArrowRight size={16} className="sc-arrow" />
                                 </a>
-                                <a href="#event-details" className="sc-btn sc-btn-ghost">
+                                <a
+                                    href="#event-details"
+                                    className="sc-btn sc-btn-ghost"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        const el = document.getElementById("event-details");
+                                        if (el) {
+                                            el.scrollIntoView({ behavior: "smooth", block: "start" });
+                                            window.history.pushState({}, "", "#event-details");
+                                        }
+                                    }}
+                                >
                                     <span>Event Details & Stay</span>
                                 </a>
                             </div>
@@ -228,7 +275,7 @@ export default function DubaiSeriesPage({ onAdminClick }) {
             <section id="speakers" className="sc-section">
                 <div className="sc-container">
                     <div style={{ textAlign: "center", marginBottom: "30px" }} className="sc-reveal">
-                        <span className="sc-eyebrow">KEYNOTE VOICES</span>
+                        <span className="sc-eyebrow">SPEAKERS DIRECTORY · KEYNOTE VOICES</span>
                         <h2 className="sc-section-title sc-display">
                             Confirmed <span className="sc-gold-text">Speakers</span>
                         </h2>

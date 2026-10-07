@@ -399,3 +399,86 @@ export async function uploadSpeakerAbstract(id, file) {
         return null;
     }
 }
+
+export async function uploadSpeakerPeerCitePdf(id, file) {
+    try {
+        const path = `peercite_${id}.pdf`;
+        const { error: uploadError } = await supabase.storage
+            .from("speaker-abstracts")
+            .upload(path, file, { contentType: "application/pdf", upsert: true });
+        if (uploadError) throw uploadError;
+        const { data } = supabase.storage.from("speaker-abstracts").getPublicUrl(path);
+        const publicUrl = data?.publicUrl || null;
+
+        const sizeInMb = (file.size / (1024 * 1024)).toFixed(2) + " MB";
+        const dateStr = new Date().toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric"
+        });
+
+        const meta = {
+            url: publicUrl,
+            fileName: file.name,
+            fileSize: sizeInMb,
+            uploadedAt: dateStr,
+            publisher: "PeerCite Academic Press",
+            isbn: "978-981-18-9412-3",
+            doi: `10.58921/peercite.wlwh.2026.${String(id).toLowerCase()}`
+        };
+
+        try {
+            localStorage.setItem(`peercite_proceedings_${id}`, JSON.stringify(meta));
+        } catch (e) {
+            console.error("Local storage error:", e);
+        }
+
+        return meta;
+    } catch (e) {
+        console.error("PeerCite PDF upload failed:", e);
+        return null;
+    }
+}
+
+export async function getSpeakerPeerCitePdf(id) {
+    if (!id) return null;
+    try {
+        const local = localStorage.getItem(`peercite_proceedings_${id}`);
+        if (local) {
+            return JSON.parse(local);
+        }
+    } catch (e) {}
+
+    try {
+        if (supabase) {
+            const { data, error } = await supabase.storage
+                .from("speaker-abstracts")
+                .list("", { search: `peercite_${id}.pdf` });
+            if (!error && data && data.length > 0) {
+                const found = data.find(f => f.name === `peercite_${id}.pdf`);
+                if (found) {
+                    const { data: urlData } = supabase.storage
+                        .from("speaker-abstracts")
+                        .getPublicUrl(`peercite_${id}.pdf`);
+                    const meta = {
+                        url: urlData?.publicUrl,
+                        fileName: `PeerCite_${id}_Proceedings.pdf`,
+                        fileSize: found.metadata?.size ? (found.metadata.size / (1024 * 1024)).toFixed(2) + " MB" : "Official PDF",
+                        uploadedAt: found.created_at ? new Date(found.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "November 25, 2026",
+                        publisher: "PeerCite Academic Press",
+                        isbn: "978-981-18-9412-3",
+                        doi: `10.58921/peercite.wlwh.2026.${String(id).toLowerCase()}`
+                    };
+                    try {
+                        localStorage.setItem(`peercite_proceedings_${id}`, JSON.stringify(meta));
+                    } catch (e) {}
+                    return meta;
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Error checking PeerCite PDF in storage:", e);
+    }
+    return null;
+}
+

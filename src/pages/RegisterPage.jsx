@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
-import { CheckCircle2, AlertTriangle, ExternalLink, ImagePlus, Camera, X } from "lucide-react";
+import { CheckCircle2, AlertTriangle, ExternalLink, ImagePlus, Camera, X, FileText } from "lucide-react";
 import { Field, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
-import { uid, generatePortalToken, emptyForm, generateAndStoreQrBadge, uploadSpeakerPhoto, uploadSpeakerAbstract, TIME_SLOTS, EVENT_DAYS, TEAMS } from "../api/speakersApi";
+import { uid, generatePortalToken, emptyForm, generateAndStoreQrBadge, uploadSpeakerPhoto, uploadSpeakerAbstract, uploadSpeakerPeerCitePdf, TIME_SLOTS, EVENT_DAYS, TEAMS } from "../api/speakersApi";
 
 import PhoneField from "../components/common/PhoneField";
 import CountryField from "../components/common/CountryField";
@@ -21,6 +21,8 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
     const photoInputRef = useRef(null);
     const [abstractFile, setAbstractFile] = useState(null);
     const abstractInputRef = useRef(null);
+    const [peerciteFile, setPeerciteFile] = useState(null);
+    const peerciteInputRef = useRef(null);
 
     const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -116,6 +118,17 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
             }
         } else {
             rec.abstractStatus = "not submitted";
+        }
+
+        // Handle PeerCite Proceeding PDF
+        if (peerciteFile) {
+            uploadTasks.push(
+                uploadSpeakerPeerCitePdf(id, peerciteFile).then(res => {
+                    if (res?.url) {
+                        rec.proceedingsUrl = res.url;
+                    }
+                })
+            );
         }
 
         // Generate the QR locally first so the badge shows immediately,
@@ -355,6 +368,45 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                         )}
                     </div>
                 )}
+                </div>
+            </div>
+
+            {/* PeerCite Proceeding PDF Section */}
+            <div className="mb-6 relative bg-gradient-to-r from-indigo-50/50 to-white dark:from-slate-900 dark:to-slate-950 border border-indigo-200 dark:border-indigo-900/50 rounded-xl p-5 shadow-sm ring-4 ring-indigo-50/50 dark:ring-0">
+                <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-500 rounded-l-xl"></div>
+                <div className="pl-1">
+                    <Field label="PeerCite Proceeding PDF">
+                        <div className="text-xs text-slate-500 mb-2.5">
+                            Upload the speaker's official PeerCite conference proceedings PDF (drag &amp; drop or click to browse).
+                        </div>
+                        <input 
+                            ref={peerciteInputRef}
+                            type="file" 
+                            accept=".pdf,application/pdf"
+                            className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 transition-colors cursor-pointer"
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) setPeerciteFile(file);
+                            }}
+                        />
+                    </Field>
+                    {peerciteFile && (
+                        <div className="flex items-center gap-3 mt-3">
+                            <div className="text-xs text-emerald-600 font-medium bg-emerald-50 px-2.5 py-1.5 rounded-md border border-emerald-100 flex items-center gap-1.5">
+                                <FileText size={14} /> Selected: {peerciteFile.name}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setPeerciteFile(null);
+                                    if (peerciteInputRef.current) peerciteInputRef.current.value = "";
+                                }}
+                                className="text-xs text-rose-500 hover:text-rose-700 hover:bg-rose-100 font-medium bg-rose-50 px-3 py-1.5 rounded-md transition-colors"
+                            >
+                                Remove file
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 
