@@ -384,10 +384,10 @@ export async function uploadSpeakerPhoto(id, file) {
     }
 }
 
-export async function uploadSpeakerAbstract(id, file) {
+export async function uploadSpeakerAbstract(speakerId, sessionId, file) {
     try {
         const ext = file.name.split(".").pop();
-        const path = `${id}.${ext}`;
+        const path = sessionId ? `${speakerId}_${sessionId}.${ext}` : `${speakerId}.${ext}`;
         const { error: uploadError } = await supabase.storage
             .from("speaker-abstracts")
             .upload(path, file, { upsert: true });
@@ -398,4 +398,19 @@ export async function uploadSpeakerAbstract(id, file) {
         console.error("Speaker abstract upload failed:", e);
         return null;
     }
+}
+
+export function getAbstractsMap(abstractUrlString) {
+    if (!abstractUrlString) return {};
+    const trimmed = String(abstractUrlString).trim();
+    if (trimmed.startsWith('{')) {
+        try {
+            return JSON.parse(trimmed);
+        } catch (e) {
+            return {};
+        }
+    } else if (trimmed.startsWith('http')) {
+        return { legacy: trimmed };
+    }
+    return {};
 }

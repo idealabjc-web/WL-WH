@@ -1,10 +1,22 @@
 import React, { useMemo, useState } from 'react';
 import { BarChart2, Users, FileText, FileX, CalendarDays, CheckCircle, Clock, AlertTriangle, Hotel, Utensils, MapPin, Activity, Copy, SlidersHorizontal } from 'lucide-react';
-import { TIME_SLOTS, EVENT_DAYS } from '../api/speakersApi';
+import { TIME_SLOTS, EVENT_DAYS, getAbstractsMap } from '../api/speakersApi';
 
 const TRACKABLE_FIELDS = [
     { id: "photo", label: "Photo", issueText: "Missing Photo", check: (s) => !s.photoUrl },
-    { id: "abstract", label: "Abstract", issueText: "Pending Abstract", check: (s) => (!s.abstractStatus || s.abstractStatus.toLowerCase() !== 'submitted') && s.abstractProvided !== 'yes' },
+    { id: "abstract", label: "Abstract", issueText: "Pending Abstract", check: (s) => {
+        if (s.abstractProvided === 'yes') return false;
+        const currentAbstracts = getAbstractsMap(s.abstractUrl);
+        const validSessions = s.sessions && s.sessions.length > 0 
+            ? s.sessions 
+            : [{ timeSlot: s.timeSlot, day: s.day, conferenceRoom: s.conferenceRoom }];
+        for (let i = 0; i < validSessions.length; i++) {
+            const sess = validSessions[i];
+            const sessionId = sess.id || `session_${i}`;
+            if (!currentAbstracts[sessionId] && !currentAbstracts.legacy) return true;
+        }
+        return false;
+    }},
     { id: "schedule", label: "Schedule (Time/Day/Room)", issueText: "Not Scheduled", check: (s, hasCompleteSession) => !hasCompleteSession },
     { id: "hotelRoom", label: "Hotel Room", issueText: "Missing Hotel Room", check: (s) => {
         const val = s.accommodationStatus ? s.accommodationStatus.toLowerCase() : "";
@@ -77,7 +89,20 @@ export default function AnalysisPage({ speakers, toast }) {
             });
 
             // Abstracts
-            if (s.abstractStatus === "submitted" || s.abstractProvided === "yes") {
+            let hasPendingAbstract = false;
+            if (s.abstractProvided !== "yes") {
+                const currentAbstracts = getAbstractsMap(s.abstractUrl);
+                for (let i = 0; i < validSessions.length; i++) {
+                    const sess = validSessions[i];
+                    const sessionId = sess.id || `session_${i}`;
+                    if (!currentAbstracts[sessionId] && !currentAbstracts.legacy) {
+                        hasPendingAbstract = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!hasPendingAbstract) {
                 abstractsSubmitted++;
             } else {
                 abstractsNotSubmitted++;
