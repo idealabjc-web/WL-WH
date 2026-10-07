@@ -10,6 +10,7 @@ import SpeakerAvatar from "../components/common/SpeakerAvatar";
 import { TIME_SLOTS, EVENT_DAYS, generatePortalToken, uploadSpeakerAbstract, uploadSpeakerPhoto, TEAMS } from "../api/speakersApi";
 import { supabase } from "../supabaseClient";
 import * as XLSX from "xlsx-js-style";
+import { slugify } from "../site/publicApi";
 
 
 
@@ -149,9 +150,10 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                 .eq("id", speaker.id);
         }
 
-        const link = `${window.location.origin}/?s=${speaker.id}&t=${token}`;
+        const speakerSlug = slugify(speaker.name || speaker.id);
+        const link = `${window.location.origin}/dubai-series/${speakerSlug}?s=${speaker.id}&t=${token}`;
         navigator.clipboard.writeText(link).then(() => {
-            alert("Portal link copied to clipboard!");
+            alert("Speaker portal link copied to clipboard:\n" + link);
         });
     };
 

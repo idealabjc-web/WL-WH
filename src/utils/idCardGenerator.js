@@ -21,8 +21,8 @@
 // 6. Divider: 2 px dark line, x=325 to 755, y=1232, tapering at both ends.
 // 7. Role "{{role}}": center y=1266, italic regular, 40 px, #333.
 // 8. Dates "{{dates}} | {{city_country}}": center y=1340, bold, 44 px, #0B2A4A.
-// 9. QR code encoding {{qr_url}}: 185×185 px at x=448, y=1395 on white tile with 10 px padding.
-//    Small badge ID text below QR (16 px, grey, y=1590).
+// 9. QR code encoding {{qr_url}}: 310×310 px on white tile with 15 px padding, centered at x=540.
+//    Small badge ID text below QR (18 px, grey, y=1728).
 import QRCode from "qrcode";
 import { getCountryCode, getCountryFlagUrl, getCountryName } from "./countryFlags";
 
@@ -133,7 +133,7 @@ async function generateRoom2IdCardJpeg(speaker) {
     ctx.fillRect(0, 0, W, H);
 
     // Background Image (same as Room 1)
-    const topBgImg = (await loadImage(`/top_bg.jpg?v=dubai_${Date.now()}`)) || (await loadImage("/dubai_bg.jpg"));
+    const topBgImg = (await loadImage(`/id_card_background.jpg?v=${Date.now()}`)) || (await loadImage("/id_card_background.jpg"));
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(0, 0);
@@ -324,13 +324,17 @@ async function generateRoom2IdCardJpeg(speaker) {
     let infoText = "";
     if (speaker.day || speaker.timeSlot || speaker.conferenceRoom) {
         const d = speaker.day ? speaker.day.replace("November", "Nov").trim() : "";
-        const t = speaker.timeSlot ? speaker.timeSlot.replace(" (Lunch)", "").trim() : "";
+        const rawT = speaker.timeSlot ? speaker.timeSlot.replace(" (Lunch)", "").trim() : "";
+        const t = rawT.replace(/(\b\d{1,2}):(\d{2})\b/g, (m, h, min) => {
+            let hr = parseInt(h, 10);
+            return isNaN(hr) ? m : `${String(hr % 12 === 0 ? 12 : hr % 12).padStart(2, "0")}:${min} ${hr >= 12 ? "PM" : "AM"}`;
+        });
         const r = speaker.conferenceRoom || "Room 2";
         infoText = [d, t, r].filter(Boolean).join(" | ");
     } else {
         infoText = "25-26 November, 2026 | Dubai, UAE";
     }
-    ctx.fillText(infoText, 540, 1340);
+    ctx.fillText(infoText, 540, 1328);
 
     // Bottom Waves (Orange) - Draw BEFORE QR Code
     ctx.save();
@@ -416,25 +420,27 @@ async function generateRoom2IdCardJpeg(speaker) {
     ctx.restore();
 
     // QR Code - Draw AFTER Bottom Waves
-    const qrSize = 185;
-    const qrTilePadding = 10;
-    const qrTileX = 448 - qrTilePadding; // 438
-    const qrTileY = 1395 - qrTilePadding; // 1385
-    const qrTileSize = qrSize + qrTilePadding * 2; // 205
+    const qrSize = 310;
+    const qrTilePadding = 15;
+    const qrTileSize = qrSize + qrTilePadding * 2; // 340
+    const qrTileX = (W - qrTileSize) / 2;
+    const qrTileY = 1362;
+    const qrX = (W - qrSize) / 2;
+    const qrY = qrTileY + qrTilePadding;
 
     // White tile
     ctx.save();
-    ctx.shadowColor = "rgba(0, 0, 0, 0.10)";
-    ctx.shadowBlur = 12;
+    ctx.shadowColor = "rgba(0, 0, 0, 0.14)";
+    ctx.shadowBlur = 16;
     ctx.shadowOffsetY = 4;
-    roundRect(ctx, qrTileX, qrTileY, qrTileSize, qrTileSize, 12);
+    roundRect(ctx, qrTileX, qrTileY, qrTileSize, qrTileSize, 18);
     ctx.fillStyle = "#ffffff";
     ctx.fill();
     ctx.restore();
     
     // Subtle tile outline
     ctx.save();
-    roundRect(ctx, qrTileX, qrTileY, qrTileSize, qrTileSize, 12);
+    roundRect(ctx, qrTileX, qrTileY, qrTileSize, qrTileSize, 18);
     ctx.strokeStyle = "rgba(226, 232, 240, 0.9)";
     ctx.lineWidth = 1.2;
     ctx.stroke();
@@ -443,12 +449,12 @@ async function generateRoom2IdCardJpeg(speaker) {
     try {
         const qrUrl = speaker.qrUrl || (typeof window !== "undefined" ? `${window.location.origin}/check-in/${speaker.id}` : speaker.id || "SPEAKER");
         const qrDataUrl = await QRCode.toDataURL(qrUrl, { 
-            width: 400 * scale,
+            width: 600 * scale,
             margin: 1,
             color: { dark: "#000000", light: "#ffffff" }
         });
         const qrImg = await loadImage(qrDataUrl);
-        if (qrImg) ctx.drawImage(qrImg, 448, 1395, qrSize, qrSize);
+        if (qrImg) ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
     } catch(e) {
         console.warn("QR generation failed:", e);
     }
@@ -469,9 +475,7 @@ async function generateRoom2IdCardJpeg(speaker) {
 }
 
 export async function generateIdCardJpeg(speaker) {
-    if (speaker.conferenceRoom && (speaker.conferenceRoom.toLowerCase().includes("room 2") || speaker.conferenceRoom === "2")) {
-        return await generateRoom2IdCardJpeg(speaker);
-    }
+    const isRoom2 = speaker.conferenceRoom && (speaker.conferenceRoom.toLowerCase().includes("room 2") || speaker.conferenceRoom === "2");
     const W = 1080;
     const H = 1800;
     const scale = 2; // Optimal balance for high clarity (~2MB file size)
@@ -492,7 +496,7 @@ export async function generateIdCardJpeg(speaker) {
     // x=0, y=0, width 1080, height ~800, object-fit: cover.
     // Bottom edge is a soft curved wave fading into white (around y=780–810).
     // ═══════════════════════════════════════════════════════════════════════════
-    const topBgImg = (await loadImage(`/top_bg.jpg?v=dubai_${Date.now()}`)) || (await loadImage("/dubai_bg.jpg"));
+    const topBgImg = (await loadImage(`/id_card_background.jpg?v=${Date.now()}`)) || (await loadImage("/id_card_background.jpg"));
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(0, 0);
@@ -537,8 +541,8 @@ export async function generateIdCardJpeg(speaker) {
         ctx.lineTo(0, H);
         ctx.closePath();
         const wave1Grad = ctx.createLinearGradient(0, 1430, W, H);
-        wave1Grad.addColorStop(0, "#166534"); // green-800
-        wave1Grad.addColorStop(1, "#22c55e"); // green-500
+        wave1Grad.addColorStop(0, isRoom2 ? "#c2410c" : "#166534"); // orange-700 / green-800
+        wave1Grad.addColorStop(1, isRoom2 ? "#f97316" : "#22c55e"); // orange-500 / green-500
         ctx.fillStyle = wave1Grad;
         ctx.fill();
         ctx.restore();
@@ -552,8 +556,8 @@ export async function generateIdCardJpeg(speaker) {
         ctx.lineTo(0, H);
         ctx.closePath();
         const wave2Grad = ctx.createLinearGradient(0, 1510, W, H);
-        wave2Grad.addColorStop(0, "#14532d"); // green-900
-        wave2Grad.addColorStop(1, "#052e16"); // green-950
+        wave2Grad.addColorStop(0, isRoom2 ? "#7c2d12" : "#14532d"); // orange-900 / green-900
+        wave2Grad.addColorStop(1, isRoom2 ? "#431407" : "#052e16"); // orange-950 / green-950
         ctx.fillStyle = wave2Grad;
         ctx.fill();
         ctx.restore();
@@ -595,7 +599,7 @@ export async function generateIdCardJpeg(speaker) {
     // ═══════════════════════════════════════════════════════════════════════════
     ctx.save();
     ctx.font = "italic bold 30px 'Red Hat Display', Montserrat, Inter, -apple-system, sans-serif";
-    ctx.fillStyle = "#064e3b"; // emerald-900
+    ctx.fillStyle = isRoom2 ? "#7c2d12" : "#064e3b"; // orange-900 / emerald-900
 
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
@@ -653,8 +657,8 @@ export async function generateIdCardJpeg(speaker) {
     ctx.shadowOffsetY = 6;
     roundRect(ctx, bannerX, bannerY, bannerW, bannerH, bannerR);
     const bannerGrad = ctx.createLinearGradient(bannerX, bannerY, bannerX + bannerW, bannerY);
-    bannerGrad.addColorStop(0, "#15803d"); // green-700
-    bannerGrad.addColorStop(1, "#22c55e"); // green-500
+    bannerGrad.addColorStop(0, isRoom2 ? "#ea580c" : "#15803d"); // orange-600 / green-700
+    bannerGrad.addColorStop(1, isRoom2 ? "#f97316" : "#22c55e"); // orange-500 / green-500
     ctx.fillStyle = bannerGrad;
     ctx.fill();
     ctx.restore();
@@ -787,7 +791,7 @@ export async function generateIdCardJpeg(speaker) {
         nameFontSize -= 2;
         ctx.font = `bold ${nameFontSize}px 'Red Hat Display', Montserrat, Inter, -apple-system, sans-serif`;
     }
-    ctx.fillStyle = "#16a34a"; // green-600
+    ctx.fillStyle = isRoom2 ? "#c2410c" : "#16a34a"; // orange-700 / green-600
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(speakerDisplayName, 540, 1170);
@@ -818,7 +822,11 @@ export async function generateIdCardJpeg(speaker) {
     let datesText = "";
     if (speaker.day || speaker.timeSlot || speaker.conferenceRoom) {
         const d = speaker.day ? speaker.day.replace("November", "Nov").trim() : "";
-        const t = speaker.timeSlot ? speaker.timeSlot.replace(" (Lunch)", "").trim() : "";
+        const rawT = speaker.timeSlot ? speaker.timeSlot.replace(" (Lunch)", "").trim() : "";
+        const t = rawT.replace(/(\b\d{1,2}):(\d{2})\b/g, (m, h, min) => {
+            let hr = parseInt(h, 10);
+            return isNaN(hr) ? m : `${String(hr % 12 === 0 ? 12 : hr % 12).padStart(2, "0")}:${min} ${hr >= 12 ? "PM" : "AM"}`;
+        });
         const r = speaker.conferenceRoom || "Room 1";
         datesText = [d, t, r].filter(Boolean).join(" | ");
     } else {
@@ -829,37 +837,39 @@ export async function generateIdCardJpeg(speaker) {
 
     ctx.save();
     ctx.font = "bold 44px 'Red Hat Display', Montserrat, Inter, -apple-system, sans-serif";
-    ctx.fillStyle = "#064e3b"; // emerald-900
+    ctx.fillStyle = isRoom2 ? "#7c2d12" : "#064e3b"; // orange-900 / emerald-900
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.letterSpacing = "0.5px";
-    ctx.fillText(datesText, 540, 1340);
+    ctx.fillText(datesText, 540, 1328);
     ctx.restore();
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // 9. QR CODE encoding {{qr_url}}: 185×185 px at x=448, y=1395,
-    //    on a white tile with 10 px padding. Generate with real QR library.
-    //    Optional small badge ID text below QR (16 px, grey, y=1590).
+    // 9. QR CODE encoding {{qr_url}}: 310×310 px on white tile with 15 px padding,
+    //    centered at x=540. Generate with real QR library.
+    //    Small badge ID text below QR (18 px, grey, y=1728).
     // ═══════════════════════════════════════════════════════════════════════════
-    const qrSize = 185;
-    const qrTilePadding = 10;
-    const qrTileX = 448 - qrTilePadding; // 438
-    const qrTileY = 1395 - qrTilePadding; // 1385
-    const qrTileSize = qrSize + qrTilePadding * 2; // 205
+    const qrSize = 310;
+    const qrTilePadding = 15;
+    const qrTileSize = qrSize + qrTilePadding * 2; // 340
+    const qrTileX = (W - qrTileSize) / 2;
+    const qrTileY = 1362;
+    const qrX = (W - qrSize) / 2;
+    const qrY = qrTileY + qrTilePadding;
 
     // White tile
     ctx.save();
-    ctx.shadowColor = "rgba(0, 0, 0, 0.10)";
-    ctx.shadowBlur = 12;
+    ctx.shadowColor = "rgba(0, 0, 0, 0.14)";
+    ctx.shadowBlur = 16;
     ctx.shadowOffsetY = 4;
-    roundRect(ctx, qrTileX, qrTileY, qrTileSize, qrTileSize, 12);
+    roundRect(ctx, qrTileX, qrTileY, qrTileSize, qrTileSize, 18);
     ctx.fillStyle = "#ffffff";
     ctx.fill();
     ctx.restore();
 
     // Subtle tile outline
     ctx.save();
-    roundRect(ctx, qrTileX, qrTileY, qrTileSize, qrTileSize, 12);
+    roundRect(ctx, qrTileX, qrTileY, qrTileSize, qrTileSize, 18);
     ctx.strokeStyle = "rgba(226, 232, 240, 0.9)";
     ctx.lineWidth = 1.2;
     ctx.stroke();
@@ -868,25 +878,25 @@ export async function generateIdCardJpeg(speaker) {
     try {
         const qrUrl = speaker.qrUrl || (typeof window !== "undefined" ? `${window.location.origin}/check-in/${speaker.id}` : speaker.id || "SPEAKER");
         const qrDataUrl = await QRCode.toDataURL(qrUrl, {
-            width: 400 * scale,
+            width: 600 * scale,
             margin: 1,
             color: { dark: "#000000", light: "#ffffff" },
         });
         const qrImg = await loadImage(qrDataUrl);
         if (qrImg) {
-            ctx.drawImage(qrImg, 448, 1395, qrSize, qrSize);
+            ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
         }
     } catch (err) {
         console.warn("QR generation failed:", speaker.id, err);
     }
 
-    // Small badge ID text below QR at y=1590
+    // Small badge ID text below QR at y=1728
     ctx.save();
-    ctx.font = "600 16px 'Courier New', monospace";
+    ctx.font = "600 18px 'Courier New', monospace";
     ctx.fillStyle = "#64748b";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(`ID: ${speaker.id || "—"}`, 540, 1590);
+    ctx.fillText(`ID: ${speaker.id || "—"}`, 540, 1728);
     ctx.restore();
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -898,7 +908,7 @@ export async function generateIdCardJpeg(speaker) {
                 const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
                 const safeName = (speaker.name || "speaker").replace(/[^a-zA-Z0-9_-]/g, "_");
                 const filename = `ID_Badge_${safeName}_${speaker.id}.jpg`;
-                resolve({ id: speaker.id, speaker, dataUrl, blob, filename, templateVersion: "v5_country_flags" });
+                resolve({ id: speaker.id, speaker, dataUrl, blob, filename, templateVersion: "v7_orange_room2" });
             },
             "image/jpeg",
             0.92

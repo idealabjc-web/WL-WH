@@ -470,6 +470,24 @@ html, body {
   border-color: #E2E8F0 !important;
 }
 
+.light-mode section[style*="radial-gradient"] button:not(.bg-\[\#4457F5\]) {
+  color: #1e1b4b !important;
+  background-color: #EEF2FF !important;
+  border-color: #C7D2FE !important;
+}
+
+.light-mode section[style*="radial-gradient"] button:not(.bg-\[\#4457F5\]):hover {
+  background-color: #E0E7FF !important;
+}
+
+.light-mode section[style*="radial-gradient"] button:not(.bg-\[\#4457F5\]) span {
+  color: #1e1b4b !important;
+}
+
+.light-mode section[style*="radial-gradient"] button:not(.bg-\[\#4457F5\]) svg {
+  color: #4F46E5 !important;
+}
+
 .light-mode section[style*="radial-gradient"] .beam {
   background: linear-gradient(to bottom, rgba(59, 130, 246, 0.12), rgba(99, 102, 241, 0.04), transparent) !important;
 }

@@ -5,10 +5,10 @@ import {
     ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, 
     Sparkles, CheckCircle2, Megaphone, Award,
     Sun, Moon, BookOpen, TrendingUp, Star,
-    Camera, Upload, Image as ImageIcon, X, FileText
+    Camera, Upload, Image as ImageIcon, X, FileText, Bus
 } from "lucide-react";
 
-import CheckinPage from "../CheckinPage";
+import CheckinPage, { formatStayDates } from "../CheckinPage";
 import DashboardPage from "../DashboardPage";
 import FeedbackPage from "../FeedbackPage";
 import Toast from "../../components/common/Toast";
@@ -19,12 +19,14 @@ import { fetchAnnouncements } from "../../api/announcementsApi";
 import SpeakerCheckoutPage from "./SpeakerCheckoutPage";
 import SpeakerAnnouncementsPage from "./SpeakerAnnouncementsPage";
 import SpeakerAbstractPage from "./SpeakerAbstractPage";
+import PeerCiteProceedingsPage from "./PeerCiteProceedingsPage";
 import HangingBadgePull from "../../components/HangingBadgePull";
 import { getCountryFlagUrl, getCountryName } from "../../utils/countryFlags";
 
 const TABS = [
     { id: "home", label: "Home", icon: BadgeCheck },
     { id: "abstract", label: "Abstract", icon: FileText },
+    { id: "proceedings", label: "PeerCite Proceedings", icon: BookOpen, mobileLabel: "Proceedings" },
     { id: "announcements", label: "Announcements", icon: Megaphone },
     { id: "feedback", label: "Feedback", icon: MessageSquare },
 ];
@@ -149,7 +151,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
 
     // Derived active speaker from live list or fallback to initial speaker prop
     const currentSpeaker = (speakers && speakers.length > 0
-        ? speakers.find(s => s.id === speaker?.id || (s.email && speaker?.email && s.email.toLowerCase() === speaker.email.toLowerCase()))
+        ? (speakers.find(s => s.id === speaker?.id) || speaker)
         : null) || speaker || {};
 
     const confirmCheckin = async (id, notes) => {
@@ -266,7 +268,11 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
     const eventDay = currentSpeaker.day ? `${currentSpeaker.day}${currentSpeaker.timeSlot ? ` · ${currentSpeaker.timeSlot}` : ""}` : "November 25 · 10:30 – 10:55";
     const venueText = `${currentSpeaker.conferenceRoom || currentSpeaker.room || "Room 1"} · Holiday Inn Express Dubai Airport`;
     const hotelRoomText = currentSpeaker.hotelRoom ? (currentSpeaker.hotelRoom.toLowerCase().startsWith("room") ? currentSpeaker.hotelRoom : `Room ${currentSpeaker.hotelRoom}`) : (currentSpeaker.room || "Room 1999");
-    const dietaryText = currentSpeaker.diet || "No preference";
+    const stayDatesText = formatStayDates(
+        currentSpeaker.checkinDate || currentSpeaker.checkin_date,
+        currentSpeaker.checkoutDate || currentSpeaker.checkout_date,
+        currentSpeaker.accommodationStatus
+    );
 
     const isActuallyLightMode = !isDarkMode && currentTheme === 'theme-default';
 
@@ -447,22 +453,36 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                                         <span>CONFIRMED KEYNOTE SPEAKER</span>
                                     </div>
                                     {currentSpeaker?.country && (
-                                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 border border-white/20 text-xs font-semibold text-white shadow-xs backdrop-blur-xs">
+                                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold shadow-xs backdrop-blur-xs border ${
+                                            isActuallyLightMode 
+                                                ? 'bg-slate-900/5 border-slate-900/15 text-slate-700' 
+                                                : 'bg-white/10 border-white/20 text-white'
+                                        }`}>
                                             <img 
                                                 src={getCountryFlagUrl(currentSpeaker.country, "w40")} 
                                                 alt={currentSpeaker.country} 
-                                                className="w-4 h-3 rounded-xs object-cover border border-white/20 shrink-0" 
+                                                className="w-4 h-3 rounded-xs object-cover border border-black/10 shrink-0" 
                                             />
                                             <span>{getCountryName(currentSpeaker.country)}</span>
+                                        </div>
+                                    )}
+                                    {currentSpeaker?.sessions?.length > 1 && (
+                                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold shadow-xs backdrop-blur-xs border ${
+                                            isActuallyLightMode 
+                                                ? 'bg-blue-900/5 border-blue-900/15 text-blue-700' 
+                                                : 'bg-blue-500/15 border-blue-400/30 text-[#8B9BFF]'
+                                        }`}>
+                                            <Sparkles size={11} className="text-[#8B9BFF]" />
+                                            <span>{currentSpeaker.sessions.length} Presentation Slots</span>
                                         </div>
                                     )}
                                 </div>
 
                                 {/* Compact Balanced Headline without large gap */}
                                 <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight text-white leading-tight animate-fade-in-up">
-                                    Welcome,{" "}
-                                    <span className="bg-gradient-to-r from-white via-slate-100 to-[#8B9BFF] bg-clip-text text-transparent">
-                                        {firstName}
+                                    Welcome,
+                                    <span className="block mt-1 sm:mt-1.5 bg-gradient-to-r from-white via-slate-100 to-[#8B9BFF] bg-clip-text text-transparent">
+                                        {speakerName}
                                     </span>
                                 </h1>
 
@@ -475,11 +495,15 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                                 <div className="mt-4 flex flex-wrap items-center gap-3 animate-fade-in-up" style={{ animationDelay: "0.25s" }}>
                                     <button
                                         onClick={() => handleTabChange("abstract")}
-                                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 transition-all backdrop-blur-md cursor-pointer active:scale-95 group shadow-sm"
+                                        className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer active:scale-95 group shadow-sm ${
+                                            isActuallyLightMode
+                                                ? 'bg-indigo-50/95 hover:bg-indigo-100 text-indigo-950 border-indigo-200/90 shadow-indigo-100/50'
+                                                : 'bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur-md'
+                                        }`}
                                     >
-                                        <FileText size={14} className="text-[#8B9BFF] group-hover:scale-110 transition-transform" />
+                                        <FileText size={15} className={`${isActuallyLightMode ? 'text-indigo-600' : 'text-[#8B9BFF]'} group-hover:scale-110 transition-transform`} />
                                         <span>View Presentation Abstract</span>
-                                        <span className="text-[#8B9BFF] group-hover:translate-x-0.5 transition-transform">→</span>
+                                        <span className={`${isActuallyLightMode ? 'text-indigo-600' : 'text-[#8B9BFF]'} group-hover:translate-x-0.5 transition-transform`}>→</span>
                                     </button>
                                 </div>
                             </div>
@@ -508,7 +532,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                         <div className="relative z-10 w-full max-w-7xl mx-auto pb-4 pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 text-xs font-semibold text-[#B4BEE6]">
                             <div className="flex items-center gap-2">
                                 <Calendar size={14} className="text-[#8B9BFF]" />
-                                <span>October 24–26, 2026</span>
+                                <span>November 24–26, 2026</span>
                             </div>
                             <div className="flex items-center gap-1.5">
                                 <MapPin size={14} className="text-[#8B9BFF]" />
@@ -616,6 +640,16 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                                             loading="lazy" 
                                             referrerPolicy="no-referrer-when-downgrade"
                                         />
+                                    </div>
+
+                                    {/* Shuttle Service Notice below Map */}
+                                    <div className="mt-3.5 p-3 rounded-xl bg-[#050A1F]/70 border border-[#1E2A5A] flex items-center gap-2.5 text-xs text-[#d2d6ea]">
+                                        <span className="w-6 h-6 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+                                            <Bus size={13} />
+                                        </span>
+                                        <span className="leading-snug">
+                                            <b className="text-white font-semibold">Note:</b> Complimentary shuttle service will be available from Dubai International Airport to the hotel.
+                                        </span>
                                     </div>
                                 </div>
 
@@ -943,6 +977,13 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                             toast={toast}
                         />
                     )}
+                    {tab === "proceedings" && (
+                        <PeerCiteProceedingsPage 
+                            speaker={currentSpeaker} 
+                            isDarkMode={isDarkMode} 
+                            toast={toast} 
+                        />
+                    )}
                     {tab === "announcements" && <SpeakerAnnouncementsPage announcements={announcements} />}
                     {tab === "feedback" && (
                         <FeedbackPage 
@@ -967,7 +1008,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
 
             {/* Mobile Bottom Navigation Bar */}
             <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#050A1F]/95 backdrop-blur-xl border-t border-[#1E2A5A] pb-safe shadow-2xl">
-                <div className="grid grid-cols-4 w-full items-center px-1 py-1">
+                <div className="grid grid-cols-5 w-full items-center px-1 py-1">
                     {TABS.map(t => (
                         <button
                             key={t.id}

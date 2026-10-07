@@ -48,8 +48,20 @@ export default function ProfileCard({
                             <span className="font-semibold text-slate-900 sm:text-right max-w-md">{sessionDisplay}</span>
                         </div>
                         <div className="py-2.5 sm:py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 text-sm">
-                            <span className="text-slate-500 text-xs sm:text-sm font-medium">Slot</span>
-                            <span className="font-semibold text-amber-700 sm:text-right">{slotDisplay}</span>
+                            <span className="text-slate-500 text-xs sm:text-sm font-medium">
+                                {speaker.sessions && speaker.sessions.length > 1 ? `Slots (${speaker.sessions.length})` : "Slot"}
+                            </span>
+                            {speaker.sessions && speaker.sessions.length > 1 ? (
+                                <div className="space-y-1 sm:text-right">
+                                    {speaker.sessions.map((s, idx) => (
+                                        <div key={idx} className="text-xs font-semibold text-amber-700">
+                                            Slot {idx + 1}: {s.day} · {s.timeSlot || s.time_slot} ({s.conferenceRoom || s.conference_room || "Room 1"})
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <span className="font-semibold text-amber-700 sm:text-right">{slotDisplay}</span>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -90,8 +102,22 @@ export default function ProfileCard({
                     </div>
                 </div>
                 {row("Session", speaker.sessionTitle || speaker.session_title)}
-                {row("Day / time slot", `${speaker.day || "—"} · ${speaker.timeSlot || speaker.time_slot || "—"}`)}
-                {row("Conference Room", speaker.conferenceRoom || speaker.conference_room || speaker.room)}
+                {speaker.sessions && speaker.sessions.length > 1 ? (
+                    row("Assigned Slots", (
+                        <div className="space-y-1 text-right">
+                            {speaker.sessions.map((s, idx) => (
+                                <div key={idx} className="text-xs">
+                                    <span className="font-bold text-slate-900">Slot {idx + 1}:</span> {s.day} · <span className="text-amber-700 font-semibold">{s.timeSlot || s.time_slot}</span> ({s.conferenceRoom || s.conference_room || "Room 1"})
+                                </div>
+                            ))}
+                        </div>
+                    ))
+                ) : (
+                    <>
+                        {row("Day / time slot", `${speaker.day || "—"} · ${speaker.timeSlot || speaker.time_slot || "—"}`)}
+                        {row("Conference Room", speaker.conferenceRoom || speaker.conference_room || speaker.room)}
+                    </>
+                )}
                 {speaker.accommodationStatus === "Without Accommodation" || speaker.accommodation_status === "Without Accommodation"
                     ? row("Accommodation", "Without Accommodation")
                     : (

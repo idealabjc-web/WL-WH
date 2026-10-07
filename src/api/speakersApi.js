@@ -104,7 +104,28 @@ export function speakerToRow(s) {
 export function rowToSpeaker(r) {
     // Flatten the joined data into the single speaker object so UI doesn't break.
     // Supabase can return arrays or objects depending on foreign key setup (one-to-many vs one-to-one).
-    const session = Array.isArray(r.sessions) ? (r.sessions[0] || {}) : (r.sessions || {});
+    const rawSessions = Array.isArray(r.sessions) ? r.sessions : (r.sessions ? [r.sessions] : []);
+    const normalizedSessions = rawSessions.map(s => ({
+        ...s,
+        id: s.id,
+        speaker_id: s.speaker_id || r.id,
+        sessionTitle: s.session_title || s.sessionTitle || r.session_title || null,
+        day: s.day || null,
+        timeSlot: s.time_slot || s.timeSlot || null,
+        conferenceRoom: s.conference_room || s.conferenceRoom || null,
+        session_title: s.session_title || s.sessionTitle || r.session_title || null,
+        time_slot: s.time_slot || s.timeSlot || null,
+        conference_room: s.conference_room || s.conferenceRoom || null,
+    })).sort((a, b) => {
+        const dayA = a.day || "";
+        const dayB = b.day || "";
+        if (dayA !== dayB) return dayA.localeCompare(dayB);
+        const timeA = a.timeSlot || "";
+        const timeB = b.timeSlot || "";
+        return timeA.localeCompare(timeB);
+    });
+
+    const session = normalizedSessions[0] || {};
     const accomm = Array.isArray(r.accommodations) ? (r.accommodations[0] || {}) : (r.accommodations || {});
     const att = Array.isArray(r.attendance) ? (r.attendance[0] || {}) : (r.attendance || {});
     
@@ -128,11 +149,11 @@ export function rowToSpeaker(r) {
         email: r.email,
         phone: r.phone,
         country: r.country || "",
-        sessions: Array.isArray(r.sessions) ? r.sessions : (r.sessions ? [r.sessions] : []),
-        sessionTitle: session.session_title || r.session_title || null,
+        sessions: normalizedSessions,
+        sessionTitle: session.sessionTitle || r.session_title || null,
         day: session.day || r.day || null,
-        timeSlot: session.time_slot || r.time_slot || null,
-        conferenceRoom: session.conference_room || r.conference_room || r.room || null,
+        timeSlot: session.timeSlot || r.time_slot || null,
+        conferenceRoom: session.conferenceRoom || r.conference_room || r.room || null,
         accommodationStatus: accomm.accommodation_status || r.accommodation_status || null,
         hotelRoom: accomm.hotel_room || r.hotel_room || null,
         checkinDate: accomm.checkin_date || r.checkin_date || null,
