@@ -1,8 +1,29 @@
-import React, { useMemo } from 'react';
-import { BarChart2, Users, FileText, FileX, CalendarDays, CheckCircle, Clock, AlertTriangle, Hotel, Utensils, MapPin, Activity, Copy } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { BarChart2, Users, FileText, FileX, CalendarDays, CheckCircle, Clock, AlertTriangle, Hotel, Utensils, MapPin, Activity, Copy, SlidersHorizontal } from 'lucide-react';
 import { TIME_SLOTS, EVENT_DAYS } from '../api/speakersApi';
 
-export default function AnalysisPage({ speakers }) {
+const TRACKABLE_FIELDS = [
+    { id: "photo", label: "Photo", issueText: "Missing Photo", check: (s) => !s.photoUrl },
+    { id: "abstract", label: "Abstract", issueText: "Pending Abstract", check: (s) => (!s.abstractStatus || s.abstractStatus.toLowerCase() !== 'submitted') && s.abstractProvided !== 'yes' },
+    { id: "schedule", label: "Schedule (Time/Day/Room)", issueText: "Not Scheduled", check: (s, hasCompleteSession) => !hasCompleteSession },
+    { id: "hotelRoom", label: "Hotel Room", issueText: "Missing Hotel Room", check: (s) => {
+        const val = s.accommodationStatus ? s.accommodationStatus.toLowerCase() : "";
+        const needsHotel = val === "with accommodation" || val === "yes" || val === "required";
+        return needsHotel && (!s.hotelRoom || s.hotelRoom.trim() === "");
+    }},
+    { id: "country", label: "Country", issueText: "Missing Country", check: (s) => !s.country || s.country.trim() === "" },
+    { id: "whoseSpeaker", label: "Owner (Whose Speaker)", issueText: "Missing Whose Speaker", check: (s) => !s.whoseSpeaker || s.whoseSpeaker.trim() === "" },
+    { id: "email", label: "Email", issueText: "Missing Email", check: (s) => !s.email || s.email.trim() === "" },
+    { id: "phone", label: "Phone", issueText: "Missing Phone", check: (s) => !s.phone || s.phone.trim() === "" },
+    { id: "sessionTitle", label: "Session Title", issueText: "Missing Session Title", check: (s) => !s.sessionTitle || s.sessionTitle.trim() === "" },
+    { id: "team", label: "Team", issueText: "Missing Team", check: (s) => !s.team || s.team.trim() === "" },
+    { id: "speakerTag", label: "Speaker Tag", issueText: "Missing Tag", check: (s) => !s.speakerTag || s.speakerTag.trim() === "" },
+    { id: "accommodationStatus", label: "Accommodation Status", issueText: "Missing Accomm. Status", check: (s) => !s.accommodationStatus || s.accommodationStatus.trim() === "" },
+    { id: "diet", label: "Dietary Need", issueText: "Missing Dietary Need", check: (s) => !s.diet || s.diet.trim() === "" },
+];
+
+export default function AnalysisPage({ speakers, toast }) {
+    const [selectedFields, setSelectedFields] = useState(["photo", "abstract", "schedule", "hotelRoom", "country", "whoseSpeaker"]);
     const rooms = ["Room 1", "Room 2"];
     const bookableTimeSlots = TIME_SLOTS.filter(s => !s.toLowerCase().includes("lunch"));
     const totalSlotsPerRoom = EVENT_DAYS.length * bookableTimeSlots.length; 
@@ -77,7 +98,8 @@ export default function AnalysisPage({ speakers }) {
             if (daysScheduled.has(EVENT_DAYS[1])) day2Speakers++;
 
             // Logistics
-            if (s.accommodationStatus && s.accommodationStatus.toLowerCase() !== "no" && s.accommodationStatus.toLowerCase() !== "none") {
+            const accVal = s.accommodationStatus ? s.accommodationStatus.toLowerCase() : "";
+            if (accVal === "with accommodation" || accVal === "yes" || accVal === "required") {
                 accommodationRequired++;
             }
             if (s.tour && s.tour.toLowerCase() === "yes") {
@@ -89,11 +111,12 @@ export default function AnalysisPage({ speakers }) {
 
             // Missing info tracking
             let issues = [];
-            if (!s.photoUrl) issues.push("Missing Photo");
-            if ((!s.abstractStatus || s.abstractStatus.toLowerCase() !== 'submitted') && s.abstractProvided !== 'yes') issues.push("Pending Abstract");
-            if (!hasCompleteSession) issues.push("Not Scheduled");
-            if (!s.country || s.country.trim() === "") issues.push("Missing Country");
-            if (!s.whoseSpeaker || s.whoseSpeaker.trim() === "") issues.push("Missing Whose Speaker");
+            
+            TRACKABLE_FIELDS.forEach(field => {
+                if (selectedFields.includes(field.id) && field.check(s, hasCompleteSession)) {
+                    issues.push(field.issueText);
+                }
+            });
 
             if (issues.length > 0) {
                 missingInfo.push({ id: s.id, name: s.name, whoseSpeaker: s.whoseSpeaker, issues });
@@ -124,7 +147,7 @@ export default function AnalysisPage({ speakers }) {
             dietaryNeeds,
             missingInfo
         };
-    }, [speakers, bookableTimeSlots, totalSlots, totalSlotsPerRoom]);
+    }, [speakers, bookableTimeSlots, totalSlots, totalSlotsPerRoom, selectedFields]);
 
     const handleCopyMissingInfo = () => {
         if (!analysis.missingInfo || analysis.missingInfo.length === 0) return;
@@ -136,8 +159,9 @@ export default function AnalysisPage({ speakers }) {
         }).join("\n\n");
 
         navigator.clipboard.writeText(textToCopy).then(() => {
-            console.log("Copied missing info to clipboard!");
+            if (toast) toast("Copied missing info to clipboard! ✓");
         }).catch(err => {
+            if (toast) toast("Failed to copy text.");
             console.error("Failed to copy text: ", err);
         });
     };
@@ -304,7 +328,31 @@ export default function AnalysisPage({ speakers }) {
                         </button>
                     )}
                 </div>
-                <p className="text-slate-500 text-sm mb-6">Speakers requiring attention (missing schedules, photos, or abstracts).</p>
+                <p className="text-slate-500 text-sm mb-4">Speakers requiring attention based on the selected fields below.</p>
+
+                <div className="mb-6">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
+                        <SlidersHorizontal size={16} />
+                        Filter Fields to Check:
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {TRACKABLE_FIELDS.map(field => (
+                            <button
+                                key={field.id}
+                                onClick={() => setSelectedFields(prev => 
+                                    prev.includes(field.id) ? prev.filter(f => f !== field.id) : [...prev, field.id]
+                                )}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors border ${
+                                    selectedFields.includes(field.id) 
+                                        ? "bg-rose-100 border-rose-200 text-rose-700 hover:bg-rose-200" 
+                                        : "bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100"
+                                }`}
+                            >
+                                {field.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
 
                 {analysis.missingInfo.length === 0 ? (
                     <div className="text-emerald-600 font-medium flex items-center gap-2 bg-emerald-50 p-4 rounded-xl border border-emerald-100">

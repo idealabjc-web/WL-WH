@@ -1081,7 +1081,11 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                                     )}
                                                 </td>
                                                 <td className="py-3 px-4 text-xs font-semibold text-slate-700 whitespace-nowrap">
-                                                    {s.nights ? `${s.nights} N` : "—"}
+                                                    {(() => {
+                                                        const accVal = s.accommodationStatus ? s.accommodationStatus.toLowerCase() : "";
+                                                        if (accVal === "without accommodation" || accVal === "no" || accVal === "none") return <span className="text-slate-400 font-medium">NA</span>;
+                                                        return s.nights ? `${s.nights} N` : "—";
+                                                    })()}
                                                 </td>
                                                 <td className="py-3 px-4 text-right whitespace-nowrap">
                                                     <StatusBadge checkedIn={s.checkedIn} checkedOut={s.checkedOut} />

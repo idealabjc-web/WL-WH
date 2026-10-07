@@ -418,7 +418,7 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
                                     onRefresh={refresh}
                                 />
                             )}
-                            {tab === "analysis" && userRole === "admin" && <AnalysisPage speakers={speakers} />}
+                            {tab === "analysis" && userRole === "admin" && <AnalysisPage speakers={speakers} toast={toast} />}
                             {tab === "export" && userRole === "admin" && <DataExportPage speakers={speakers} />}
                             {tab === "audit" && userRole === "admin" && <AuditLogsPage />}
                             {tab === "settings" && <SettingsPage userEmail={userEmail} />}

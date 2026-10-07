@@ -377,7 +377,7 @@ export async function uploadSpeakerPhoto(id, file) {
             .upload(path, file, { contentType: file.type, upsert: true });
         if (uploadError) throw uploadError;
         const { data } = supabase.storage.from("speaker-photos").getPublicUrl(path);
-        return data?.publicUrl || null;
+        return data?.publicUrl ? `${data.publicUrl}?t=${Date.now()}` : null;
     } catch (e) {
         console.error("Speaker photo upload failed:", e);
         return null;
@@ -393,7 +393,7 @@ export async function uploadSpeakerAbstract(id, file) {
             .upload(path, file, { upsert: true });
         if (uploadError) throw uploadError;
         const { data } = supabase.storage.from("speaker-abstracts").getPublicUrl(path);
-        return data?.publicUrl || null;
+        return data?.publicUrl ? `${data.publicUrl}?t=${Date.now()}` : null;
     } catch (e) {
         console.error("Speaker abstract upload failed:", e);
         return null;
