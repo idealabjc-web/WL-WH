@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { StatCard, StatusBadge, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
-import { TIME_SLOTS, EVENT_DAYS, generatePortalToken, uploadSpeakerAbstract, uploadSpeakerPhoto, uploadSpeakerPeerCitePdf, getSpeakerPeerCitePdf, TEAMS } from "../api/speakersApi";
+import { TIME_SLOTS, EVENT_DAYS, generatePortalToken, uploadSpeakerAbstract, uploadSpeakerPhoto, uploadSpeakerPeerCitePdf, getSpeakerPeerCitePdf, TEAMS, getAbstractsMap } from "../api/speakersApi";
 import { supabase } from "../supabaseClient";
 import * as XLSX from "xlsx-js-style";
 import { slugify } from "../site/publicApi";
@@ -22,9 +22,8 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
     const [isEditing, setIsEditing] = useState(false);
     const [form, setForm] = useState(speaker);
     const [saving, setSaving] = useState(false);
-    const [abstractFile, setAbstractFile] = useState(null);
+    const [abstractFiles, setAbstractFiles] = useState({}); // { [sessionId_or_index]: File }
     const [abstractUploading, setAbstractUploading] = useState(false);
-    const abstractInputRef = useRef(null);
     const [photoFile, setPhotoFile] = useState(null);
     const [photoUploading, setPhotoUploading] = useState(false);
     const photoInputRef = useRef(null);
@@ -147,14 +146,29 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
             updatedForm.conferenceRoom = null;
         }
 
-        // Upload abstract file if one was selected
-        if (abstractFile) {
+        // Upload abstract files if any were selected
+        if (Object.keys(abstractFiles).length > 0) {
             setAbstractUploading(true);
-            const url = await uploadSpeakerAbstract(speaker.id, abstractFile);
-            setAbstractUploading(false);
-            if (url) {
-                updatedForm = { ...updatedForm, abstractUrl: url, abstractStatus: "submitted" };
+            const currentAbstracts = getAbstractsMap(updatedForm.abstractUrl);
+            
+            for (const [key, file] of Object.entries(abstractFiles)) {
+                // Determine sessionId (if key is an index, use that index's session if available, else use key)
+                let sessionId = key;
+                if (!isNaN(key) && form.sessions && form.sessions[key]) {
+                    sessionId = form.sessions[key].id || `session_${key}`;
+                }
+                const url = await uploadSpeakerAbstract(speaker.id, sessionId, file);
+                if (url) {
+                    currentAbstracts[sessionId] = url;
+                }
             }
+            
+            setAbstractUploading(false);
+            updatedForm = { 
+                ...updatedForm, 
+                abstractUrl: JSON.stringify(currentAbstracts), 
+                abstractStatus: "submitted" 
+            };
         }
 
         // Upload photo file if one was selected
@@ -171,9 +185,8 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
         const success = await onUpdate(speaker.id, updatedForm);
         setSaving(false);
         if (success) {
-            setAbstractFile(null);
+            setAbstractFiles({});
             setPhotoFile(null);
-            if (abstractInputRef.current) abstractInputRef.current.value = "";
             if (photoInputRef.current) photoInputRef.current.value = "";
             setIsEditing(false);
         }
@@ -518,61 +531,95 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                     </div>
                     <div><label className="text-xs font-semibold text-slate-700">Concerns</label><input className={inputCls} value={form.concerns || ""} onChange={set("concerns")} /></div>
 
-                    {/* Abstract */}
+                    {/* Abstracts */}
                     <div className="sm:col-span-2">
                         <label className="text-xs font-semibold text-slate-700 block mb-1.5">
-                            Abstract File
+                            Abstract Files
                         </label>
-                        <input
-                            ref={abstractInputRef}
-                            type="file"
-                            accept=".pdf,.doc,.docx,.ppt,.pptx"
-                            className="hidden"
-                            onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) setAbstractFile(file);
-                            }}
-                        />
-                        {abstractFile ? (
-                            <div className="flex items-center gap-2">
-                                <div className="text-xs text-emerald-600 font-medium bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-100 truncate flex-1">
-                                    Selected: {abstractFile.name}
+                        
+                        {(() => {
+                            const currentAbstracts = getAbstractsMap(form.abstractUrl);
+                            const sessionsToRender = form.sessions && form.sessions.length > 0 
+                                ? form.sessions 
+                                : [{ _isLegacy: true, id: 'legacy' }];
+
+                            return (
+                                <div className="space-y-3">
+                                    {sessionsToRender.map((sess, idx) => {
+                                        const sessionId = sess._isLegacy ? 'legacy' : (sess.id || `session_${idx}`);
+                                        const file = abstractFiles[sessionId];
+                                        // Allow first session to inherit legacy abstract if it exists
+                                        const currentUrl = currentAbstracts[sessionId] || (idx === 0 ? currentAbstracts.legacy : null) || (sess._isLegacy ? currentAbstracts.legacy : null);
+                                        const labelTitle = sess._isLegacy 
+                                            ? "Abstract File" 
+                                            : `Abstract for Slot ${idx + 1}: ${sess.day || 'TBA'} • ${sess.timeSlot || 'TBA'}`;
+
+                                        return (
+                                            <div key={sessionId} className="p-3 bg-slate-50 border border-slate-200 rounded-xl relative">
+                                                <div className="text-[11px] font-bold text-slate-500 mb-2">{labelTitle}</div>
+                                                <input
+                                                    type="file"
+                                                    accept=".pdf,.doc,.docx,.ppt,.pptx"
+                                                    className="hidden"
+                                                    id={`abstract_upload_${sessionId}`}
+                                                    onChange={(e) => {
+                                                        const selected = e.target.files?.[0];
+                                                        if (selected) {
+                                                            setAbstractFiles(prev => ({ ...prev, [sessionId]: selected }));
+                                                        }
+                                                    }}
+                                                />
+                                                {file ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="text-xs text-emerald-600 font-medium bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-100 truncate flex-1">
+                                                            Selected: {file.name}
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            className="text-xs text-rose-500 hover:text-rose-700 hover:bg-rose-50 font-semibold px-3 py-2 rounded-lg transition-colors"
+                                                            onClick={() => {
+                                                                setAbstractFiles(prev => {
+                                                                    const next = { ...prev };
+                                                                    delete next[sessionId];
+                                                                    return next;
+                                                                });
+                                                                const input = document.getElementById(`abstract_upload_${sessionId}`);
+                                                                if (input) input.value = "";
+                                                            }}
+                                                        >Remove</button>
+                                                    </div>
+                                                ) : currentUrl ? (
+                                                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                                                        <div className="text-xs text-blue-700 font-medium bg-blue-50 px-3 py-2 rounded-lg border border-blue-100 flex-1 flex items-center justify-between">
+                                                            <span className="truncate mr-2">Current abstract uploaded</span>
+                                                            <a href={currentUrl} target="_blank" rel="noreferrer" className="underline hover:text-blue-900 shrink-0">
+                                                                View ↗
+                                                            </a>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            className="text-xs text-slate-700 hover:text-slate-900 font-semibold border border-slate-200 hover:bg-slate-50 px-3 py-2 rounded-lg bg-white transition-colors shrink-0"
+                                                            onClick={() => document.getElementById(`abstract_upload_${sessionId}`)?.click()}
+                                                        >
+                                                            Change File
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        className="text-xs text-slate-600 hover:text-slate-800 font-semibold border-2 border-dashed border-slate-200 hover:border-amber-300 hover:bg-amber-50 px-3 py-2.5 rounded-lg bg-white transition-colors w-full flex items-center justify-center gap-2"
+                                                        onClick={() => document.getElementById(`abstract_upload_${sessionId}`)?.click()}
+                                                    >
+                                                        <span className="text-amber-500 font-bold text-lg leading-none">+</span>
+                                                        Submit Abstract File
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                                <button
-                                    type="button"
-                                    className="text-xs text-rose-500 hover:text-rose-700 hover:bg-rose-50 font-semibold px-3 py-2 rounded-lg transition-colors"
-                                    onClick={() => {
-                                        setAbstractFile(null);
-                                        if (abstractInputRef.current) abstractInputRef.current.value = "";
-                                    }}
-                                >Remove</button>
-                            </div>
-                        ) : form.abstractUrl ? (
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                                <div className="text-xs text-blue-700 font-medium bg-blue-50 px-3 py-2 rounded-lg border border-blue-100 flex-1 flex items-center justify-between">
-                                    <span className="truncate mr-2">Current abstract uploaded</span>
-                                    <a href={form.abstractUrl} target="_blank" rel="noreferrer" className="underline hover:text-blue-900 shrink-0">
-                                        View ↗
-                                    </a>
-                                </div>
-                                <button
-                                    type="button"
-                                    className="text-xs text-slate-700 hover:text-slate-900 font-semibold border border-slate-200 hover:bg-slate-50 px-3 py-2 rounded-lg bg-white transition-colors shrink-0"
-                                    onClick={() => abstractInputRef.current?.click()}
-                                >
-                                    Change File
-                                </button>
-                            </div>
-                        ) : (
-                            <button
-                                type="button"
-                                className="text-xs text-slate-600 hover:text-slate-800 font-semibold border-2 border-dashed border-slate-200 hover:border-amber-300 hover:bg-amber-50 px-3 py-2.5 rounded-lg bg-slate-50 transition-colors w-full flex items-center justify-center gap-2"
-                                onClick={() => abstractInputRef.current?.click()}
-                            >
-                                <span className="text-amber-500 font-bold text-lg leading-none">+</span>
-                                Submit Abstract File
-                            </button>
-                        )}
+                            );
+                        })()}
                     </div>
 
                     {/* PeerCite Proceeding PDF Section */}
@@ -789,12 +836,20 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                     {row("Speaker Tour", isSpeaker && !isSelf ? "Confidential" : speaker.tour)}
                     <div className="text-xs font-semibold text-amber-600 tracking-wide mt-3 mb-1.5">ABSTRACT</div>
                     {row("Abstract Status", speaker.abstractStatus ? speaker.abstractStatus.charAt(0).toUpperCase() + speaker.abstractStatus.slice(1) : "—")}
-                    {speaker.abstractUrl && (
-                        <div className="flex justify-between gap-4 py-2 border-b border-slate-100 dark:border-slate-800 last:border-0 text-sm">
-                            <div className="text-slate-500 shrink-0">Abstract File</div>
-                            <a href={speaker.abstractUrl} target="_blank" rel="noreferrer" className="font-semibold text-blue-600 underline text-right truncate">View ↗</a>
-                        </div>
-                    )}
+                    {(() => {
+                        const currentAbstracts = getAbstractsMap(speaker.abstractUrl);
+                        const urls = Object.entries(currentAbstracts);
+                        if (urls.length === 0) return null;
+                        
+                        return urls.map(([key, url], i) => (
+                            <div key={key} className="flex justify-between gap-4 py-2 border-b border-slate-100 dark:border-slate-800 last:border-0 text-sm">
+                                <div className="text-slate-500 shrink-0">
+                                    {key === 'legacy' ? 'Abstract File' : `Abstract File ${i + 1}`}
+                                </div>
+                                <a href={url} target="_blank" rel="noreferrer" className="font-semibold text-blue-600 underline text-right truncate">View ↗</a>
+                            </div>
+                        ));
+                    })()}
                 </div>
             </div>
 
@@ -1344,7 +1399,11 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                                     )}
                                                 </td>
                                                 <td className="py-3 px-4 text-xs font-semibold text-slate-700 whitespace-nowrap">
-                                                    {s.nights ? `${s.nights} N` : "—"}
+                                                    {(() => {
+                                                        const accVal = s.accommodationStatus ? s.accommodationStatus.toLowerCase() : "";
+                                                        if (accVal === "without accommodation" || accVal === "no" || accVal === "none") return <span className="text-slate-400 font-medium">NA</span>;
+                                                        return s.nights ? `${s.nights} N` : "—";
+                                                    })()}
                                                 </td>
                                                 <td className="py-3 px-4 text-right whitespace-nowrap">
                                                     <StatusBadge checkedIn={s.checkedIn} checkedOut={s.checkedOut} />

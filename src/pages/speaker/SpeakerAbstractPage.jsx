@@ -6,19 +6,39 @@ import {
 } from "lucide-react";
 import { getCountryFlagUrl, getCountryName } from "../../utils/countryFlags";
 import { formatTimeAmPm } from "../CheckinPage";
+import { getAbstractsMap } from "../../api/speakersApi";
 
 export default function SpeakerAbstractPage({ 
     speaker = {}, 
     isDarkMode = true, 
     toast = () => {} 
 }) {
+    const abstractSessions = useMemo(() => {
+        if (Array.isArray(speaker?.sessions) && speaker.sessions.length > 0) {
+            return speaker.sessions;
+        }
+        if (speaker?.day || speaker?.timeSlot || speaker?.conferenceRoom) {
+            return [{
+                day: speaker.day,
+                timeSlot: speaker.timeSlot,
+                conferenceRoom: speaker.conferenceRoom || speaker.room,
+                sessionTitle: speaker.sessionTitle || speaker.session_title || "Keynote Presentation"
+            }];
+        }
+        return [];
+    }, [speaker]);
+
+    const [selectedSessionIndex, setSelectedSessionIndex] = useState(0);
+
+    const currentSession = abstractSessions[selectedSessionIndex] || abstractSessions[0] || {};
+
     const speakerId = speaker?.id || "speaker";
     const speakerName = speaker?.name || "Distinguished Speaker";
-    const sessionTitle = speaker?.sessionTitle || speaker?.session_title || "Keynote Presentation";
+    const sessionTitle = currentSession?.sessionTitle || currentSession?.session_title || speaker?.sessionTitle || speaker?.session_title || "Keynote Presentation";
     const speakerRole = speaker?.speakerTag || "Keynote Speaker";
     const affiliation = speaker?.team || speaker?.whoseSpeaker || "Official Delegation";
-    const presentationDay = speaker?.day || "November 25, 2026";
-    const rawTime = speaker?.timeSlot || "10:30 – 10:55";
+    const presentationDay = currentSession?.day || speaker?.day || "November 25, 2026";
+    const rawTime = currentSession?.timeSlot || speaker?.timeSlot || "10:30 – 10:55";
     const timeSlot = rawTime.replace(/(\b\d{1,2}):(\d{2})\b/g, (match, h, m) => {
         let hour = parseInt(h, 10);
         if (isNaN(hour)) return match;
@@ -27,23 +47,13 @@ export default function SpeakerAbstractPage({
         const padHour = String(hour12).padStart(2, "0");
         return `${padHour}:${m} ${ampm}`;
     });
-    const conferenceRoom = speaker?.conferenceRoom || speaker?.room || "Room 1 - Main Stage";
+    const conferenceRoom = currentSession?.conferenceRoom || currentSession?.conference_room || currentSession?.room || speaker?.conferenceRoom || speaker?.room || "Room 1 - Main Stage";
     const speakerCountry = speaker?.country;
-    const abstractUrl = speaker?.abstractUrl || "";
 
-    const abstractSessions = useMemo(() => {
-        if (Array.isArray(speaker?.sessions) && speaker.sessions.length > 0) {
-            return speaker.sessions;
-        }
-        if (speaker?.day || speaker?.timeSlot || speaker?.conferenceRoom) {
-            return [{
-                day: presentationDay,
-                timeSlot,
-                conferenceRoom
-            }];
-        }
-        return [];
-    }, [speaker, presentationDay, timeSlot, conferenceRoom]);
+    // Resolve specific abstract URL for this session
+    const abstractsMap = useMemo(() => getAbstractsMap(speaker?.abstractUrl), [speaker?.abstractUrl]);
+    const sessionIdKey = currentSession.id || `session_${selectedSessionIndex}`;
+    const abstractUrl = abstractsMap[sessionIdKey] || (selectedSessionIndex === 0 ? abstractsMap.legacy : "") || "";
 
     // URLs to guarantee opening strictly in PDF format (handles both direct PDF and docx/doc via high-performance viewer)
     const isDirectPdf = abstractUrl.toLowerCase().endsWith(".pdf");
@@ -52,7 +62,7 @@ export default function SpeakerAbstractPage({
         : (abstractUrl ? `https://docs.google.com/viewer?url=${encodeURIComponent(abstractUrl)}` : "");
 
     // Local storage key for custom abstract text
-    const abstractStorageKey = `speaker_abstract_text_${speakerId}`;
+    const abstractStorageKey = `speaker_abstract_text_${speakerId}_${selectedSessionIndex}`;
     
     // Default structured abstract template tailored to this speaker
     const defaultAbstract = `Background & Purpose:
@@ -83,7 +93,7 @@ Keywords: Leadership, Healthcare Innovation, Clinical Governance, Patient Outcom
     const [draftText, setDraftText] = useState(abstractText);
     const [copied, setCopied] = useState(false);
 
-    // Sync when speaker changes
+    // Sync when speaker or session changes
     useEffect(() => {
         try {
             const saved = localStorage.getItem(abstractStorageKey);
@@ -98,7 +108,7 @@ Keywords: Leadership, Healthcare Innovation, Clinical Governance, Patient Outcom
             setAbstractText(defaultAbstract);
             setDraftText(defaultAbstract);
         }
-    }, [speakerId, sessionTitle]);
+    }, [abstractStorageKey, defaultAbstract]);
 
     const handleSave = () => {
         setAbstractText(draftText);
@@ -135,6 +145,32 @@ Keywords: Leadership, Healthcare Innovation, Clinical Governance, Patient Outcom
 
     return (
         <div className="w-full max-w-4xl mx-auto space-y-6 animate-fade-in-up">
+            {/* Session Tabs (if multiple) */}
+            {abstractSessions.length > 1 && (
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-2 snap-x scrollbar-hide">
+                    {abstractSessions.map((sess, idx) => (
+                        <button
+                            key={idx}
+                            onClick={() => {
+                                setSelectedSessionIndex(idx);
+                                setIsEditing(false);
+                            }}
+                            className={`px-4 py-2 text-sm font-bold rounded-xl whitespace-nowrap transition-all shadow-sm shrink-0 snap-start border ${
+                                selectedSessionIndex === idx
+                                    ? isDarkMode
+                                        ? "bg-indigo-600 text-white border-indigo-500 ring-2 ring-indigo-500/30"
+                                        : "bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-600/30"
+                                    : isDarkMode
+                                        ? "bg-white/5 text-slate-300 border-white/10 hover:bg-white/10"
+                                        : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                            }`}
+                        >
+                            Slot {idx + 1}
+                        </button>
+                    ))}
+                </div>
+            )}
+
             {/* Main Abstract Dossier Card */}
             <div className={`rounded-3xl p-6 sm:p-10 border shadow-2xl relative overflow-hidden transition-all duration-300 ${
                 isDarkMode 

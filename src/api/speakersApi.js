@@ -377,23 +377,23 @@ export async function uploadSpeakerPhoto(id, file) {
             .upload(path, file, { contentType: file.type, upsert: true });
         if (uploadError) throw uploadError;
         const { data } = supabase.storage.from("speaker-photos").getPublicUrl(path);
-        return data?.publicUrl || null;
+        return data?.publicUrl ? `${data.publicUrl}?t=${Date.now()}` : null;
     } catch (e) {
         console.error("Speaker photo upload failed:", e);
         return null;
     }
 }
 
-export async function uploadSpeakerAbstract(id, file) {
+export async function uploadSpeakerAbstract(speakerId, sessionId, file) {
     try {
         const ext = file.name.split(".").pop();
-        const path = `${id}.${ext}`;
+        const path = sessionId ? `${speakerId}_${sessionId}.${ext}` : `${speakerId}.${ext}`;
         const { error: uploadError } = await supabase.storage
             .from("speaker-abstracts")
             .upload(path, file, { upsert: true });
         if (uploadError) throw uploadError;
         const { data } = supabase.storage.from("speaker-abstracts").getPublicUrl(path);
-        return data?.publicUrl || null;
+        return data?.publicUrl ? `${data.publicUrl}?t=${Date.now()}` : null;
     } catch (e) {
         console.error("Speaker abstract upload failed:", e);
         return null;
@@ -482,3 +482,17 @@ export async function getSpeakerPeerCitePdf(id) {
     return null;
 }
 
+export function getAbstractsMap(abstractUrlString) {
+    if (!abstractUrlString) return {};
+    const trimmed = String(abstractUrlString).trim();
+    if (trimmed.startsWith('{')) {
+        try {
+            return JSON.parse(trimmed);
+        } catch (e) {
+            return {};
+        }
+    } else if (trimmed.startsWith('http')) {
+        return { legacy: trimmed };
+    }
+    return {};
+}

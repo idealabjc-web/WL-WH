@@ -328,6 +328,92 @@ export default function IdCardsPage({
         }
     };
 
+    // 4.5. Bundle all generated JPEG cards into a single PDF
+    const handleDownloadSinglePdf = async () => {
+        let currentCards = { ...cards };
+
+        // If no cards generated yet, auto-generate first
+        if (Object.keys(currentCards).length === 0) {
+            if (totalSpeakers === 0) {
+                toast("No speakers available to generate ID cards.");
+                return;
+            }
+            toast("Generating and storing ID cards first...");
+            setGenerating(true);
+            let done = 0;
+            for (const s of speakers) {
+                setProgress(`Generating & saving ${done + 1} of ${speakers.length}: ${s.name}...`);
+                const card = await generateIdCardJpeg(s);
+                const uploadRes = await uploadIdCardToStorage(s, card.blob, card.filename);
+                if (uploadRes.publicUrl) {
+                    card.publicUrl = uploadRes.publicUrl;
+                    card.isStored = true;
+                }
+                currentCards[s.id] = card;
+                done++;
+            }
+            setCards(currentCards);
+            saveLocalCachedCards(currentCards);
+            setGenerating(false);
+            setProgress(null);
+        }
+
+        setZipping(true);
+        toast("Generating single PDF with all ID cards...");
+        try {
+            const cardList = Object.values(currentCards);
+            
+            const pdf = new jsPDF({
+                orientation: "portrait",
+                unit: "px",
+                format: [1080, 1800]
+            });
+
+            let firstPage = true;
+
+            // Add every generated card to the pdf
+            for (const c of cardList) {
+                let blob = c.blob;
+                if (!blob && (c.publicUrl || c.dataUrl)) {
+                    try {
+                        const res = await fetch(c.publicUrl || c.dataUrl);
+                        blob = await res.blob();
+                    } catch (e) {
+                        console.warn("Could not fetch blob for", c.filename, e);
+                    }
+                }
+                if (blob) {
+                    try {
+                        const dataUrl = await new Promise((resolve) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => resolve(reader.result);
+                            reader.readAsDataURL(blob);
+                        });
+                        
+                        if (!firstPage) {
+                            pdf.addPage([1080, 1800], "portrait");
+                        }
+                        
+                        pdf.addImage(dataUrl, "JPEG", 0, 0, 1080, 1800);
+                        firstPage = false;
+                    } catch (err) {
+                        console.error("Failed to generate PDF page for", c.filename, err);
+                    }
+                }
+            }
+
+            const timestamp = Date.now();
+            pdf.save(`WL-WH-2025-All-Speaker-ID-Cards_${timestamp}.pdf`);
+            
+            toast(`Downloaded single PDF with ${cardList.length} ID card(s).`);
+        } catch (err) {
+            console.error("Single PDF creation failed:", err);
+            toast("Failed to build PDF file. Please try again.");
+        } finally {
+            setZipping(false);
+        }
+    };
+
     // 5. Download a single card as a PDF
     const downloadSingleCard = async (card) => {
         try {
@@ -446,7 +532,16 @@ export default function IdCardsPage({
                             className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-200 text-slate-950 font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-95 min-h-[44px]"
                         >
                             <FileArchive size={16} />
-                            {zipping ? "Creating ZIP..." : "Generate & Download ZIP"}
+                            {zipping ? "Creating ZIP..." : "Download ZIP"}
+                        </button>
+
+                        <button
+                            onClick={handleDownloadSinglePdf}
+                            disabled={zipping || generating || totalSpeakers === 0}
+                            className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-95 min-h-[44px]"
+                        >
+                            <Download size={16} />
+                            {zipping ? "Processing..." : "Download PDF"}
                         </button>
                     </div>
                 </div>
