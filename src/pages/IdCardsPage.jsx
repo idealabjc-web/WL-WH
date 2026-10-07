@@ -58,7 +58,7 @@ export default function IdCardsPage({
 
             for (const s of speakers) {
                 // If speaker has no card or has an old template card
-                if (!currentCards[s.id] || currentCards[s.id].templateVersion !== "v6_dubai_bg") {
+                if (!currentCards[s.id] || currentCards[s.id].templateVersion !== "v9_qr_photo_fix") {
                     try {
                         const card = await generateIdCardJpeg(s);
                         currentCards[s.id] = card;
@@ -81,17 +81,32 @@ export default function IdCardsPage({
     const handleLoadCards = async () => {
         if (totalSpeakers === 0) return;
         setLoadingCards(true);
-        // toast("Scanning cloud storage for ID cards..."); // Assuming toast might not be imported or available, but it's passed as prop
         try {
             const storedCards = await fetchStoredIdCards(speakers);
-            setCards(prev => {
-                const updated = { ...prev, ...storedCards };
-                saveLocalCachedCards(updated);
-                return updated;
-            });
-            const count = Object.keys(storedCards).length;
+            const currentCards = { ...cards };
+            let count = 0;
+            for (const s of speakers) {
+                const stored = storedCards[s.id];
+                // Only adopt stored cards if they match the latest template version.
+                // Otherwise keep or regenerate with latest template version so cards don't revert to old form!
+                if (stored && stored.templateVersion === "v9_qr_photo_fix") {
+                    currentCards[s.id] = stored;
+                } else if (!currentCards[s.id] || currentCards[s.id].templateVersion !== "v9_qr_photo_fix") {
+                    try {
+                        const card = await generateIdCardJpeg(s);
+                        currentCards[s.id] = card;
+                    } catch (err) {
+                        console.error("Auto card generation failed for", s.name, err);
+                    }
+                }
+                count++;
+            }
+            setCards(currentCards);
+            saveLocalCachedCards(currentCards);
+            if (toast) toast(`Loaded ID cards for ${count} speakers.`);
         } catch (e) {
             console.error("Failed to load cards:", e);
+            if (toast) toast("Failed to load cards.");
         } finally {
             setLoadingCards(false);
         }

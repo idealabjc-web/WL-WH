@@ -166,7 +166,7 @@ export default function CheckinPage({
 
     useEffect(() => {
         if (mySpeaker?.id) {
-            QRCode.toDataURL(mySpeaker.id, { width: 280, margin: 1, color: { dark: "#0f172a", light: "#ffffff" } })
+            QRCode.toDataURL(mySpeaker.id, { width: 400, margin: 1, color: { dark: "#0f172a", light: "#ffffff" } })
                 .then(url => setQrDataUrl(url))
                 .catch(() => {});
         }
@@ -895,10 +895,10 @@ export default function CheckinPage({
                                                         <img 
                                                             src={qrDataUrl} 
                                                             alt={`QR Badge for ${mySpeaker.name}`}
-                                                            className="w-32 h-32 sm:w-40 sm:h-40 object-contain rounded-lg"
+                                                            className="w-36 h-36 sm:w-44 sm:h-44 object-contain rounded-lg"
                                                         />
                                                     ) : (
-                                                        <div className="w-32 h-32 sm:w-40 sm:h-40 flex items-center justify-center text-slate-400 bg-slate-100 rounded-lg text-xs font-mono">
+                                                        <div className="w-36 h-36 sm:w-44 sm:h-44 flex items-center justify-center text-slate-400 bg-slate-100 rounded-lg text-xs font-mono">
                                                             Loading QR...
                                                         </div>
                                                     )}

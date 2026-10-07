@@ -259,10 +259,28 @@ async function generateRoom2IdCardJpeg(speaker) {
     const photoUrl = speaker.croppedPhotoUrl || speaker.photoUrl || speaker.photo_url;
     const speakerPhoto = await loadImage(photoUrl);
     if (speakerPhoto) {
-        const sc = Math.max(((r-7)*2)/speakerPhoto.width, ((r-7)*2)/speakerPhoto.height);
+        const innerR = r - 7;
+        let zoom = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        const baseSc = Math.max((innerR * 2) / speakerPhoto.width, (innerR * 2) / speakerPhoto.height);
+        
+        if (speaker.idCardPosition && speaker.idCardPosition.crop) {
+            const cropperScale = (innerR * 2) / 380;
+            offsetX = (speaker.idCardPosition.crop.x || 0) * cropperScale;
+            offsetY = (speaker.idCardPosition.crop.y || 0) * cropperScale;
+            zoom = speaker.idCardPosition.zoom || 1;
+        } else if (speakerPhoto.height > speakerPhoto.width) {
+            // Natural headroom compensation for portrait photos so faces aren't pushed up
+            const excessH = speakerPhoto.height * baseSc - (innerR * 2);
+            offsetY = Math.min(excessH * 0.22, 65);
+        }
+
+        const sc = baseSc * zoom;
         const dw = speakerPhoto.width * sc;
         const dh = speakerPhoto.height * sc;
-        ctx.drawImage(speakerPhoto, cx - dw/2, cy - dh/2, dw, dh);
+        ctx.drawImage(speakerPhoto, cx - dw / 2 + offsetX, cy - dh / 2 + offsetY, dw, dh);
     }
     ctx.restore();
 
@@ -309,13 +327,13 @@ async function generateRoom2IdCardJpeg(speaker) {
     ctx.fillText(speakerDisplayName, 540, 1170);
     ctx.restore();
 
-    drawTaperedDivider(ctx, 325, 755, 1232);
+    drawTaperedDivider(ctx, 325, 755, 1230);
 
     ctx.fillStyle = "#334155";
     ctx.font = "italic 500 40px 'Red Hat Display', Montserrat, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(speaker.role || speaker.designation || "Keynote Speaker", 540, 1266);
+    ctx.fillText(speaker.role || speaker.designation || "Keynote Speaker", 540, 1264);
 
     ctx.fillStyle = "#0f172a";
     ctx.font = "bold 44px 'Red Hat Display', Montserrat, sans-serif";
@@ -334,7 +352,7 @@ async function generateRoom2IdCardJpeg(speaker) {
     } else {
         infoText = "25-26 November, 2026 | Dubai, UAE";
     }
-    ctx.fillText(infoText, 540, 1328);
+    ctx.fillText(infoText, 540, 1324);
 
     // Bottom Waves (Orange) - Draw BEFORE QR Code
     ctx.save();
@@ -419,12 +437,12 @@ async function generateRoom2IdCardJpeg(speaker) {
 
     ctx.restore();
 
-    // QR Code - Draw AFTER Bottom Waves
-    const qrSize = 310;
-    const qrTilePadding = 15;
-    const qrTileSize = qrSize + qrTilePadding * 2; // 340
+    // QR Code - Draw AFTER Bottom Waves (Balanced size for high scannability and visual harmony)
+    const qrSize = 340;
+    const qrTilePadding = 14;
+    const qrTileSize = qrSize + qrTilePadding * 2; // 368
     const qrTileX = (W - qrTileSize) / 2;
-    const qrTileY = 1362;
+    const qrTileY = 1354;
     const qrX = (W - qrSize) / 2;
     const qrY = qrTileY + qrTilePadding;
 
@@ -449,7 +467,7 @@ async function generateRoom2IdCardJpeg(speaker) {
     try {
         const qrUrl = speaker.qrUrl || (typeof window !== "undefined" ? `${window.location.origin}/check-in/${speaker.id}` : speaker.id || "SPEAKER");
         const qrDataUrl = await QRCode.toDataURL(qrUrl, { 
-            width: 600 * scale,
+            width: 700 * scale,
             margin: 1,
             color: { dark: "#000000", light: "#ffffff" }
         });
@@ -469,6 +487,7 @@ async function generateRoom2IdCardJpeg(speaker) {
                 filename: `WL-WH-2026-ID-${(speaker.name || "Speaker").replace(/\s+/g, "_")}.jpg`,
                 speaker,
                 isStored: false,
+                templateVersion: "v9_qr_photo_fix",
             });
         }, "image/jpeg", 0.95);
     });
@@ -735,10 +754,27 @@ export async function generateIdCardJpeg(speaker) {
     ctx.clip();
 
     if (speakerPhoto) {
-        const sc = Math.max((photoInnerR * 2) / speakerPhoto.width, (photoInnerR * 2) / speakerPhoto.height);
+        let zoom = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+
+        const baseSc = Math.max((photoInnerR * 2) / speakerPhoto.width, (photoInnerR * 2) / speakerPhoto.height);
+        
+        if (speaker.idCardPosition && speaker.idCardPosition.crop) {
+            const cropperScale = (photoInnerR * 2) / 380;
+            offsetX = (speaker.idCardPosition.crop.x || 0) * cropperScale;
+            offsetY = (speaker.idCardPosition.crop.y || 0) * cropperScale;
+            zoom = speaker.idCardPosition.zoom || 1;
+        } else if (speakerPhoto.height > speakerPhoto.width) {
+            // Natural headroom compensation for portrait photos so faces aren't pushed up
+            const excessH = speakerPhoto.height * baseSc - (photoInnerR * 2);
+            offsetY = Math.min(excessH * 0.22, 65);
+        }
+
+        const sc = baseSc * zoom;
         const dw = speakerPhoto.width * sc;
         const dh = speakerPhoto.height * sc;
-        ctx.drawImage(speakerPhoto, photoCX - dw / 2, photoCY - dh / 2, dw, dh);
+        ctx.drawImage(speakerPhoto, photoCX - dw / 2 + offsetX, photoCY - dh / 2 + offsetY, dw, dh);
     } else {
         // Fallback neutral light-grey with corporate initials
         ctx.fillStyle = "#e2e8f0";
@@ -798,12 +834,12 @@ export async function generateIdCardJpeg(speaker) {
     ctx.restore();
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // 6. DIVIDER: 2 px dark line, x=325 to 755, y=1232, tapering at both ends.
+    // 6. DIVIDER: 2 px dark line, x=325 to 755, y=1230, tapering at both ends.
     // ═══════════════════════════════════════════════════════════════════════════
-    drawTaperedDivider(ctx, 325, 755, 1232);
+    drawTaperedDivider(ctx, 325, 755, 1230);
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // 7. ROLE "{{role}}": center y=1266, italic regular, 40 px, #333.
+    // 7. ROLE "{{role}}": center y=1264, italic regular, 40 px, #333.
     // ═══════════════════════════════════════════════════════════════════════════
     const roleText = (speaker.role && speaker.role.toLowerCase() !== "speaker")
         ? speaker.role
@@ -813,11 +849,11 @@ export async function generateIdCardJpeg(speaker) {
     ctx.fillStyle = "#333333";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(roleText, 540, 1266);
+    ctx.fillText(roleText, 540, 1264);
     ctx.restore();
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // 8. DATES "{{dates}} | {{city_country}}": center y=1340, bold, 44 px, green.
+    // 8. DATES "{{dates}} | {{city_country}}": center y=1324, bold, 44 px.
     // ═══════════════════════════════════════════════════════════════════════════
     let datesText = "";
     if (speaker.day || speaker.timeSlot || speaker.conferenceRoom) {
@@ -841,19 +877,19 @@ export async function generateIdCardJpeg(speaker) {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.letterSpacing = "0.5px";
-    ctx.fillText(datesText, 540, 1328);
+    ctx.fillText(datesText, 540, 1324);
     ctx.restore();
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // 9. QR CODE encoding {{qr_url}}: 310×310 px on white tile with 15 px padding,
+    // 9. QR CODE encoding {{qr_url}}: 340×340 px on white tile with 14 px padding,
     //    centered at x=540. Generate with real QR library.
-    //    Small badge ID text below QR (18 px, grey, y=1728).
+    //    Small badge ID text below QR (18 px, grey, y=1752).
     // ═══════════════════════════════════════════════════════════════════════════
-    const qrSize = 310;
-    const qrTilePadding = 15;
-    const qrTileSize = qrSize + qrTilePadding * 2; // 340
+    const qrSize = 340;
+    const qrTilePadding = 14;
+    const qrTileSize = qrSize + qrTilePadding * 2; // 368
     const qrTileX = (W - qrTileSize) / 2;
-    const qrTileY = 1362;
+    const qrTileY = 1354;
     const qrX = (W - qrSize) / 2;
     const qrY = qrTileY + qrTilePadding;
 
@@ -878,7 +914,7 @@ export async function generateIdCardJpeg(speaker) {
     try {
         const qrUrl = speaker.qrUrl || (typeof window !== "undefined" ? `${window.location.origin}/check-in/${speaker.id}` : speaker.id || "SPEAKER");
         const qrDataUrl = await QRCode.toDataURL(qrUrl, {
-            width: 600 * scale,
+            width: 700 * scale,
             margin: 1,
             color: { dark: "#000000", light: "#ffffff" },
         });
@@ -890,13 +926,13 @@ export async function generateIdCardJpeg(speaker) {
         console.warn("QR generation failed:", speaker.id, err);
     }
 
-    // Small badge ID text below QR at y=1728
+    // Small badge ID text below QR at y=1752
     ctx.save();
     ctx.font = "600 18px 'Courier New', monospace";
     ctx.fillStyle = "#64748b";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(`ID: ${speaker.id || "—"}`, 540, 1728);
+    ctx.fillText(`ID: ${speaker.id || "—"}`, 540, 1752);
     ctx.restore();
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -908,7 +944,7 @@ export async function generateIdCardJpeg(speaker) {
                 const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
                 const safeName = (speaker.name || "speaker").replace(/[^a-zA-Z0-9_-]/g, "_");
                 const filename = `ID_Badge_${safeName}_${speaker.id}.jpg`;
-                resolve({ id: speaker.id, speaker, dataUrl, blob, filename, templateVersion: "v7_orange_room2" });
+                resolve({ id: speaker.id, speaker, dataUrl, blob, filename, templateVersion: "v9_qr_photo_fix" });
             },
             "image/jpeg",
             0.92
