@@ -320,7 +320,7 @@ export default function HangingBadgePull({ isDarkMode, onToggle, currentSpeaker,
 
                             {/* Keynote Pill */}
                             <div className="mt-0.5 px-1.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/40 text-[7px] font-black tracking-wider text-amber-500 dark:text-amber-300 uppercase">
-                                KEYNOTE SPEAKER
+                                {(currentSpeaker?.speakerTag || currentSpeaker?.speaker_tag || currentSpeaker?.role || "KEYNOTE SPEAKER").toUpperCase()}
                             </div>
 
                             {/* Registered Country Flag & Label — only if country is set */}

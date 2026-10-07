@@ -333,7 +333,7 @@ async function generateRoom2IdCardJpeg(speaker) {
     ctx.font = "italic 500 40px 'Red Hat Display', Montserrat, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(speaker.role || speaker.designation || "Keynote Speaker", 540, 1264);
+    ctx.fillText(speaker.speakerTag || speaker.speaker_tag || speaker.role || speaker.designation || "Keynote Speaker", 540, 1264);
 
     ctx.fillStyle = "#0f172a";
     ctx.font = "bold 44px 'Red Hat Display', Montserrat, sans-serif";
@@ -487,7 +487,7 @@ async function generateRoom2IdCardJpeg(speaker) {
                 filename: `WL-WH-2026-ID-${(speaker.name || "Speaker").replace(/\s+/g, "_")}.jpg`,
                 speaker,
                 isStored: false,
-                templateVersion: "v9_qr_photo_fix",
+                templateVersion: "v10_speaker_tag",
             });
         }, "image/jpeg", 0.95);
     });
@@ -841,9 +841,7 @@ export async function generateIdCardJpeg(speaker) {
     // ═══════════════════════════════════════════════════════════════════════════
     // 7. ROLE "{{role}}": center y=1264, italic regular, 40 px, #333.
     // ═══════════════════════════════════════════════════════════════════════════
-    const roleText = (speaker.role && speaker.role.toLowerCase() !== "speaker")
-        ? speaker.role
-        : "Keynote Speaker";
+    const roleText = speaker.speakerTag || speaker.speaker_tag || speaker.role || speaker.designation || "Keynote Speaker";
     ctx.save();
     ctx.font = "italic 40px 'Red Hat Display', Montserrat, Inter, -apple-system, sans-serif";
     ctx.fillStyle = "#333333";
@@ -944,7 +942,7 @@ export async function generateIdCardJpeg(speaker) {
                 const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
                 const safeName = (speaker.name || "speaker").replace(/[^a-zA-Z0-9_-]/g, "_");
                 const filename = `ID_Badge_${safeName}_${speaker.id}.jpg`;
-                resolve({ id: speaker.id, speaker, dataUrl, blob, filename, templateVersion: "v9_qr_photo_fix" });
+                resolve({ id: speaker.id, speaker, dataUrl, blob, filename, templateVersion: "v10_speaker_tag" });
             },
             "image/jpeg",
             0.92

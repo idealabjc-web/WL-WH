@@ -1,6 +1,6 @@
 import { supabase, isSupabaseConfigured } from "../supabaseClient";
 
-const CACHE_KEY = "wlwh_id_cards_cache_v9";
+const CACHE_KEY = "wlwh_id_cards_cache_v10";
 
 /**
  * Uploads a generated ID card JPEG blob to Supabase storage.
@@ -147,6 +147,7 @@ export function getLocalCachedCards() {
         localStorage.removeItem("wlwh_id_cards_cache_v2");
         localStorage.removeItem("wlwh_id_cards_cache_v4_dubai");
         localStorage.removeItem("wlwh_id_cards_cache_v5_flags");
+        localStorage.removeItem("wlwh_id_cards_cache_v9");
         const raw = localStorage.getItem(CACHE_KEY);
         if (!raw) return {};
         return JSON.parse(raw);
@@ -167,7 +168,7 @@ export function saveLocalCachedCards(cards) {
                 publicUrl: c.publicUrl || null,
                 dataUrl: c.dataUrl || c.publicUrl || null,
                 isStored: Boolean(c.publicUrl),
-                templateVersion: c.templateVersion || "v9_qr_photo_fix"
+                templateVersion: c.templateVersion || "v10_speaker_tag"
             };
         }
         localStorage.setItem(CACHE_KEY, JSON.stringify(serialized));

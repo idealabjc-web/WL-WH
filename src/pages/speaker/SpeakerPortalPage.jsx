@@ -450,7 +450,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                                             <span className="relative inline-flex rounded-full h-2 w-2 bg-[#4457F5] shadow-[0_0_8px_#4457F5]" />
                                         </span>
                                         <BadgeCheck size={14} className="text-[#8B9BFF]" />
-                                        <span>CONFIRMED KEYNOTE SPEAKER</span>
+                                        <span>CONFIRMED {((currentSpeaker?.speakerTag || currentSpeaker?.speaker_tag || currentSpeaker?.role || "Keynote Speaker")).toUpperCase()}</span>
                                     </div>
                                     {currentSpeaker?.country && (
                                         <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold shadow-xs backdrop-blur-xs border ${

@@ -96,7 +96,7 @@ export function speakerToRow(s) {
         whose_speaker: s.whoseSpeaker || null,
         team: s.team || null,
         portal_token: s.portalToken || null,
-        speaker_tag: s.speakerTag || null,
+        speaker_tag: s.speakerTag || s.role || null,
         accompanying_persons: s.accompanyingPersonsList || [],
     };
 }
@@ -178,6 +178,7 @@ export function rowToSpeaker(r) {
         team: r.team || parsedTeam || null,
         portalToken: r.portal_token || null,
         speakerTag: r.speaker_tag || null,
+        role: r.speaker_tag || r.role || null,
         idCardPosition: r.id_card_position || null,
         accompanyingPersonsList: Array.isArray(r.accompanying_persons) ? r.accompanying_persons : (r.accompanying_persons ? JSON.parse(r.accompanying_persons) : []),
         accompanyingPerson: (Array.isArray(r.accompanying_persons) && r.accompanying_persons.length > 0) ? "yes" : "no",

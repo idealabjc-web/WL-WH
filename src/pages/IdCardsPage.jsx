@@ -58,7 +58,7 @@ export default function IdCardsPage({
 
             for (const s of speakers) {
                 // If speaker has no card or has an old template card
-                if (!currentCards[s.id] || currentCards[s.id].templateVersion !== "v9_qr_photo_fix") {
+                if (!currentCards[s.id] || currentCards[s.id].templateVersion !== "v10_speaker_tag") {
                     try {
                         const card = await generateIdCardJpeg(s);
                         currentCards[s.id] = card;
@@ -89,9 +89,9 @@ export default function IdCardsPage({
                 const stored = storedCards[s.id];
                 // Only adopt stored cards if they match the latest template version.
                 // Otherwise keep or regenerate with latest template version so cards don't revert to old form!
-                if (stored && stored.templateVersion === "v9_qr_photo_fix") {
+                if (stored && stored.templateVersion === "v10_speaker_tag") {
                     currentCards[s.id] = stored;
-                } else if (!currentCards[s.id] || currentCards[s.id].templateVersion !== "v9_qr_photo_fix") {
+                } else if (!currentCards[s.id] || currentCards[s.id].templateVersion !== "v10_speaker_tag") {
                     try {
                         const card = await generateIdCardJpeg(s);
                         currentCards[s.id] = card;
@@ -567,7 +567,7 @@ export default function IdCardsPage({
                                             </span>
                                         </div>
                                         <div className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                                            {s.sessionTitle || "Speaker"}
+                                            {s.speakerTag || s.speaker_tag || s.role || s.sessionTitle || "Speaker"}
                                         </div>
 
                                         {/* Download and Edit buttons */}
