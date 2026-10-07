@@ -414,3 +414,30 @@ export function getAbstractsMap(abstractUrlString) {
     }
     return {};
 }
+
+export async function fetchAllAbstractFiles() {
+    try {
+        const { data, error } = await supabase.storage.from("speaker-abstracts").list('', {
+            limit: 1000,
+            offset: 0,
+            sortBy: { column: 'created_at', order: 'desc' }
+        });
+        if (error) throw error;
+        // Filter out the hidden placeholder file often created by Supabase
+        return (data || []).filter(f => f.name !== '.emptyFolderPlaceholder');
+    } catch (e) {
+        console.error("Failed to list abstract files:", e);
+        return [];
+    }
+}
+
+export async function deleteAbstractFile(fileName) {
+    try {
+        const { error } = await supabase.storage.from("speaker-abstracts").remove([fileName]);
+        if (error) throw error;
+        return true;
+    } catch (e) {
+        console.error("Failed to delete abstract file:", e);
+        return false;
+    }
+}

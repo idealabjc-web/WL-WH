@@ -17,6 +17,11 @@ const TRACKABLE_FIELDS = [
         }
         return false;
     }},
+    { id: "abstracts_no", label: "Multiple Abstracts", issueText: "Has Multiple Abstracts Uploaded", check: (s) => {
+        const currentAbstracts = getAbstractsMap(s.abstractUrl);
+        const uploadedCount = Object.values(currentAbstracts).filter(url => url && typeof url === 'string' && url.trim() !== "").length;
+        return uploadedCount > 1;
+    }},
     { id: "schedule", label: "Schedule (Time/Day/Room)", issueText: "Not Scheduled", check: (s, hasCompleteSession) => !hasCompleteSession },
     { id: "hotelRoom", label: "Hotel Room", issueText: "Missing Hotel Room", check: (s) => {
         const val = s.accommodationStatus ? s.accommodationStatus.toLowerCase() : "";

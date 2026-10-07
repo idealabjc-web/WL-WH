@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Users, ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, Menu, BadgeCheck, LogOut, Settings, Megaphone, Activity, Calendar, BarChart2, Download } from "lucide-react";
+import { Users, ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, Menu, BadgeCheck, LogOut, Settings, Megaphone, Activity, Calendar, BarChart2, Download, FileText } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./supabaseClient";
 import { fetchSpeakers, speakerToRow, createSpeakerRecord, updateSpeakerRecord } from "./api/speakersApi";
 import { fetchFeedback, feedbackToRow } from "./api/feedbackApi";
@@ -22,8 +22,9 @@ import AgendaPage from "./pages/AgendaPage";
 import AnalysisPage from "./pages/AnalysisPage";
 import AdvancedSlotManagement from "./pages/AdvancedSlotManagement";
 import DataExportPage from "./pages/DataExportPage";
+import AbstractAnalysisPage from "./pages/AbstractAnalysisPage";
 
-const VALID_TABS = ["dashboard", "register", "checkin", "idcards", "feedback", "broadcasts", "agenda", "analysis", "advanced-slots", "settings", "audit", "export"];
+const VALID_TABS = ["dashboard", "register", "checkin", "idcards", "feedback", "broadcasts", "agenda", "analysis", "advanced-slots", "abstract-analysis", "settings", "audit", "export"];
 
 function getInitialTab() {
     const hash = window.location.hash.replace("#", "").toLowerCase();
@@ -277,6 +278,7 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
     if (userRole === "admin") {
         tabs.push({ id: "agenda", label: "Agenda", icon: Calendar });
         tabs.push({ id: "analysis", label: "Analysis", icon: BarChart2 });
+        tabs.push({ id: "abstract-analysis", label: "Storage Audit", icon: FileText });
         tabs.push({ id: "advanced-slots", label: "Advanced Slots", icon: Calendar });
         tabs.push({ id: "export", label: "Data Export", icon: Download });
         tabs.push({ id: "audit", label: "Audit Logs", icon: Activity });
@@ -419,6 +421,7 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
                                 />
                             )}
                             {tab === "analysis" && userRole === "admin" && <AnalysisPage speakers={speakers} toast={toast} />}
+                            {tab === "abstract-analysis" && userRole === "admin" && <AbstractAnalysisPage speakers={speakers} toast={toast} />}
                             {tab === "export" && userRole === "admin" && <DataExportPage speakers={speakers} />}
                             {tab === "audit" && userRole === "admin" && <AuditLogsPage />}
                             {tab === "settings" && <SettingsPage userEmail={userEmail} />}

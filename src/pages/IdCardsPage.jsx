@@ -328,6 +328,114 @@ export default function IdCardsPage({
         }
     };
 
+    const handleCustomDownloadZip = async () => {
+        let currentCards = { ...cards };
+
+        // If no cards generated yet, auto-generate first
+        if (Object.keys(currentCards).length === 0) {
+            if (totalSpeakers === 0) {
+                toast("No speakers available to generate ID cards.");
+                return;
+            }
+            toast("Generating and storing ID cards first...");
+            setGenerating(true);
+            let done = 0;
+            for (const s of speakers) {
+                setProgress(`Generating & saving ${done + 1} of ${speakers.length}: ${s.name}...`);
+                const card = await generateIdCardJpeg(s);
+                const uploadRes = await uploadIdCardToStorage(s, card.blob, card.filename);
+                if (uploadRes.publicUrl) {
+                    card.publicUrl = uploadRes.publicUrl;
+                    card.isStored = true;
+                }
+                currentCards[s.id] = card;
+                done++;
+            }
+            setCards(currentCards);
+            saveLocalCachedCards(currentCards);
+            setGenerating(false);
+            setProgress(null);
+        }
+
+        setZipping(true);
+        toast("Preparing organized ZIP file...");
+        try {
+            const zip = new JSZip();
+            const room1 = zip.folder("Room 1");
+            const room2 = zip.folder("Room 2");
+            const others = zip.folder("Other");
+            const cardList = Object.values(currentCards);
+
+            // Add every generated card to the zip as a PDF
+            for (const c of cardList) {
+                let blob = c.blob;
+                if (!blob && (c.publicUrl || c.dataUrl)) {
+                    try {
+                        const res = await fetch(c.publicUrl || c.dataUrl);
+                        blob = await res.blob();
+                    } catch (e) {
+                        console.warn("Could not fetch blob for", c.filename, e);
+                    }
+                }
+                if (blob) {
+                    try {
+                        const dataUrl = await new Promise((resolve) => {
+                            const reader = new FileReader();
+                            reader.onloadend = () => resolve(reader.result);
+                            reader.readAsDataURL(blob);
+                        });
+                        
+                        const pdf = new jsPDF({
+                            orientation: "portrait",
+                            unit: "px",
+                            format: [1080, 1800]
+                        });
+                        
+                        pdf.addImage(dataUrl, "JPEG", 0, 0, 1080, 1800);
+                        const pdfBlob = pdf.output('blob');
+                        
+                        const timestamp = Date.now();
+                        const pdfFilename = c.filename.replace(".jpg", "").replace(".jpeg", "") + `_${timestamp}.pdf`;
+                        
+                        const roomVal = (c.speaker?.conferenceRoom || c.speaker?.room || "").toLowerCase();
+                        if (roomVal.includes("room 1")) {
+                            room1.file(pdfFilename, pdfBlob);
+                        } else if (roomVal.includes("room 2")) {
+                            room2.file(pdfFilename, pdfBlob);
+                        } else {
+                            others.file(pdfFilename, pdfBlob);
+                        }
+                    } catch (err) {
+                        console.error("Failed to generate PDF for", c.filename, err);
+                    }
+                }
+            }
+
+            // Generate ZIP file
+            const zipBlob = await zip.generateAsync({
+                type: "blob",
+                compression: "DEFLATE",
+                compressionOptions: { level: 6 },
+            });
+
+            // Trigger browser download
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(zipBlob);
+            link.download = `WL-WH-Organized-ID-Cards-${new Date().toISOString().slice(0, 10)}.zip`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+
+            toast(`Downloaded Organized ZIP successfully.`);
+        } catch (err) {
+            console.error("ZIP creation failed:", err);
+            toast("Failed to build organized ZIP file.");
+        } finally {
+            setZipping(false);
+        }
+    };
+
     // 4.5. Bundle all generated JPEG cards into a single PDF
     const handleDownloadSinglePdf = async () => {
         let currentCards = { ...cards };
@@ -533,6 +641,15 @@ export default function IdCardsPage({
                         >
                             <FileArchive size={16} />
                             {zipping ? "Creating ZIP..." : "Download ZIP"}
+                        </button>
+
+                        <button
+                            onClick={handleCustomDownloadZip}
+                            disabled={zipping || generating || totalSpeakers === 0}
+                            className="w-full sm:w-auto flex-1 inline-flex items-center justify-center gap-2 bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-300 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-xs transition-all active:scale-95 min-h-[44px]"
+                        >
+                            <FileArchive size={16} />
+                            {zipping ? "Creating..." : "Custom Download"}
                         </button>
 
                         <button
