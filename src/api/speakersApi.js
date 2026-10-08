@@ -439,6 +439,26 @@ export async function uploadSpeakerPeerCitePdf(id, file) {
         return null;
     }
 }
+export async function deleteSpeakerPeerCitePdf(id) {
+    if (!id) return false;
+    try {
+        if (supabase) {
+            const { error } = await supabase.storage
+                .from("peercite_proceedings")
+                .remove([`peercite_${id}.pdf`]);
+            if (error) throw error;
+        }
+        
+        try {
+            localStorage.removeItem(`peercite_proceedings_${id}`);
+        } catch (e) {}
+        
+        return true;
+    } catch (e) {
+        console.error("PeerCite PDF delete failed:", e);
+        return false;
+    }
+}
 
 export async function getSpeakerPeerCitePdf(id) {
     if (!id) return null;

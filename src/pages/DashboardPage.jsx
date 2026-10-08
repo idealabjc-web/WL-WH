@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { StatCard, StatusBadge, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
-import { TIME_SLOTS, EVENT_DAYS, generatePortalToken, uploadSpeakerAbstract, uploadSpeakerPhoto, uploadSpeakerPeerCitePdf, getSpeakerPeerCitePdf, TEAMS, getAbstractsMap } from "../api/speakersApi";
+import { TIME_SLOTS, EVENT_DAYS, generatePortalToken, uploadSpeakerAbstract, uploadSpeakerPhoto, uploadSpeakerPeerCitePdf, getSpeakerPeerCitePdf, deleteSpeakerPeerCitePdf, TEAMS, getAbstractsMap } from "../api/speakersApi";
 import { supabase } from "../supabaseClient";
 import * as XLSX from "xlsx-js-style";
 import { slugify } from "../site/publicApi";
@@ -64,14 +64,18 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
         }
     };
 
-    const handleRemovePeercite = () => {
+    const handleRemovePeercite = async () => {
         if (window.confirm("Are you sure you want to remove the PeerCite proceedings PDF for this speaker?")) {
-            try {
-                localStorage.removeItem(`peercite_proceedings_${speaker.id}`);
-            } catch (e) {}
-            setPeerciteData(null);
-            if (peerciteInputRef.current) peerciteInputRef.current.value = "";
-            if (onRefresh) onRefresh();
+            setPeerciteUploading(true);
+            const success = await deleteSpeakerPeerCitePdf(speaker.id);
+            setPeerciteUploading(false);
+            if (success) {
+                setPeerciteData(null);
+                if (peerciteInputRef.current) peerciteInputRef.current.value = "";
+                if (onRefresh) onRefresh();
+            } else {
+                alert("Failed to delete the PDF. Please try again.");
+            }
         }
     };
 
