@@ -285,12 +285,12 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                 <div className="w-full max-w-7xl mx-auto px-4 sm:px-8">
                     <div className="flex items-center justify-between h-16 sm:h-18 gap-3">
                         {/* Brand Logo & Event Tag */}
-                        <div className="flex items-center gap-3 shrink-0">
-                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#4457F5] via-[#3B6CF6] to-[#7A4DF0] flex items-center justify-center font-black text-white text-xs shadow-md shadow-blue-600/30">
+                        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+                            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-[#4457F5] via-[#3B6CF6] to-[#7A4DF0] flex items-center justify-center font-black text-white text-xs shadow-md shadow-blue-600/30">
                                 WL
                             </div>
                             <div>
-                                <div className="text-[10px] font-bold tracking-[0.14em] text-[#8B9BFF] uppercase leading-none">
+                                <div className="text-[9px] sm:text-[10px] font-bold tracking-[0.14em] text-[#8B9BFF] uppercase leading-none">
                                     WL‑WH DUBAI 2026
                                 </div>
                                 <div className="text-sm sm:text-base font-black text-white leading-tight mt-0.5 tracking-tight">
@@ -300,7 +300,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                         </div>
 
                         {/* Desktop Navigation Links */}
-                        <nav className="hidden md:flex items-center gap-6 lg:gap-8" aria-label="Portal Navigation">
+                        <nav className="hidden lg:flex items-center gap-6 lg:gap-8" aria-label="Portal Navigation">
                             {TABS.map((t) => {
                                 const isActive = tab === t.id;
                                 return (
@@ -320,15 +320,15 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                         </nav>
 
                         {/* Theme Toggle & Sign Out CTA Button */}
-                        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 relative">
+                        <div className="flex items-center gap-1 sm:gap-2.5 shrink-0 relative">
                             {/* Theme Selector Dropdown */}
                             <div className="relative">
                                 <button 
                                     onClick={() => setShowThemeMenu(!showThemeMenu)}
-                                    className="relative p-2 rounded-full hover:bg-white/5 transition-colors group overflow-hidden border border-transparent hover:border-white/10" 
+                                    className="relative p-1.5 sm:p-2 rounded-full hover:bg-white/5 transition-colors group overflow-hidden border border-transparent hover:border-white/10" 
                                     aria-label="Color Themes"
                                 >
-                                    <Sparkles className="text-[#8B9BFF] group-hover:text-white transition-colors" size={18} />
+                                    <Sparkles className="text-[#8B9BFF] group-hover:text-white transition-colors" size={16} />
                                 </button>
                                 
                                 {showThemeMenu && (
@@ -352,42 +352,44 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
 
                             {currentTheme === 'theme-default' && (
                                 <>
-                                    <button onClick={() => setIsDarkMode(!isDarkMode)} className="relative p-2 rounded-full hover:bg-white/5 transition-colors group overflow-hidden border border-transparent hover:border-white/10" aria-label="Toggle Theme">
-                                        <div className="relative w-5 h-5 flex items-center justify-center">
-                                            <Sun className={`absolute text-amber-400 transition-all duration-500 transform ${isDarkMode ? 'opacity-0 rotate-90 scale-50' : 'opacity-100 rotate-0 scale-100'}`} size={20} />
-                                            <Moon className={`absolute text-[#8B9BFF] group-hover:text-white transition-all duration-500 transform ${isDarkMode ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-90 scale-50'}`} size={20} />
+                                    <button onClick={() => setIsDarkMode(!isDarkMode)} className="relative p-1.5 sm:p-2 rounded-full hover:bg-white/5 transition-colors group overflow-hidden border border-transparent hover:border-white/10" aria-label="Toggle Theme">
+                                        <div className="relative w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center">
+                                            <Sun className={`absolute text-amber-400 transition-all duration-500 transform ${isDarkMode ? 'opacity-0 rotate-90 scale-50' : 'opacity-100 rotate-0 scale-100'}`} size={18} />
+                                            <Moon className={`absolute text-[#8B9BFF] group-hover:text-white transition-all duration-500 transform ${isDarkMode ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-90 scale-50'}`} size={18} />
                                         </div>
                                     </button>
-                                    <div className="h-6 w-px bg-[#1E2A5A] mx-0.5 sm:mx-1" />
+                                    <div className="h-5 sm:h-6 w-px bg-[#1E2A5A] mx-0.5 sm:mx-1" />
                                 </>
                             )}
                             
                             {showLogoutConfirm ? (
-                                <div className="flex items-center gap-1.5 animate-scale-pop">
+                                <div className="flex items-center gap-1 sm:gap-1.5 animate-scale-pop">
                                     <span className="text-xs text-white/70 hidden sm:inline">Sign out?</span>
                                     <button
                                         onClick={() => { setShowLogoutConfirm(false); onLogout && onLogout(); }}
-                                        className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition-all shadow-xs"
+                                        className="px-2 py-1 sm:px-2.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[10px] sm:text-xs font-bold transition-all shadow-xs"
                                     >Yes</button>
                                     <button
                                         onClick={() => setShowLogoutConfirm(false)}
-                                        className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-all"
+                                        className="px-2 py-1 sm:px-2.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[10px] sm:text-xs font-semibold transition-all"
                                     >No</button>
                                 </div>
                             ) : (
                                 <button
                                     onClick={() => setShowLogoutConfirm(true)}
-                                    className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-[#4457F5] hover:bg-[#3B6CF6] active:scale-95 text-white font-bold text-xs tracking-wider uppercase transition-all shadow-md shadow-blue-600/30 flex items-center gap-1.5"
+                                    className="p-1.5 sm:px-4 sm:py-2 rounded-lg bg-[#4457F5] hover:bg-[#3B6CF6] active:scale-95 text-white font-bold text-xs tracking-wider uppercase transition-all shadow-md shadow-blue-600/30 flex items-center justify-center gap-1.5"
+                                    aria-label="Sign Out"
                                 >
-                                    <LogOut size={13} className="hidden sm:inline" />
-                                    <span>Sign Out</span>
+                                    <LogOut size={16} className="sm:hidden shrink-0" />
+                                    <LogOut size={13} className="hidden sm:inline shrink-0" />
+                                    <span className="hidden sm:inline">Sign Out</span>
                                 </button>
                             )}
                         </div>
                     </div>
 
                     {/* Tablet navigation sub-bar */}
-                    <div className="flex md:hidden items-center gap-4 pb-2 overflow-x-auto scrollbar-none" style={{ scrollbarWidth: "none" }}>
+                    <div className="hidden sm:flex lg:hidden items-center gap-4 pb-2 overflow-x-auto scrollbar-none" style={{ scrollbarWidth: "none" }}>
                         {TABS.map((t) => (
                             <button
                                 key={t.id}
@@ -440,11 +442,11 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                         <div className="pointer-events-none absolute -bottom-24 left-[10%] w-80 h-80 rounded-full bg-[#4457F5]/20 blur-3xl animate-pulse-glow" />
 
                         {/* Hero Center Content */}
-                        <div className="relative z-10 w-full max-w-7xl mx-auto pt-8 sm:pt-11 pb-6 sm:pb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                        <div className="relative z-10 w-full max-w-7xl mx-auto pt-8 sm:pt-11 pb-6 sm:pb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6 sm:gap-8 text-center sm:text-left">
                             <div className="flex flex-col justify-center flex-1">
                                 {/* Confirmed Speaker Tag & Country Badge */}
-                                <div className="flex flex-wrap items-center gap-2 mb-2 animate-fade-in-left">
-                                    <div className="inline-flex items-center gap-2 text-[11px] font-bold tracking-[0.14em] text-[#8B9BFF] uppercase">
+                                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-3 sm:mb-2 animate-fade-in-left">
+                                    <div className="inline-flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-[11px] font-bold tracking-[0.14em] text-[#8B9BFF] uppercase">
                                         <span className="relative flex h-2 w-2">
                                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8B9BFF] opacity-75" />
                                             <span className="relative inline-flex rounded-full h-2 w-2 bg-[#4457F5] shadow-[0_0_8px_#4457F5]" />
@@ -453,7 +455,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                                         <span>CONFIRMED {((currentSpeaker?.speakerTag || currentSpeaker?.speaker_tag || currentSpeaker?.role || "Keynote Speaker")).toUpperCase()}</span>
                                     </div>
                                     {currentSpeaker?.country && (
-                                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold shadow-xs backdrop-blur-xs border ${
+                                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold shadow-xs backdrop-blur-xs border ${
                                             isActuallyLightMode 
                                                 ? 'bg-slate-900/5 border-slate-900/15 text-slate-700' 
                                                 : 'bg-white/10 border-white/20 text-white'
@@ -467,7 +469,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                                         </div>
                                     )}
                                     {currentSpeaker?.sessions?.length > 1 && (
-                                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold shadow-xs backdrop-blur-xs border ${
+                                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold shadow-xs backdrop-blur-xs border ${
                                             isActuallyLightMode 
                                                 ? 'bg-blue-900/5 border-blue-900/15 text-blue-700' 
                                                 : 'bg-blue-500/15 border-blue-400/30 text-[#8B9BFF]'
@@ -479,20 +481,20 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                                 </div>
 
                                 {/* Compact Balanced Headline without large gap */}
-                                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight text-white leading-tight animate-fade-in-up">
+                                <h1 className="text-2xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight text-white leading-tight animate-fade-in-up">
                                     Welcome,
-                                    <span className="block mt-1 sm:mt-1.5 bg-gradient-to-r from-white via-slate-100 to-[#8B9BFF] bg-clip-text text-transparent">
+                                    <span className="block mt-0.5 sm:mt-1.5 bg-gradient-to-r from-white via-slate-100 to-[#8B9BFF] bg-clip-text text-transparent">
                                         {speakerName}
                                     </span>
                                 </h1>
 
                                 {/* Topic Subtitle */}
-                                <div className="mt-2 text-sm sm:text-lg text-[#B4BEE6] font-medium tracking-tight max-w-2xl leading-snug animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
+                                <div className="mt-3 sm:mt-2 text-xs sm:text-lg text-[#B4BEE6] font-medium tracking-tight max-w-2xl leading-snug animate-fade-in-up mx-auto sm:mx-0" style={{ animationDelay: "0.2s" }}>
                                     {sessionTopic}
                                 </div>
 
                                 {/* Abstract Quick Link */}
-                                <div className="mt-4 flex flex-wrap items-center gap-3 animate-fade-in-up" style={{ animationDelay: "0.25s" }}>
+                                <div className="mt-5 sm:mt-4 flex flex-wrap items-center justify-center sm:justify-start gap-3 animate-fade-in-up" style={{ animationDelay: "0.25s" }}>
                                     <button
                                         onClick={() => handleTabChange("abstract")}
                                         className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer active:scale-95 group shadow-sm ${

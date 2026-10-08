@@ -404,11 +404,11 @@ export async function uploadSpeakerPeerCitePdf(id, file) {
     try {
         const path = `peercite_${id}.pdf`;
         const { error: uploadError } = await supabase.storage
-            .from("speaker-abstracts")
+            .from("peercite_proceedings")
             .upload(path, file, { contentType: "application/pdf", upsert: true });
         if (uploadError) throw uploadError;
-        const { data } = supabase.storage.from("speaker-abstracts").getPublicUrl(path);
-        const publicUrl = data?.publicUrl || null;
+        const { data } = supabase.storage.from("peercite_proceedings").getPublicUrl(path);
+        const publicUrl = data?.publicUrl ? `${data.publicUrl}?t=${Date.now()}` : null;
 
         const sizeInMb = (file.size / (1024 * 1024)).toFixed(2) + " MB";
         const dateStr = new Date().toLocaleDateString("en-US", {
@@ -452,16 +452,17 @@ export async function getSpeakerPeerCitePdf(id) {
     try {
         if (supabase) {
             const { data, error } = await supabase.storage
-                .from("speaker-abstracts")
+                .from("peercite_proceedings")
                 .list("", { search: `peercite_${id}.pdf` });
             if (!error && data && data.length > 0) {
                 const found = data.find(f => f.name === `peercite_${id}.pdf`);
                 if (found) {
                     const { data: urlData } = supabase.storage
-                        .from("speaker-abstracts")
+                        .from("peercite_proceedings")
                         .getPublicUrl(`peercite_${id}.pdf`);
+                    const fileVersion = found.updated_at ? new Date(found.updated_at).getTime() : Date.now();
                     const meta = {
-                        url: urlData?.publicUrl,
+                        url: urlData?.publicUrl ? `${urlData.publicUrl}?t=${fileVersion}` : null,
                         fileName: `PeerCite_${id}_Proceedings.pdf`,
                         fileSize: found.metadata?.size ? (found.metadata.size / (1024 * 1024)).toFixed(2) + " MB" : "Official PDF",
                         uploadedAt: found.created_at ? new Date(found.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "November 25, 2026",

@@ -181,20 +181,20 @@ Keywords: Leadership, Healthcare Innovation, Clinical Governance, Patient Outcom
                 <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#4457F5]/10 via-[#7A4DF0]/5 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
 
                 {/* Top Action & Proceedings Bar */}
-                <div className="relative z-10 pb-5 border-b border-slate-200 dark:border-[#1E2A5A] flex flex-wrap items-center justify-between gap-3">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-bold tracking-wider uppercase">
-                        <Sparkles size={12} />
-                        <span>Official Proceedings · WL‑WH Dubai 2026</span>
+                <div className="relative z-10 pb-5 border-b border-slate-200 dark:border-[#1E2A5A] flex flex-col sm:flex-row items-center sm:justify-between gap-4">
+                    <div className="w-full sm:w-auto flex items-start sm:items-center justify-center sm:justify-start gap-2 px-4 py-2.5 sm:py-1 rounded-xl sm:rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-bold tracking-wider uppercase text-center sm:text-left">
+                        <Sparkles size={14} className="shrink-0 mt-0.5 sm:mt-0" />
+                        <span className="leading-snug">Official Proceedings · WL‑WH Dubai 2026</span>
                     </div>
 
                     {/* Toolbar Actions */}
-                    <div className="flex items-center flex-wrap gap-2">
+                    <div className="w-full sm:w-auto grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center gap-2">
                         {abstractUrl && (
                             <a
                                 href={openPdfUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="px-3.5 py-1.5 bg-gradient-to-r from-[#4457F5] to-indigo-600 hover:from-[#3B6CF6] hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-900/40 transition-all flex items-center gap-1.5 active:scale-95"
+                                className="col-span-2 sm:col-span-1 w-full sm:w-auto justify-center px-3.5 py-2.5 sm:py-1.5 bg-gradient-to-r from-[#4457F5] to-indigo-600 hover:from-[#3B6CF6] hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-900/40 transition-all flex items-center gap-1.5 active:scale-95"
                             >
                                 <FileText size={14} />
                                 <span>Open PDF</span>
@@ -206,7 +206,7 @@ Keywords: Leadership, Healthcare Innovation, Clinical Governance, Patient Outcom
                             <>
                                 <button
                                     onClick={handleSave}
-                                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                                    className="col-span-1 w-full sm:w-auto justify-center px-3.5 py-2.5 sm:py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
                                 >
                                     <Save size={14} />
                                     <span>Save</span>
@@ -216,7 +216,7 @@ Keywords: Leadership, Healthcare Innovation, Clinical Governance, Patient Outcom
                                         setDraftText(abstractText);
                                         setIsEditing(false);
                                     }}
-                                    className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
+                                    className={`col-span-1 w-full sm:w-auto justify-center px-3 py-2.5 sm:py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
                                         isDarkMode ? 'bg-white/5 hover:bg-white/10 text-white border-white/10' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
                                     }`}
                                 >
@@ -226,38 +226,38 @@ Keywords: Leadership, Healthcare Innovation, Clinical Governance, Patient Outcom
                         ) : (
                             <button
                                 onClick={() => setIsEditing(true)}
-                                className={`px-3.5 py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer ${
+                                className={`col-span-1 w-full sm:w-auto justify-center px-3.5 py-2.5 sm:py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer ${
                                     isDarkMode 
                                         ? 'bg-white/5 hover:bg-white/10 text-white border-white/10 hover:border-indigo-400' 
                                         : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200 shadow-xs'
                                 }`}
                             >
-                                <Edit3 size={14} className="text-indigo-400" />
+                                <Edit3 size={14} className="text-indigo-400 shrink-0" />
                                 <span>Edit Abstract</span>
                             </button>
                         )}
 
                         <button
                             onClick={handleCopyCitation}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer ${
+                            className={`col-span-1 w-full sm:w-auto justify-center px-3 py-2.5 sm:py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer ${
                                 isDarkMode 
                                     ? 'bg-white/5 hover:bg-white/10 text-white border-white/10' 
                                     : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200 shadow-xs'
                             }`}
                         >
-                            {copied ? <Check size={14} className="text-emerald-400" /> : <Share2 size={14} className="text-indigo-400" />}
+                            {copied ? <Check size={14} className="text-emerald-400 shrink-0" /> : <Share2 size={14} className="text-indigo-400 shrink-0" />}
                             <span>{copied ? "Copied" : "Cite"}</span>
                         </button>
 
                         <button
                             onClick={handlePrint}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer ${
+                            className={`col-span-2 sm:col-span-1 w-full sm:w-auto justify-center px-3 py-2.5 sm:py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer ${
                                 isDarkMode 
                                     ? 'bg-white/5 hover:bg-white/10 text-white border-white/10' 
                                     : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200 shadow-xs'
                             }`}
                         >
-                            <Printer size={14} className="text-indigo-400" />
+                            <Printer size={14} className="text-indigo-400 shrink-0" />
                             <span>Print</span>
                         </button>
                     </div>
@@ -324,7 +324,7 @@ Keywords: Leadership, Healthcare Innovation, Clinical Governance, Patient Outcom
                                 ))}
                             </div>
                         ) : (
-                            <div className="hidden md:flex items-center gap-3 pl-2 border-l border-slate-300 dark:border-slate-700 text-xs">
+                            <div className="hidden lg:flex items-center gap-3 pl-2 border-l border-slate-300 dark:border-slate-700 text-xs">
                                 <span className="flex items-center gap-1.5 text-indigo-400">
                                     <Calendar size={13} />
                                     <span className={isDarkMode ? 'text-[#B4BEE6]' : 'text-slate-700'}>{presentationDay}</span>

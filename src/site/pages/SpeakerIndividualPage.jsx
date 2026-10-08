@@ -92,32 +92,19 @@ export default function SpeakerIndividualPage({
         return (
             <div className="sc-page">
                 {/* Notice bar showing current personalized URL */}
-                <div
-                    style={{
-                        background: "linear-gradient(90deg, #0b1236, #16245e)",
-                        borderBottom: "1px solid rgba(226, 184, 92, 0.3)",
-                        padding: "8px 16px",
-                        fontSize: "12px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        color: "#d0d5f0",
-                    }}
-                >
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <span style={{ color: "var(--sc-gold)", fontWeight: 700 }}>✦</span>
-                        <span>
-                            Viewing individual speaker portal for <b>{activeSpeaker?.name}</b>
+                <div className="bg-gradient-to-r from-[#0b1236] to-[#16245e] border-b border-[#e2b85c]/30 px-3 sm:px-4 py-2.5 sm:py-2 text-[10px] sm:text-xs flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 text-[#d0d5f0] text-center sm:text-left z-50 relative">
+                    <div className="flex items-center gap-1.5 sm:gap-2">
+                        <span className="text-[#e2b85c] font-bold">✦</span>
+                        <span className="leading-snug">
+                            Viewing individual speaker portal for <b className="text-white">{activeSpeaker?.name}</b>
                         </span>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <Link
-                            to="/dubai-series"
-                            style={{ color: "var(--sc-gold)", textDecoration: "none", fontWeight: 600 }}
-                        >
-                            ← Back to Dubai Series
-                        </Link>
-                    </div>
+                    <Link
+                        to="/dubai-series"
+                        className="text-[#e2b85c] font-semibold hover:text-[#f4d17f] transition-colors shrink-0"
+                    >
+                        ← Back to Dubai Series
+                    </Link>
                 </div>
 
                 <SpeakerPortalPage
