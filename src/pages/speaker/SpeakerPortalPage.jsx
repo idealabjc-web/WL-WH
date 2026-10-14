@@ -5,7 +5,8 @@ import {
     ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, 
     Sparkles, CheckCircle2, Megaphone, Award,
     Sun, Moon, BookOpen, TrendingUp, Star,
-    Camera, Upload, Image as ImageIcon, X, FileText, Bus
+    Camera, Upload, Image as ImageIcon, X, FileText, Bus,
+    Info, Download, ExternalLink, ZoomIn
 } from "lucide-react";
 
 import CheckinPage, { formatStayDates } from "../CheckinPage";
@@ -57,6 +58,10 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
     });
     const [showThemeMenu, setShowThemeMenu] = useState(false);
     const [showCertificateModal, setShowCertificateModal] = useState(false);
+    const [showShuttleModal, setShowShuttleModal] = useState(false);
+    const [credentialTab, setCredentialTab] = useState("all");
+    const [enlargedImage, setEnlargedImage] = useState(null);
+    const [shuttleViewMode, setShuttleViewMode] = useState("pages");
     
     useEffect(() => {
         const isActuallyLightMode = !isDarkMode && currentTheme === 'theme-default';
@@ -645,13 +650,23 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                                     </div>
 
                                     {/* Shuttle Service Notice below Map */}
-                                    <div className="mt-3.5 p-3 rounded-xl bg-[#050A1F]/70 border border-[#1E2A5A] flex items-center gap-2.5 text-xs text-[#d2d6ea]">
-                                        <span className="w-6 h-6 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
-                                            <Bus size={13} />
-                                        </span>
-                                        <span className="leading-snug">
-                                            <b className="text-white font-semibold">Note:</b> Complimentary shuttle service will be available from Dubai International Airport to the hotel.
-                                        </span>
+                                    <div className="mt-3.5 p-3 sm:p-3.5 rounded-2xl bg-[#050A1F]/80 border border-[#1E2A5A] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#d2d6ea]">
+                                        <div className="flex items-center gap-2.5">
+                                            <span className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+                                                <Bus size={14} />
+                                            </span>
+                                            <span className="leading-snug">
+                                                <b className="text-white font-semibold">Note:</b> Complimentary shuttle service will be available from Dubai International Airport to the hotel.
+                                            </span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowShuttleModal(true)}
+                                            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-[#4457F5] hover:bg-[#3B6CF6] text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-600/30 shrink-0 self-start sm:self-auto btn-shimmer active:scale-95 cursor-pointer"
+                                        >
+                                            <FileText size={13} />
+                                            <span>View PDF</span>
+                                        </button>
                                     </div>
                                 </div>
 
@@ -692,7 +707,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                                         className="mt-5 w-full py-2.5 bg-[#4457F5] hover:bg-[#3B6CF6] text-white text-xs sm:text-sm font-bold rounded-xl transition-all shadow-md shadow-blue-600/30 flex items-center justify-center gap-2 cursor-pointer active:scale-95 btn-shimmer"
                                     >
                                         <Award size={15} />
-                                        <span>View Credential →</span>
+                                        <span>Credentials →</span>
                                     </button>
                                 </div>
                             </div>
@@ -1031,60 +1046,414 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
             <Toast message={toastMsg} />
         </div>
 
-        {/* Certificate Popup Modal (Outside filter div!) */}
+        {/* Certificate / Credentials Popup Modal */}
         {showCertificateModal && (
             <div 
                 onClick={() => setShowCertificateModal(false)}
-                className="fixed inset-0 z-[200] bg-[#050A1F]/90 backdrop-blur-md p-4 flex items-center justify-center animate-in fade-in zoom-in duration-200"
+                className="fixed inset-0 z-[200] bg-[#050A1F]/90 backdrop-blur-md p-3 sm:p-6 flex items-center justify-center animate-in fade-in zoom-in duration-200"
             >
                 <div 
                     onClick={(e) => e.stopPropagation()}
-                    className="bg-[#0A1233] border border-[#1E2A5A] rounded-3xl max-w-4xl w-full p-6 sm:p-8 shadow-2xl relative flex flex-col items-center justify-center max-h-[90vh] overflow-y-auto text-white"
+                    className="bg-[#0A1233] border border-[#1E2A5A] rounded-3xl max-w-5xl w-full p-4 sm:p-7 shadow-2xl relative flex flex-col max-h-[92vh] overflow-hidden text-white"
                     style={{
-                        background: "radial-gradient(ellipse at top right, rgba(68, 87, 245, 0.1), transparent), #0A1233"
+                        background: "radial-gradient(ellipse at top right, rgba(68, 87, 245, 0.12), transparent), #0A1233"
                     }}
                 >
-                    <button
-                        onClick={() => setShowCertificateModal(false)}
-                        className="absolute top-5 right-5 p-2 rounded-xl text-[#9AA5CC] hover:text-white hover:bg-[#1E2A5A]/50 transition-colors cursor-pointer z-10"
-                    >
-                        <X size={20} />
-                    </button>
-                    
-                    <div className="flex flex-col items-center gap-2 mb-6 relative z-10">
-                        <div className="w-12 h-12 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
-                            <Award size={24} />
+                    {/* Header */}
+                    <div className="flex items-center justify-between pb-4 border-b border-[#1E2A5A]">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-[#4457F5] text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-600/30">
+                                <Award size={22} />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h3 className="text-lg sm:text-xl font-black text-white">Speaker Credentials</h3>
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-950/80 text-[#8B9BFF] border border-[#1E2A5A]">
+                                        Sample Previews
+                                    </span>
+                                </div>
+                                <p className="text-xs text-[#9AA5CC] mt-0.5">
+                                    Certopus Verification &amp; Continuing Education (CE) Credits
+                                </p>
+                            </div>
                         </div>
-                        <h3 className="text-xl sm:text-2xl font-black text-white mt-1">Digital Credential</h3>
-                        <p className="text-xs sm:text-sm text-[#B4BEE6]">Official Certopus Verified Certificate</p>
-                    </div>
-
-                    <div className="w-full rounded-2xl overflow-hidden border border-[#1E2A5A] bg-[#050A1F] shadow-lg relative z-10 text-center flex justify-center">
-                        <img
-                            src="/images/certopus_sample_certificate.png"
-                            alt="Certopus Sample Certificate"
-                            className="max-w-full h-auto object-contain max-h-[60vh]"
-                            onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.nextSibling.style.display = 'block';
-                            }}
-                        />
-                        <div style={{ display: 'none' }} className="p-12 text-center w-full">
-                            <Award size={48} className="text-[#8B9BFF] mx-auto mb-2" />
-                            <div className="font-bold text-white text-lg">Certopus Sample Certificate</div>
-                            <div className="text-sm text-[#9AA5CC] mt-2">Image will load when provided.</div>
-                        </div>
-                    </div>
-
-                    <div className="mt-6 flex justify-between items-center w-full relative z-10">
-                        <span className="text-xs text-[#9AA5CC] font-mono bg-[#1E2A5A]/50 px-2 py-1 rounded border border-[#1E2A5A]">Powered by Certopus™</span>
                         <button
                             onClick={() => setShowCertificateModal(false)}
-                            className="px-6 py-2.5 rounded-xl bg-[#4457F5] hover:bg-[#3B6CF6] shadow-md shadow-blue-600/30 text-white font-bold transition-colors cursor-pointer border border-transparent"
+                            className="p-2 rounded-xl text-[#9AA5CC] hover:text-white hover:bg-[#1E2A5A]/50 transition-colors cursor-pointer"
+                            aria-label="Close"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
+
+                    {/* Scrollable Content */}
+                    <div className="overflow-y-auto py-4 space-y-4 pr-1">
+                        {/* Note Banner */}
+                        <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 flex items-start sm:items-center gap-3 text-xs sm:text-sm">
+                            <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 border border-amber-500/40">
+                                <Info size={16} />
+                            </div>
+                            <div className="leading-relaxed">
+                                <b className="text-amber-300 font-semibold">Note:</b> These are sample certificates. You will receive your original certificates after the conference.
+                            </div>
+                        </div>
+
+                        {/* Filter Tabs */}
+                        <div className="flex items-center gap-2 border-b border-[#1E2A5A] pb-3">
+                            <button
+                                onClick={() => setCredentialTab("all")}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                    credentialTab === "all"
+                                        ? "bg-[#4457F5] text-white shadow-md shadow-blue-600/30"
+                                        : "bg-[#050A1F] text-[#9AA5CC] hover:text-white border border-[#1E2A5A]"
+                                }`}
+                            >
+                                View Both (2)
+                            </button>
+                            <button
+                                onClick={() => setCredentialTab("certopus")}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                    credentialTab === "certopus"
+                                        ? "bg-[#4457F5] text-white shadow-md shadow-blue-600/30"
+                                        : "bg-[#050A1F] text-[#9AA5CC] hover:text-white border border-[#1E2A5A]"
+                                }`}
+                            >
+                                Certopus Certificate
+                            </button>
+                            <button
+                                onClick={() => setCredentialTab("ce")}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                    credentialTab === "ce"
+                                        ? "bg-[#4457F5] text-white shadow-md shadow-blue-600/30"
+                                        : "bg-[#050A1F] text-[#9AA5CC] hover:text-white border border-[#1E2A5A]"
+                                }`}
+                            >
+                                CE Credits Certificate
+                            </button>
+                        </div>
+
+                        {/* Certificates Grid */}
+                        <div className={`grid gap-5 ${credentialTab === "all" ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"}`}>
+                            {/* Card 1: Certopus Certificate */}
+                            {(credentialTab === "all" || credentialTab === "certopus") && (
+                                <div className="bg-[#050A1F] border border-[#1E2A5A] rounded-2xl p-4 flex flex-col justify-between hover:border-[#4457F5]/50 transition-all">
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <Award size={16} className="text-[#8B9BFF]" />
+                                                <span className="font-bold text-sm text-white">Certopus Certificate</span>
+                                            </div>
+                                            <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                                                Sample
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-[#9AA5CC] mb-3">
+                                            Official Certopus Certificate of Recognition &amp; Participation with permanent cryptographic verification.
+                                        </p>
+                                        <div 
+                                            onClick={() => setEnlargedImage({ src: "/images/certopus_sample.jpg", title: "Certopus Sample Certificate" })}
+                                            className="w-full rounded-xl overflow-hidden border border-[#1E2A5A] bg-[#0A1233] relative group cursor-zoom-in flex items-center justify-center aspect-[16/11]"
+                                        >
+                                            <img
+                                                src="/images/certopus_sample.jpg"
+                                                alt="Certopus Sample Certificate"
+                                                className="w-full h-full object-contain p-1 transition-transform duration-300 group-hover:scale-[1.02]"
+                                                onError={(e) => {
+                                                    e.target.src = "/images/certopus_sample_certificate.png";
+                                                }}
+                                            />
+                                            <div className="absolute inset-0 bg-[#050A1F]/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                                <span className="px-3 py-1.5 rounded-lg bg-[#4457F5] text-white text-xs font-bold flex items-center gap-1.5 shadow-lg">
+                                                    <ZoomIn size={13} /> Click to Enlarge
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 pt-3 border-t border-[#1E2A5A] flex items-center justify-between text-xs text-[#9AA5CC]">
+                                        <span className="font-mono text-[11px]">Format: Certopus Verified</span>
+                                        <a
+                                            href="/images/certopus_sample.jpg"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[#8B9BFF] hover:text-white flex items-center gap-1 font-semibold"
+                                        >
+                                            <ExternalLink size={12} /> Open Full
+                                        </a>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Card 2: CE Credits Certificate */}
+                            {(credentialTab === "all" || credentialTab === "ce") && (
+                                <div className="bg-[#050A1F] border border-[#1E2A5A] rounded-2xl p-4 flex flex-col justify-between hover:border-[#4457F5]/50 transition-all">
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <Award size={16} className="text-amber-400" />
+                                                <span className="font-bold text-sm text-white">CE Credits Certificate</span>
+                                            </div>
+                                            <span className="text-[10px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                                                Sample
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-[#9AA5CC] mb-3">
+                                            Accredited Continuing Education (CE) units certificate granted to conference speakers and participants.
+                                        </p>
+                                        <div 
+                                            onClick={() => setEnlargedImage({ src: "/images/CE_credits_sample.jpeg", title: "Continuing Education (CE) Sample Certificate" })}
+                                            className="w-full rounded-xl overflow-hidden border border-[#1E2A5A] bg-[#0A1233] relative group cursor-zoom-in flex items-center justify-center aspect-[16/11]"
+                                        >
+                                            <img
+                                                src="/images/CE_credits_sample.jpeg"
+                                                alt="Continuing Education CE Credits Sample Certificate"
+                                                className="w-full h-full object-contain p-1 transition-transform duration-300 group-hover:scale-[1.02]"
+                                                onError={(e) => {
+                                                    e.target.src = "/images/CE_sample.jpeg";
+                                                }}
+                                            />
+                                            <div className="absolute inset-0 bg-[#050A1F]/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                                <span className="px-3 py-1.5 rounded-lg bg-[#4457F5] text-white text-xs font-bold flex items-center gap-1.5 shadow-lg">
+                                                    <ZoomIn size={13} /> Click to Enlarge
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 pt-3 border-t border-[#1E2A5A] flex items-center justify-between text-xs text-[#9AA5CC]">
+                                        <span className="font-mono text-[11px]">Format: Accredited CE Units</span>
+                                        <a
+                                            href="/images/CE_credits_sample.jpeg"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[#8B9BFF] hover:text-white flex items-center gap-1 font-semibold"
+                                        >
+                                            <ExternalLink size={12} /> Open Full
+                                        </a>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="pt-3 border-t border-[#1E2A5A] flex items-center justify-between">
+                        <span className="text-xs text-[#9AA5CC] font-mono bg-[#1E2A5A]/40 px-2.5 py-1 rounded-lg border border-[#1E2A5A]">
+                            WL-WH Dubai 2026 Credentials
+                        </span>
+                        <button
+                            onClick={() => setShowCertificateModal(false)}
+                            className="px-6 py-2 rounded-xl bg-[#4457F5] hover:bg-[#3B6CF6] shadow-md shadow-blue-600/30 text-white font-bold text-xs sm:text-sm transition-all cursor-pointer"
                         >
                             Close
                         </button>
                     </div>
+                </div>
+            </div>
+        )}
+
+        {/* Shuttle Service Information PDF Modal */}
+        {showShuttleModal && (
+            <div 
+                onClick={() => setShowShuttleModal(false)}
+                className="fixed inset-0 z-[200] bg-[#050A1F]/90 backdrop-blur-md p-3 sm:p-6 flex items-center justify-center animate-in fade-in zoom-in duration-200"
+            >
+                <div 
+                    onClick={(e) => e.stopPropagation()}
+                    className="bg-[#0A1233] border border-[#1E2A5A] rounded-3xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl relative flex flex-col max-h-[92vh] overflow-hidden text-white"
+                    style={{
+                        background: "radial-gradient(ellipse at top right, rgba(68, 87, 245, 0.12), transparent), #0A1233"
+                    }}
+                >
+                    {/* Header */}
+                    <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-[#1E2A5A]">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                                <Bus size={20} />
+                            </div>
+                            <div>
+                                <h3 className="text-base sm:text-xl font-black text-white">
+                                    Shuttle Service Information
+                                </h3>
+                                <p className="text-xs text-[#9AA5CC] mt-0.5">
+                                    Complimentary Airport &amp; Local Transfer — Holiday Inn Express Dubai Airport
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <a
+                                href="/images/shuttle_service_information.pdf"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#050A1F] hover:bg-[#1E2A5A] border border-[#1E2A5A] text-xs font-semibold text-[#8B9BFF] hover:text-white transition-colors"
+                                title="Open PDF in new window"
+                            >
+                                <ExternalLink size={13} /> Open
+                            </a>
+                            <a
+                                href="/images/shuttle_service_information.pdf"
+                                download="Holiday_Inn_Express_Dubai_Airport_Shuttle_Service.pdf"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#4457F5]/20 hover:bg-[#4457F5] border border-[#4457F5]/40 text-xs font-semibold text-[#8B9BFF] hover:text-white transition-colors"
+                                title="Download PDF"
+                            >
+                                <Download size={13} /> <span className="hidden sm:inline">Download</span>
+                            </a>
+                            <button
+                                onClick={() => setShowShuttleModal(false)}
+                                className="p-2 rounded-xl text-[#9AA5CC] hover:text-white hover:bg-[#1E2A5A]/50 transition-colors cursor-pointer"
+                                aria-label="Close"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* View Selector for Mobile and Desktop */}
+                    <div className="flex items-center justify-between py-2 border-b border-[#1E2A5A]/60 text-xs">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[#9AA5CC]">View mode:</span>
+                            <button
+                                onClick={() => setShuttleViewMode("pages")}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                    shuttleViewMode === "pages"
+                                        ? "bg-[#4457F5] text-white"
+                                        : "bg-[#050A1F] text-[#9AA5CC] hover:text-white border border-[#1E2A5A]"
+                                }`}
+                            >
+                                Mobile Friendly Pages
+                            </button>
+                            <button
+                                onClick={() => setShuttleViewMode("embed")}
+                                className={`hidden sm:inline-block px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                    shuttleViewMode === "embed"
+                                        ? "bg-[#4457F5] text-white"
+                                        : "bg-[#050A1F] text-[#9AA5CC] hover:text-white border border-[#1E2A5A]"
+                                }`}
+                            >
+                                PDF Document Viewer
+                            </button>
+                        </div>
+                        <span className="text-[11px] text-emerald-400 font-mono hidden sm:inline">
+                            24/7 Airport Shuttle DXB
+                        </span>
+                    </div>
+
+                    {/* Modal Body */}
+                    <div className="overflow-y-auto py-3 space-y-4 flex-1">
+                        {shuttleViewMode === "pages" ? (
+                            <div className="space-y-4">
+                                {/* Page 1 */}
+                                <div className="rounded-2xl border border-[#1E2A5A] bg-[#050A1F] p-2 sm:p-3">
+                                    <div className="flex items-center justify-between px-2 py-1.5 text-xs text-[#9AA5CC]">
+                                        <span className="font-semibold text-white">Page 1: Shuttle Schedule &amp; Contact (+971 565463904)</span>
+                                        <span className="text-[11px] text-[#8B9BFF]">Tap to enlarge</span>
+                                    </div>
+                                    <div 
+                                        onClick={() => setEnlargedImage({ src: "/images/shuttle_service_page_1.png", title: "Shuttle Service Schedule - Page 1" })}
+                                        className="w-full rounded-xl overflow-hidden cursor-zoom-in group relative"
+                                    >
+                                        <img
+                                            src="/images/shuttle_service_page_1.png"
+                                            alt="Shuttle Service Information Page 1"
+                                            className="w-full h-auto object-contain transition-transform duration-200 group-hover:scale-[1.01]"
+                                        />
+                                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <span className="px-3 py-1.5 rounded-xl bg-[#4457F5] text-white text-xs font-bold flex items-center gap-1.5 shadow-lg">
+                                                <ZoomIn size={13} /> View Full Size
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Page 2 */}
+                                <div className="rounded-2xl border border-[#1E2A5A] bg-[#050A1F] p-2 sm:p-3">
+                                    <div className="flex items-center justify-between px-2 py-1.5 text-xs text-[#9AA5CC]">
+                                        <span className="font-semibold text-white">Page 2: Airport Terminals &amp; Timetable Details</span>
+                                        <span className="text-[11px] text-[#8B9BFF]">Tap to enlarge</span>
+                                    </div>
+                                    <div 
+                                        onClick={() => setEnlargedImage({ src: "/images/shuttle_service_page_2.png", title: "Shuttle Service Information - Page 2" })}
+                                        className="w-full rounded-xl overflow-hidden cursor-zoom-in group relative"
+                                    >
+                                        <img
+                                            src="/images/shuttle_service_page_2.png"
+                                            alt="Shuttle Service Information Page 2"
+                                            className="w-full h-auto object-contain transition-transform duration-200 group-hover:scale-[1.01]"
+                                        />
+                                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <span className="px-3 py-1.5 rounded-xl bg-[#4457F5] text-white text-xs font-bold flex items-center gap-1.5 shadow-lg">
+                                                <ZoomIn size={13} /> View Full Size
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="w-full h-[65vh] rounded-2xl overflow-hidden border border-[#1E2A5A] bg-[#050A1F]">
+                                <iframe
+                                    src="/images/shuttle_service_information.pdf#toolbar=1"
+                                    title="Shuttle Service PDF"
+                                    className="w-full h-full border-0"
+                                />
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="pt-3 border-t border-[#1E2A5A] flex items-center justify-between">
+                        <a
+                            href="/images/shuttle_service_information.pdf"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-[#8B9BFF] hover:text-white flex items-center gap-1 font-semibold"
+                        >
+                            <ExternalLink size={13} /> Open full PDF in browser
+                        </a>
+                        <button
+                            onClick={() => setShowShuttleModal(false)}
+                            className="px-6 py-2 rounded-xl bg-[#4457F5] hover:bg-[#3B6CF6] shadow-md shadow-blue-600/30 text-white font-bold text-xs sm:text-sm transition-all cursor-pointer"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* Full-Screen Image Lightbox */}
+        {enlargedImage && (
+            <div 
+                onClick={() => setEnlargedImage(null)}
+                className="fixed inset-0 z-[220] bg-black/95 backdrop-blur-md p-3 sm:p-6 flex flex-col items-center justify-center animate-in fade-in duration-150"
+            >
+                <div className="w-full max-w-5xl flex items-center justify-between mb-3 text-white">
+                    <span className="text-sm font-bold truncate pr-4">{enlargedImage.title}</span>
+                    <div className="flex items-center gap-2">
+                        <a
+                            href={enlargedImage.src}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+                            title="Open original"
+                        >
+                            <ExternalLink size={18} />
+                        </a>
+                        <button
+                            onClick={() => setEnlargedImage(null)}
+                            className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
+                </div>
+                <div 
+                    onClick={(e) => e.stopPropagation()} 
+                    className="max-w-5xl max-h-[85vh] overflow-auto rounded-2xl flex items-center justify-center"
+                >
+                    <img 
+                        src={enlargedImage.src} 
+                        alt={enlargedImage.title} 
+                        className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl"
+                    />
                 </div>
             </div>
         )}

@@ -168,7 +168,7 @@ export function saveLocalCachedCards(cards) {
                 publicUrl: c.publicUrl || null,
                 dataUrl: c.dataUrl || c.publicUrl || null,
                 isStored: Boolean(c.publicUrl),
-                templateVersion: c.templateVersion || "v10_speaker_tag"
+                templateVersion: c.templateVersion || "v12_speaker_tag"
             };
         }
         localStorage.setItem(CACHE_KEY, JSON.stringify(serialized));

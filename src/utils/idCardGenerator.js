@@ -157,9 +157,15 @@ async function generateRoom2IdCardJpeg(speaker) {
     ctx.restore();
 
     // Top Organizers
-    ctx.fillStyle = "#0f172a";
+    ctx.save();
+    ctx.fillStyle = "#ffffff";
     ctx.font = "italic 800 32px 'Red Hat Display', Montserrat, sans-serif";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.75)";
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 2;
     ctx.fillText("Our Event Organisers :", 50, 100);
+    ctx.restore();
     const orgLogos = await loadImage("/organizer_logos.png");
     if (orgLogos) {
         ctx.drawImage(orgLogos, 50, 120, 980, (980/orgLogos.width) * orgLogos.height);
@@ -477,6 +483,18 @@ async function generateRoom2IdCardJpeg(speaker) {
         console.warn("QR generation failed:", e);
     }
 
+    // Badge ID text below QR at y=1758
+    ctx.save();
+    ctx.font = "700 30px 'Courier New', monospace";
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.85)";
+    ctx.shadowBlur = 5;
+    ctx.shadowOffsetY = 1;
+    ctx.fillText(`ID: ${speaker.id || "—"}`, 540, 1758);
+    ctx.restore();
+
     // Export to blob
     return new Promise((resolve) => {
         canvas.toBlob((blob) => {
@@ -487,7 +505,7 @@ async function generateRoom2IdCardJpeg(speaker) {
                 filename: `WL-WH-2026-ID-${(speaker.name || "Speaker").replace(/\s+/g, "_")}.jpg`,
                 speaker,
                 isStored: false,
-                templateVersion: "v10_speaker_tag",
+                templateVersion: "v12_speaker_tag",
             });
         }, "image/jpeg", 0.95);
     });
@@ -614,16 +632,17 @@ export async function generateIdCardJpeg(speaker) {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // 1. LABEL: "Our Event Organisers :" at x=37, y=63. Bold italic, 30 px, green.
+    // 1. LABEL: "Our Event Organisers :" at x=37, y=63. Bold italic, 30 px, white.
     // ═══════════════════════════════════════════════════════════════════════════
     ctx.save();
     ctx.font = "italic bold 30px 'Red Hat Display', Montserrat, Inter, -apple-system, sans-serif";
-    ctx.fillStyle = isRoom2 ? "#7c2d12" : "#064e3b"; // orange-900 / emerald-900
-
+    ctx.fillStyle = "#ffffff";
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
-    ctx.shadowColor = "rgba(255, 255, 255, 0.85)";
-    ctx.shadowBlur = 4;
+    ctx.shadowColor = "rgba(0, 0, 0, 0.75)";
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetX = 1;
+    ctx.shadowOffsetY = 2;
     ctx.fillText("Our Event Organisers :", 37, 63);
     ctx.restore();
 
@@ -924,13 +943,16 @@ export async function generateIdCardJpeg(speaker) {
         console.warn("QR generation failed:", speaker.id, err);
     }
 
-    // Small badge ID text below QR at y=1752
+    // Badge ID text below QR at y=1758
     ctx.save();
-    ctx.font = "600 18px 'Courier New', monospace";
-    ctx.fillStyle = "#64748b";
+    ctx.font = "700 30px 'Courier New', monospace";
+    ctx.fillStyle = "#ffffff";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(`ID: ${speaker.id || "—"}`, 540, 1752);
+    ctx.shadowColor = "rgba(0, 0, 0, 0.85)";
+    ctx.shadowBlur = 5;
+    ctx.shadowOffsetY = 1;
+    ctx.fillText(`ID: ${speaker.id || "—"}`, 540, 1758);
     ctx.restore();
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -942,7 +964,7 @@ export async function generateIdCardJpeg(speaker) {
                 const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
                 const safeName = (speaker.name || "speaker").replace(/[^a-zA-Z0-9_-]/g, "_");
                 const filename = `ID_Badge_${safeName}_${speaker.id}.jpg`;
-                resolve({ id: speaker.id, speaker, dataUrl, blob, filename, templateVersion: "v10_speaker_tag" });
+                resolve({ id: speaker.id, speaker, dataUrl, blob, filename, templateVersion: "v12_speaker_tag" });
             },
             "image/jpeg",
             0.92
