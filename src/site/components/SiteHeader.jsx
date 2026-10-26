@@ -150,13 +150,23 @@ export default function SiteHeader({ activeSeries = null, onAdminClick }) {
 
                         {/* Right Action buttons */}
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                            <Link
-                                to="/dubai-series"
-                                className="sc-btn sc-btn-gold sc-header-cta"
-                            >
-                                <span>Explore Dubai Series</span>
-                                <ArrowRight size={14} className="sc-arrow" />
-                            </Link>
+                            {activeSeries === "paris-series" ? (
+                                <Link
+                                    to="/dubai-series"
+                                    className="sc-btn sc-btn-gold sc-header-cta"
+                                >
+                                    <span>Explore Dubai Series 🇦🇪</span>
+                                    <ArrowRight size={14} className="sc-arrow" />
+                                </Link>
+                            ) : (
+                                <Link
+                                    to="/paris-series"
+                                    className="sc-btn sc-btn-blue sc-header-cta"
+                                >
+                                    <span>Explore Paris Series 🇫🇷</span>
+                                    <ArrowRight size={14} className="sc-arrow" />
+                                </Link>
+                            )}
 
                             {/* Mobile burger */}
                             <button
@@ -179,11 +189,14 @@ export default function SiteHeader({ activeSeries = null, onAdminClick }) {
                         Home
                     </Link>
                     <Link to="/dubai-series" className="sc-nav-link" onClick={() => setMobileOpen(false)}>
-                        🇦🇪 Dubai Series (Live Now)
+                        🇦🇪 Dubai Series (Live)
+                    </Link>
+                    <Link to="/paris-series" className="sc-nav-link" onClick={() => setMobileOpen(false)}>
+                        🇫🇷 Paris Series (Live)
                     </Link>
 
                     <h4>Other Destinations</h4>
-                    {SERIES.filter((s) => s.slug !== "dubai-series").map((s) => (
+                    {SERIES.filter((s) => s.slug !== "dubai-series" && s.slug !== "paris-series").map((s) => (
                         <Link
                             key={s.slug}
                             to={`/${s.slug}`}
@@ -197,6 +210,9 @@ export default function SiteHeader({ activeSeries = null, onAdminClick }) {
                     ))}
 
                     <h4>Event Navigation</h4>
+                    <Link to="/paris-series#tracks" className="sc-nav-link" onClick={() => setMobileOpen(false)}>
+                        Paris Summit Tracks & Focus
+                    </Link>
                     <Link to="/dubai-series#event-details" className="sc-nav-link" onClick={handleSectionNav("event-details")}>
                         Event Details & What's Provided
                     </Link>
@@ -207,15 +223,18 @@ export default function SiteHeader({ activeSeries = null, onAdminClick }) {
                         Speakers Directory
                     </Link>
                     <Link to="/dubai-series#gallery" className="sc-nav-link" onClick={handleSectionNav("gallery")}>
-                        Dubai Experience Gallery
+                        Experience Gallery
                     </Link>
                     <a href="#partners" className="sc-nav-link" onClick={handlePartnersNav}>
                         Supporting Partners
                     </a>
 
                     <div style={{ marginTop: "24px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                        <Link to="/paris-series" className="sc-btn sc-btn-blue" onClick={() => setMobileOpen(false)}>
+                            Explore Paris Series 🇫🇷
+                        </Link>
                         <Link to="/dubai-series" className="sc-btn sc-btn-gold" onClick={() => setMobileOpen(false)}>
-                            Explore Dubai Series
+                            Explore Dubai Series 🇦🇪
                         </Link>
                     </div>
                 </div>

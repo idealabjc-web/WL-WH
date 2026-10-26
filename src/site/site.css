@@ -384,6 +384,42 @@ html {
 .sc-cd-box b { display: block; font-family: var(--sc-display); font-size: 32px; line-height: 1; }
 .sc-cd-box span { display: block; margin-top: 6px; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--sc-muted); }
 
+/* ─── Paris hero & accents ───────────────────────────────── */
+.sc-paris-hero { position: relative; min-height: 100vh; overflow: hidden; display: flex; align-items: center; isolation: isolate; }
+.sc-paris-hero .sc-hero-shade { background: radial-gradient(ellipse 65% 70% at 85% 30%, rgba(91, 124, 250, 0.25), transparent 65%), radial-gradient(ellipse 60% 60% at 15% 85%, rgba(237, 41, 57, 0.18), transparent 60%), linear-gradient(180deg, rgba(6, 9, 26, 0.72), rgba(6, 9, 26, 0.58) 40%, var(--sc-bg) 98%); }
+.sc-france-bar { display: flex; height: 4px; width: 120px; border-radius: 4px; overflow: hidden; margin-bottom: 22px; box-shadow: 0 0 16px rgba(91, 124, 250, 0.4); }
+.sc-france-bar i { flex: 1; }
+.sc-btn-blue {
+  background: linear-gradient(135deg, #5B7CFA, #3b5bdb);
+  color: #ffffff !important;
+  box-shadow: 0 10px 30px -8px rgba(91, 124, 250, 0.55);
+}
+.sc-btn-blue:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 36px -6px rgba(91, 124, 250, 0.75);
+}
+.sc-blue-text {
+  background: linear-gradient(135deg, #9bb5ff 0%, #5B7CFA 55%, #8ba3ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.sc-track-card {
+  padding: 24px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--sc-border);
+  backdrop-filter: blur(14px);
+  transition: all 0.35s var(--sc-ease);
+  display: flex;
+  flex-direction: column;
+}
+.sc-track-card:hover {
+  border-color: rgba(91, 124, 250, 0.5);
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -15px rgba(91, 124, 250, 0.2);
+  background: rgba(91, 124, 250, 0.06);
+}
+
 /* ─── Split / hotel ──────────────────────────────────────── */
 .sc-split { display: grid; gap: 50px; align-items: center; grid-template-columns: 1fr; }
 @media (min-width: 980px) { .sc-split { grid-template-columns: 1fr 1fr; gap: 70px; } }

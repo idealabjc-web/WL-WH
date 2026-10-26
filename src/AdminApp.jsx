@@ -8,6 +8,7 @@ import { SERIES } from "./site/seriesData";
 // Pages
 import HomePage from "./site/pages/HomePage";
 import DubaiSeriesPage from "./site/pages/DubaiSeriesPage";
+import ParisSeriesPage from "./site/pages/ParisSeriesPage";
 import SpeakerIndividualPage from "./site/pages/SpeakerIndividualPage";
 import SeriesComingSoonPage from "./site/pages/SeriesComingSoonPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
@@ -204,7 +205,16 @@ export default function AdminApp() {
         );
     }
 
-    // 4. Other Series Pages: `/paris-series`, `/canada-series`, etc.
+    // 4. Paris Series Flagship Page: `/paris-series`
+    if (path === "/paris-series") {
+        return (
+            <ParisSeriesPage
+                onAdminClick={() => navigate("/admin")}
+            />
+        );
+    }
+
+    // 5. Other Series Pages: `/canada-series`, `/london-series`, etc.
     const matchedSeries = SERIES.find((s) => `/${s.slug}` === path);
     if (matchedSeries) {
         return (

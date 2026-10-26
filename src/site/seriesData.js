@@ -29,8 +29,8 @@ export const SERIES = [
         city: "Paris",
         country: "France",
         flag: "🇫🇷",
-        status: "soon",
-        dates: "Spring 2027",
+        status: "live",
+        dates: "April 22 – 23, 2027",
         cover: "/images/site/paris_series_cover.jpg",
         accent: "#5B7CFA",
     },
@@ -128,3 +128,90 @@ export const DUBAI_EVENT = {
         { src: "/images/site/dubai_creek_abra.jpg", title: "Dubai Creek & Al Fahidi" },
     ],
 };
+
+// ─── Paris Series details ────────────────────────────────────
+export const PARIS_EVENT = {
+    title: "Speaker Chapters · Paris Series",
+    headline: "Where European heritage meets global leadership & healthcare innovation.",
+    dates: "April 22 – 23, 2027",
+    venue: "Pullman Paris Montparnasse & European Congress Center",
+    venueAddress: "19 Rue du Commandant René Mouchotte, 75014 Paris, France",
+    mapsUrl: "https://www.google.com/maps/search/Pullman+Paris+Montparnasse",
+    about: [
+        "The Paris Series 2027 is a prestigious European summit convening clinicians, researchers, hospital executives, policy makers, and emerging healthcare innovators in the City of Light.",
+        "Across two transformative days of keynote addresses, interactive debate sessions, executive roundtables, and Seine River networking, speakers explore the forefront of medicine, clinical leadership, artificial intelligence in patient care, and international health policy.",
+    ],
+    stats: [
+        { value: 2, suffix: "", label: "Days of Summits" },
+        { value: 120, suffix: "+", label: "Global Keynote Speakers" },
+        { value: 35, suffix: "+", label: "Countries Represented" },
+        { value: 8, suffix: "", label: "Premier Partner Networks" },
+    ],
+    tracks: [
+        {
+            id: "ai",
+            title: "Artificial Intelligence in Clinical Diagnostics & Care",
+            desc: "Frontiers in deep learning for radiology, pathology, and automated diagnostics.",
+            tag: "Clinical AI",
+        },
+        {
+            id: "leadership",
+            title: "Global Health Policy & Women in Medical Leadership",
+            desc: "Breaking glass ceilings, hospital governance, and equitable health reform.",
+            tag: "Leadership",
+        },
+        {
+            id: "surgery",
+            title: "Robotic Surgery & Minimally Invasive Precision",
+            desc: "Next-gen robotic platforms, intraoperative 3D imaging, and microsurgery.",
+            tag: "Surgical Tech",
+        },
+        {
+            id: "public-health",
+            title: "Global Pandemic Preparedness & Health Equity",
+            desc: "Cross-border surveillance, vaccine accessibility, and sustainable delivery.",
+            tag: "Global Health",
+        },
+        {
+            id: "telehealth",
+            title: "Digital Health, Telemedicine & Remote Patient Monitoring",
+            desc: "Decentralized care, wearable sensors, and cybersecurity in modern EHR.",
+            tag: "Digital Health",
+        },
+        {
+            id: "biopharma",
+            title: "Next-Gen Therapeutics, Oncology & Precision Medicine",
+            desc: "Targeted cell & gene therapies, clinical trials acceleration, and biomarkers.",
+            tag: "Precision Med",
+        },
+    ],
+    provided: [
+        { icon: "Hotel", title: "Luxury Parisian Hotel Stay", text: "Complimentary luxury accommodations at Pullman Paris Montparnasse for confirmed speakers." },
+        { icon: "Utensils", title: "Gourmet French Hospitality", text: "Daily Parisian buffet breakfasts, chef-curated luncheon banquets, and artisan coffee lounges." },
+        { icon: "Plane", title: "Paris Airport & Metro Concierge", text: "Dedicated transit guidance from CDG & Orly airports and direct Montparnasse TGV access." },
+        { icon: "Award", title: "Accredited CPD/CME Certification", text: "Officially verified European CME/CPD credit certification for academic and professional standing." },
+        { icon: "BadgeCheck", title: "Executive Speaker Credential Kit", text: "Personalized executive credential badge, summit catalog, and chapter membership folio." },
+        { icon: "Camera", title: "Full Broadcast & Media Feature", text: "Multi-camera HD recording, professional stage portraits, and international press coverage." },
+        { icon: "Users", title: "Executive Roundtables", text: "Private VIP exchange lounges with ministry officials, hospital directors, and academic deans." },
+        { icon: "Compass", title: "Seine River Cultural Gala", text: "Private evening excursion along the River Seine admiring the Eiffel Tower, Louvre, and Notre-Dame." },
+    ],
+    hotel: {
+        name: "Pullman Paris Montparnasse Hotel",
+        stars: 4,
+        image: "/images/site/hotel_room_stay.jpg",
+        highlights: [
+            "Located in the vibrant Montparnasse cultural & artistic district",
+            "Integrated European conference congress halls on site",
+            "Panoramic rooftop lounge overlooking the Eiffel Tower",
+            "High-speed transit to Charles de Gaulle (CDG) and Orly (ORY) airports",
+        ],
+    },
+    gallery: [
+        { src: "/images/site/paris_eiffel_twilight.jpg", title: "Eiffel Tower & Pont d'Iéna at Twilight" },
+        { src: "/images/site/paris_louvre_museum.jpg", title: "The Louvre Pyramid & Palace Courtyard" },
+        { src: "/images/site/paris_arc_triomphe.jpg", title: "Arc de Triomphe & Champs-Élysées" },
+        { src: "/images/site/paris_seine_river.jpg", title: "River Seine Evening Excursion & Pont Alexandre III" },
+        { src: "/images/site/paris_series_cover.jpg", title: "Parisian Architectural Heritage & Skylines" },
+    ],
+};
+
