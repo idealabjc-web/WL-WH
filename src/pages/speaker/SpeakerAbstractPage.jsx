@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { 
     FileText, ExternalLink, CheckCircle2, 
-    Edit3, Save, Printer, Sparkles, BookOpen, 
-    Award, Tag, Share2, Check, Calendar, Clock, MapPin, User, Upload
+    Printer, Sparkles, BookOpen, 
+    Award, Share2, Check, Calendar, Clock, MapPin, User, Upload, Download
 } from "lucide-react";
 import { getCountryFlagUrl, getCountryName } from "../../utils/countryFlags";
 import { formatTimeAmPm } from "../CheckinPage";
@@ -53,46 +53,21 @@ export default function SpeakerAbstractPage({
     const speakerCountry = speaker?.country;
 
     // Resolve specific abstract URL for this session
-    const abstractsMap = useMemo(() => getAbstractsMap(speaker?.abstractUrl), [speaker?.abstractUrl]);
+    const rawAbstractUrl = currentSession?.abstractUrl || currentSession?.abstract_url || speaker?.abstractUrl || speaker?.abstract_url || "";
+    const abstractsMap = useMemo(() => getAbstractsMap(rawAbstractUrl), [rawAbstractUrl]);
     const sessionIdKey = currentSession.id || `session_${selectedSessionIndex}`;
-    const abstractUrl = abstractsMap[sessionIdKey] || (selectedSessionIndex === 0 ? abstractsMap.legacy : "") || "";
+    const abstractUrl = abstractsMap[sessionIdKey] 
+        || (selectedSessionIndex === 0 ? abstractsMap.legacy : "") 
+        || abstractsMap.legacy 
+        || (typeof rawAbstractUrl === 'string' && rawAbstractUrl.startsWith('http') ? rawAbstractUrl : "")
+        || (speakerId ? `https://nmarylzkesrttmllowhi.supabase.co/storage/v1/object/public/speaker-abstracts/${speakerId}.pdf` : "");
 
     // URLs to guarantee opening strictly in PDF format (handles both direct PDF and docx/doc via high-performance viewer)
-    const isDirectPdf = abstractUrl.toLowerCase().endsWith(".pdf");
+    const isDirectPdf = abstractUrl.toLowerCase().split('?')[0].endsWith(".pdf");
     const openPdfUrl = isDirectPdf 
         ? abstractUrl 
-        : (abstractUrl ? `https://docs.google.com/viewer?url=${encodeURIComponent(abstractUrl)}` : "");
+        : (abstractUrl ? `https://docs.google.com/viewer?url=${encodeURIComponent(abstractUrl)}&embedded=true` : "");
 
-    // Local storage key for custom abstract text
-    const abstractStorageKey = `speaker_abstract_text_${speakerId}_${selectedSessionIndex}`;
-    
-    // Default structured abstract template tailored to this speaker
-    const defaultAbstract = `Background & Purpose:
-Addressing contemporary benchmarks and clinical standards, this keynote synthesizes empirical research and cross-disciplinary insights into ${sessionTitle}. The presentation establishes a forward-looking roadmap to optimize outcomes for practitioners, healthcare executives, and industry researchers.
-
-Methodology & Approach:
-The framework integrates evidence-based protocols, comparative case evaluations, and scalable operational models developed to improve patient outcomes, institutional workflows, and cross-functional leadership agility.
-
-Key Findings & Discussion:
-1. High-Impact Interventions: Identification of strategic levers that significantly improve operational efficiency and clinical compliance.
-2. Technology Integration: Practical integration of modern digital health protocols into routine clinical governance.
-3. Systemic Resilience: Overcoming institutional bottlenecks through proactive communication, resource stewardship, and agile leadership.
-
-Conclusion & Strategic Impact:
-Delegates will take away actionable blueprints, validated guidelines, and strategic foresight directly applicable to healthcare excellence and organizational transformation at the WL‑WH Dubai Summit.
-
-Keywords: Leadership, Healthcare Innovation, Clinical Governance, Patient Outcomes, Global Health`;
-
-    const [abstractText, setAbstractText] = useState(() => {
-        try {
-            return localStorage.getItem(abstractStorageKey) || defaultAbstract;
-        } catch {
-            return defaultAbstract;
-        }
-    });
-
-    const [isEditing, setIsEditing] = useState(false);
-    const [draftText, setDraftText] = useState(abstractText);
     const [copied, setCopied] = useState(false);
     const [abstractUploading, setAbstractUploading] = useState(false);
     const abstractFileInputRef = useRef(null);
@@ -103,7 +78,7 @@ Keywords: Leadership, Healthcare Innovation, Clinical Governance, Patient Outcom
         try {
             const url = await uploadSpeakerAbstract(speakerId, sessionIdKey, file);
             if (url) {
-                const currentMap = getAbstractsMap(speaker?.abstractUrl);
+                const currentMap = getAbstractsMap(speaker?.abstractUrl || speaker?.abstract_url);
                 const updated = { ...currentMap, [sessionIdKey]: url };
                 if (selectedSessionIndex === 0) {
                     updated.legacy = url;
@@ -118,7 +93,7 @@ Keywords: Leadership, Healthcare Innovation, Clinical Governance, Patient Outcom
                 if (onUpdateSpeaker) {
                     onUpdateSpeaker({ id: speakerId, abstractUrl: serialized, abstractStatus: "submitted" });
                 }
-                toast("Abstract file uploaded successfully to speaker-abstracts! ✓");
+                toast("Abstract file uploaded successfully! ✓");
             } else {
                 toast("Failed to upload abstract file. Please try again.");
             }
@@ -131,34 +106,6 @@ Keywords: Leadership, Healthcare Innovation, Clinical Governance, Patient Outcom
         }
     };
 
-    // Sync when speaker or session changes
-    useEffect(() => {
-        try {
-            const saved = localStorage.getItem(abstractStorageKey);
-            if (saved) {
-                setAbstractText(saved);
-                setDraftText(saved);
-            } else {
-                setAbstractText(defaultAbstract);
-                setDraftText(defaultAbstract);
-            }
-        } catch {
-            setAbstractText(defaultAbstract);
-            setDraftText(defaultAbstract);
-        }
-    }, [abstractStorageKey, defaultAbstract]);
-
-    const handleSave = () => {
-        setAbstractText(draftText);
-        setIsEditing(false);
-        try {
-            localStorage.setItem(abstractStorageKey, draftText);
-        } catch (e) {
-            console.error("Failed to save abstract text", e);
-        }
-        toast("Abstract saved successfully ✓");
-    };
-
     const handleCopyCitation = () => {
         const citation = `${speakerName}. "${sessionTitle}." In Official Proceedings of the World Leadership & Women in Healthcare Summit (WL-WH), Dubai, UAE, 2026.`;
         navigator.clipboard.writeText(citation).then(() => {
@@ -169,30 +116,25 @@ Keywords: Leadership, Healthcare Innovation, Clinical Governance, Patient Outcom
     };
 
     const handlePrint = () => {
+        if (abstractUrl) {
+            const printWin = window.open(abstractUrl, "_blank");
+            if (printWin) {
+                printWin.focus();
+                return;
+            }
+        }
         window.print();
     };
 
-    // Parse keywords if present
-    const keywordsList = useMemo(() => {
-        const match = abstractText.match(/Keywords:\s*([^\n\r]+)/i);
-        if (match && match[1]) {
-            return match[1].split(/[,;]/).map(k => k.trim()).filter(Boolean);
-        }
-        return ["Healthcare Leadership", "Clinical Governance", "Innovation", "Dubai 2026"];
-    }, [abstractText]);
-
     return (
-        <div className="w-full max-w-4xl mx-auto space-y-6 animate-fade-in-up">
+        <div className="w-full max-w-5xl mx-auto space-y-6 animate-fade-in-up">
             {/* Session Tabs (if multiple) */}
             {abstractSessions.length > 1 && (
                 <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-2 snap-x scrollbar-hide">
                     {abstractSessions.map((sess, idx) => (
                         <button
                             key={idx}
-                            onClick={() => {
-                                setSelectedSessionIndex(idx);
-                                setIsEditing(false);
-                            }}
+                            onClick={() => setSelectedSessionIndex(idx)}
                             className={`px-4 py-2 text-sm font-bold rounded-xl whitespace-nowrap transition-all shadow-sm shrink-0 snap-start border ${
                                 selectedSessionIndex === idx
                                     ? isDarkMode
@@ -228,51 +170,32 @@ Keywords: Leadership, Healthcare Innovation, Clinical Governance, Patient Outcom
                     {/* Toolbar Actions */}
                     <div className="w-full sm:w-auto grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center gap-2">
                         {abstractUrl && (
-                            <a
-                                href={openPdfUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="col-span-2 sm:col-span-1 w-full sm:w-auto justify-center px-3.5 py-2.5 sm:py-1.5 bg-gradient-to-r from-[#4457F5] to-indigo-600 hover:from-[#3B6CF6] hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-900/40 transition-all flex items-center gap-1.5 active:scale-95"
-                            >
-                                <FileText size={14} />
-                                <span>Open PDF</span>
-                                <ExternalLink size={12} />
-                            </a>
-                        )}
-
-                        {isEditing ? (
                             <>
-                                <button
-                                    onClick={handleSave}
-                                    className="col-span-1 w-full sm:w-auto justify-center px-3.5 py-2.5 sm:py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer"
+                                <a
+                                    href={openPdfUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="col-span-2 sm:col-span-1 w-full sm:w-auto justify-center px-3.5 py-2.5 sm:py-1.5 bg-gradient-to-r from-[#4457F5] to-indigo-600 hover:from-[#3B6CF6] hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-900/40 transition-all flex items-center gap-1.5 active:scale-95"
                                 >
-                                    <Save size={14} />
-                                    <span>Save</span>
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setDraftText(abstractText);
-                                        setIsEditing(false);
-                                    }}
-                                    className={`col-span-1 w-full sm:w-auto justify-center px-3 py-2.5 sm:py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
-                                        isDarkMode ? 'bg-white/5 hover:bg-white/10 text-white border-white/10' : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                                    <ExternalLink size={13} />
+                                    <span>Fullscreen</span>
+                                </a>
+
+                                <a
+                                    href={abstractUrl}
+                                    download
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`col-span-1 w-full sm:w-auto justify-center px-3.5 py-2.5 sm:py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer ${
+                                        isDarkMode 
+                                            ? 'bg-white/5 hover:bg-white/10 text-white border-white/10 hover:border-indigo-400' 
+                                            : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200 shadow-xs'
                                     }`}
                                 >
-                                    Cancel
-                                </button>
+                                    <Download size={13} className="text-indigo-400 shrink-0" />
+                                    <span>Download</span>
+                                </a>
                             </>
-                        ) : (
-                            <button
-                                onClick={() => setIsEditing(true)}
-                                className={`col-span-1 w-full sm:w-auto justify-center px-3.5 py-2.5 sm:py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer ${
-                                    isDarkMode 
-                                        ? 'bg-white/5 hover:bg-white/10 text-white border-white/10 hover:border-indigo-400' 
-                                        : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200 shadow-xs'
-                                }`}
-                            >
-                                <Edit3 size={14} className="text-indigo-400 shrink-0" />
-                                <span>Edit Abstract</span>
-                            </button>
                         )}
 
                         <button
@@ -458,82 +381,75 @@ Keywords: Leadership, Healthcare Innovation, Clinical Governance, Patient Outcom
                     </div>
                 </div>
 
-                {/* Beautified Abstract Content */}
+                {/* Exact PDF Document Presentation */}
                 <div className="relative z-10 mt-6">
-                    {isEditing ? (
-                        <div className="space-y-3">
-                            <textarea
-                                value={draftText}
-                                onChange={(e) => setDraftText(e.target.value)}
-                                rows={18}
-                                className={`w-full p-6 rounded-2xl text-xs sm:text-sm leading-relaxed font-sans border outline-none focus:ring-2 focus:ring-indigo-500 transition-all ${
-                                    isDarkMode 
-                                        ? 'bg-[#050A1F] border-[#1E2A5A] text-white placeholder-slate-500' 
-                                        : 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400'
-                                }`}
-                                placeholder="Enter abstract content..."
-                            />
-                            <div className="text-xs text-slate-500">
-                                <span>Formatted paragraphs and plain text supported.</span>
+                    {abstractUrl ? (
+                        <div className="space-y-4">
+                            {/* Stylized PDF Document Frame */}
+                            <div className={`w-full h-[700px] sm:h-[840px] lg:h-[920px] rounded-2xl overflow-hidden border relative shadow-2xl transition-all ${
+                                isDarkMode 
+                                    ? 'bg-[#050A1F] border-[#1E2A5A] shadow-indigo-950/50' 
+                                    : 'bg-slate-100 border-slate-300 shadow-lg'
+                            }`}>
+                                <iframe
+                                    src={`${openPdfUrl}#toolbar=1&navpanes=0`}
+                                    title={`${speakerName} - Abstract PDF Document`}
+                                    className="w-full h-full border-0 rounded-2xl"
+                                />
+                            </div>
+
+                            {/* Document helper bar */}
+                            <div className={`flex flex-wrap items-center justify-between gap-3 p-3.5 sm:p-4 rounded-2xl border text-xs ${
+                                isDarkMode 
+                                    ? 'bg-[#050A1F]/80 border-[#1E2A5A] text-[#B4BEE6]' 
+                                    : 'bg-slate-50 border-slate-200 text-slate-700'
+                            }`}>
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <FileText size={15} className="text-indigo-400 shrink-0" />
+                                    <span className="truncate font-medium">
+                                        Official verified abstract manuscript submitted by {speakerName}.
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <a
+                                        href={openPdfUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-indigo-400 hover:text-indigo-300 font-bold underline text-xs"
+                                    >
+                                        Open PDF Direct ↗
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     ) : (
-                        <div className="space-y-6">
-                            {/* Stylized Abstract Paper Presentation */}
-                            <div className={`p-6 sm:p-9 rounded-2xl border relative overflow-hidden transition-all ${
-                                isDarkMode 
-                                    ? 'bg-[#050A1F]/70 border-[#1E2A5A] shadow-inner' 
-                                    : 'bg-slate-50/80 border-slate-200 shadow-xs'
-                            }`}>
-                                {/* Decorative Left Accent Line */}
-                                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-[#4457F5] via-indigo-500 to-[#7A4DF0]" />
-
-                                {/* Formatted Abstract Body */}
-                                <div className={`text-xs sm:text-sm md:text-base leading-relaxed whitespace-pre-wrap font-sans space-y-4 ${
-                                    isDarkMode ? 'text-[#D0D7F5]' : 'text-slate-800'
-                                }`}>
-                                    {abstractText}
-                                </div>
+                        <div className={`py-24 text-center rounded-2xl border p-8 space-y-4 ${
+                            isDarkMode ? 'bg-[#050A1F]/60 border-[#1E2A5A]' : 'bg-slate-50 border-slate-200'
+                        }`}>
+                            <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-[#8B9BFF] flex items-center justify-center mx-auto">
+                                <BookOpen size={32} />
                             </div>
-
-                            {/* Keywords Pill Cloud */}
-                            {keywordsList.length > 0 && (
-                                <div className="pt-2">
-                                    <div className="text-[11px] font-bold uppercase tracking-wider text-indigo-500 mb-2.5 flex items-center gap-1.5">
-                                        <Tag size={13} />
-                                        <span>Indexed Subject Keywords</span>
-                                    </div>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        {keywordsList.map((kw, i) => (
-                                            <span 
-                                                key={i} 
-                                                className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
-                                                    isDarkMode 
-                                                        ? 'bg-indigo-500/10 border-indigo-500/20 text-[#8B9BFF] hover:border-indigo-400' 
-                                                        : 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100'
-                                                }`}
-                                            >
-                                                #{kw}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Official Proceedings Footer Seal */}
-                            <div className={`mt-8 pt-6 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
-                                isDarkMode ? 'border-[#1E2A5A] text-[#9AA5CC]' : 'border-slate-200 text-slate-500'
-                            }`}>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                    <span>Peer-reviewed for official publication</span>
-                                </div>
-                                <div className="font-mono text-[11px]">
-                                    WL‑WH Dubai · November 24–26, 2026
-                                </div>
-                            </div>
+                            <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                Abstract Document in Preparation
+                            </h3>
+                            <p className={`text-xs sm:text-sm max-w-md mx-auto leading-relaxed ${isDarkMode ? 'text-[#9AA5CC]' : 'text-slate-500'}`}>
+                                The official abstract manuscript for this presentation is being finalized for publication in the WL‑WH Dubai 2026 Proceedings. Once uploaded, the exact PDF will appear here automatically.
+                            </p>
                         </div>
                     )}
+
+                    {/* Official Proceedings Footer Seal */}
+                    <div className={`mt-8 pt-6 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs ${
+                        isDarkMode ? 'border-[#1E2A5A] text-[#9AA5CC]' : 'border-slate-200 text-slate-500'
+                    }`}>
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                            <span>Peer-reviewed for official publication</span>
+                        </div>
+                        <div className="font-mono text-[11px]">
+                            WL‑WH Dubai · November 24–26, 2026
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
