@@ -386,7 +386,13 @@ export async function uploadSpeakerPhoto(id, file) {
 
 export async function uploadSpeakerAbstract(speakerId, sessionId, file) {
     try {
-        const ext = file.name.split(".").pop();
+        // Support both (speakerId, sessionId, file) and (speakerId, file)
+        if (sessionId && !file && (sessionId instanceof File || sessionId instanceof Blob || sessionId?.name)) {
+            file = sessionId;
+            sessionId = null;
+        }
+        if (!file) return null;
+        const ext = file.name ? file.name.split(".").pop() : "pdf";
         const path = sessionId ? `${speakerId}_${sessionId}.${ext}` : `${speakerId}.${ext}`;
         const { error: uploadError } = await supabase.storage
             .from("speaker-abstracts")
@@ -462,12 +468,6 @@ export async function deleteSpeakerPeerCitePdf(id) {
 
 export async function getSpeakerPeerCitePdf(id) {
     if (!id) return null;
-    try {
-        const local = localStorage.getItem(`peercite_proceedings_${id}`);
-        if (local) {
-            return JSON.parse(local);
-        }
-    } catch (e) {}
 
     try {
         if (supabase) {
@@ -475,15 +475,16 @@ export async function getSpeakerPeerCitePdf(id) {
                 .from("peercite_proceedings")
                 .list("", { search: `peercite_${id}.pdf` });
             if (!error && data && data.length > 0) {
-                const found = data.find(f => f.name === `peercite_${id}.pdf`);
+                const searchLower = `peercite_${String(id).toLowerCase()}.pdf`;
+                const found = data.find(f => f.name.toLowerCase() === searchLower || f.name === `peercite_${id}.pdf`);
                 if (found) {
                     const { data: urlData } = supabase.storage
                         .from("peercite_proceedings")
-                        .getPublicUrl(`peercite_${id}.pdf`);
+                        .getPublicUrl(found.name);
                     const fileVersion = found.updated_at ? new Date(found.updated_at).getTime() : Date.now();
                     const meta = {
                         url: urlData?.publicUrl ? `${urlData.publicUrl}?t=${fileVersion}` : null,
-                        fileName: `PeerCite_${id}_Proceedings.pdf`,
+                        fileName: found.name || `PeerCite_${id}_Proceedings.pdf`,
                         fileSize: found.metadata?.size ? (found.metadata.size / (1024 * 1024)).toFixed(2) + " MB" : "Official PDF",
                         uploadedAt: found.created_at ? new Date(found.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "November 25, 2026",
                         publisher: "PeerCite Academic Press",
@@ -496,10 +497,31 @@ export async function getSpeakerPeerCitePdf(id) {
                     return meta;
                 }
             }
+            // If checked in Supabase and no proceeding file exists, clear any stale local cache
+            if (!error) {
+                try {
+                    localStorage.removeItem(`peercite_proceedings_${id}`);
+                } catch (e) {}
+                return null;
+            }
         }
     } catch (e) {
         console.error("Error checking PeerCite PDF in storage:", e);
     }
+
+    // Only fallback to localStorage if offline/network error, AND verify strictly that URL is from peercite_proceedings!
+    try {
+        const local = localStorage.getItem(`peercite_proceedings_${id}`);
+        if (local) {
+            const parsed = JSON.parse(local);
+            if (parsed?.url && parsed.url.includes("peercite_proceedings") && !parsed.url.includes("speaker-abstracts") && !parsed.url.includes("proceedings_sample")) {
+                return parsed;
+            } else {
+                localStorage.removeItem(`peercite_proceedings_${id}`);
+            }
+        }
+    } catch (e) {}
+
     return null;
 }
 
@@ -542,5 +564,25 @@ export async function deleteAbstractFile(fileName) {
     } catch (e) {
         console.error("Failed to delete abstract file:", e);
         return false;
+    }
+}
+
+export async function getSubmittedPeerCiteSpeakerIds() {
+    try {
+        if (!supabase) return new Set();
+        const { data, error } = await supabase.storage
+            .from("peercite_proceedings")
+            .list("", { limit: 1000 });
+        if (error || !data) return new Set();
+        const ids = data
+            .map(f => {
+                const match = f.name.match(/^peercite_(.*?)\.pdf$/i);
+                return match ? match[1].toUpperCase() : null;
+            })
+            .filter(Boolean);
+        return new Set(ids);
+    } catch (e) {
+        console.error("Failed to list submitted peercite IDs:", e);
+        return new Set();
     }
 }

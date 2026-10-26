@@ -1,17 +1,19 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { 
     FileText, ExternalLink, CheckCircle2, 
     Edit3, Save, Printer, Sparkles, BookOpen, 
-    Award, Tag, Share2, Check, Calendar, Clock, MapPin, User
+    Award, Tag, Share2, Check, Calendar, Clock, MapPin, User, Upload
 } from "lucide-react";
 import { getCountryFlagUrl, getCountryName } from "../../utils/countryFlags";
 import { formatTimeAmPm } from "../CheckinPage";
-import { getAbstractsMap } from "../../api/speakersApi";
+import { getAbstractsMap, uploadSpeakerAbstract } from "../../api/speakersApi";
+import { supabase } from "../../supabaseClient";
 
 export default function SpeakerAbstractPage({ 
     speaker = {}, 
     isDarkMode = true, 
-    toast = () => {} 
+    toast = () => {},
+    onUpdateSpeaker = null
 }) {
     const abstractSessions = useMemo(() => {
         if (Array.isArray(speaker?.sessions) && speaker.sessions.length > 0) {
@@ -92,6 +94,42 @@ Keywords: Leadership, Healthcare Innovation, Clinical Governance, Patient Outcom
     const [isEditing, setIsEditing] = useState(false);
     const [draftText, setDraftText] = useState(abstractText);
     const [copied, setCopied] = useState(false);
+    const [abstractUploading, setAbstractUploading] = useState(false);
+    const abstractFileInputRef = useRef(null);
+
+    const handleUploadAbstract = async (file) => {
+        if (!file) return;
+        setAbstractUploading(true);
+        try {
+            const url = await uploadSpeakerAbstract(speakerId, sessionIdKey, file);
+            if (url) {
+                const currentMap = getAbstractsMap(speaker?.abstractUrl);
+                const updated = { ...currentMap, [sessionIdKey]: url };
+                if (selectedSessionIndex === 0) {
+                    updated.legacy = url;
+                }
+                const serialized = JSON.stringify(updated);
+                if (supabase) {
+                    await supabase
+                        .from("speakers")
+                        .update({ abstract_url: serialized, abstract_status: "submitted" })
+                        .eq("id", speakerId);
+                }
+                if (onUpdateSpeaker) {
+                    onUpdateSpeaker({ id: speakerId, abstractUrl: serialized, abstractStatus: "submitted" });
+                }
+                toast("Abstract file uploaded successfully to speaker-abstracts! ✓");
+            } else {
+                toast("Failed to upload abstract file. Please try again.");
+            }
+        } catch (e) {
+            console.error("Error uploading abstract:", e);
+            toast("Upload error. Please try again.");
+        } finally {
+            setAbstractUploading(false);
+            if (abstractFileInputRef.current) abstractFileInputRef.current.value = "";
+        }
+    };
 
     // Sync when speaker or session changes
     useEffect(() => {
@@ -247,6 +285,33 @@ Keywords: Leadership, Healthcare Innovation, Clinical Governance, Patient Outcom
                         >
                             {copied ? <Check size={14} className="text-emerald-400 shrink-0" /> : <Share2 size={14} className="text-indigo-400 shrink-0" />}
                             <span>{copied ? "Copied" : "Cite"}</span>
+                        </button>
+
+                        <input 
+                            ref={abstractFileInputRef}
+                            type="file"
+                            accept=".pdf,.doc,.docx"
+                            className="hidden"
+                            onChange={(e) => {
+                                if (e.target.files && e.target.files[0]) {
+                                    handleUploadAbstract(e.target.files[0]);
+                                }
+                            }}
+                        />
+
+                        <button
+                            type="button"
+                            onClick={() => abstractFileInputRef.current?.click()}
+                            disabled={abstractUploading}
+                            className={`col-span-1 w-full sm:w-auto justify-center px-3.5 py-2.5 sm:py-1.5 text-xs font-bold rounded-xl border transition-all flex items-center gap-1.5 cursor-pointer ${
+                                isDarkMode 
+                                    ? 'bg-white/5 hover:bg-white/10 text-white border-white/10 hover:border-indigo-400' 
+                                    : 'bg-slate-50 hover:bg-slate-100 text-slate-800 border-slate-200 shadow-xs'
+                            }`}
+                            title="Upload abstract document to speaker-abstracts bucket"
+                        >
+                            <Upload size={14} className={`text-indigo-400 shrink-0 ${abstractUploading ? 'animate-spin' : ''}`} />
+                            <span>{abstractUploading ? "Uploading..." : (abstractUrl ? "Replace File" : "Upload Document")}</span>
                         </button>
 
                         <button

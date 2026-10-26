@@ -999,6 +999,9 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                             speaker={currentSpeaker} 
                             isDarkMode={isDarkMode} 
                             toast={toast} 
+                            onUpdateSpeaker={(updated) => {
+                                setSpeakers(prev => prev.map(s => s.id === updated.id ? { ...s, ...updated } : s));
+                            }}
                         />
                     )}
                     {tab === "announcements" && <SpeakerAnnouncementsPage announcements={announcements} />}
