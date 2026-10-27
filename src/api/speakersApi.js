@@ -527,6 +527,9 @@ export async function getSpeakerPeerCitePdf(id) {
 
 export function getAbstractsMap(abstractUrlString) {
     if (!abstractUrlString) return {};
+    if (typeof abstractUrlString === "object" && abstractUrlString !== null) {
+        return abstractUrlString;
+    }
     const trimmed = String(abstractUrlString).trim();
     if (trimmed.startsWith('{')) {
         try {
@@ -534,10 +537,68 @@ export function getAbstractsMap(abstractUrlString) {
         } catch (e) {
             return {};
         }
-    } else if (trimmed.startsWith('http')) {
+    } else if (trimmed.startsWith('http') || trimmed.startsWith('/') || trimmed.startsWith('blob:')) {
         return { legacy: trimmed };
     }
     return {};
+}
+
+export async function getSpeakerAbstractData(speakerId) {
+    if (!speakerId) return null;
+    try {
+        if (supabase) {
+            // 1. Check speakers table row
+            const { data: speakerRow } = await supabase
+                .from("speakers")
+                .select("id, abstract_url, abstract_status")
+                .eq("id", speakerId)
+                .maybeSingle();
+
+            const map = getAbstractsMap(speakerRow?.abstract_url);
+
+            // 2. Also check speaker-abstracts storage bucket for files belonging to this speaker
+            try {
+                const { data: storageFiles } = await supabase.storage
+                    .from("speaker-abstracts")
+                    .list("", { search: speakerId });
+                if (storageFiles && storageFiles.length > 0) {
+                    const speakerFiles = storageFiles.filter(f => 
+                        f.name.startsWith(`${speakerId}.`) || 
+                        f.name.startsWith(`${speakerId}_`) ||
+                        f.name.toLowerCase().includes(String(speakerId).toLowerCase())
+                    );
+                    for (const f of speakerFiles) {
+                        const { data: urlData } = supabase.storage
+                            .from("speaker-abstracts")
+                            .getPublicUrl(f.name);
+                        if (urlData?.publicUrl) {
+                            const fileVersion = f.updated_at ? new Date(f.updated_at).getTime() : Date.now();
+                            const fullUrl = `${urlData.publicUrl}?t=${fileVersion}`;
+                            const nameWithoutExt = f.name.replace(/\.[^/.]+$/, "");
+                            const parts = nameWithoutExt.split("_");
+                            if (parts.length > 1 && parts[0] === speakerId) {
+                                const sessKey = parts.slice(1).join("_");
+                                if (!map[sessKey]) map[sessKey] = fullUrl;
+                            } else {
+                                if (!map.legacy) map.legacy = fullUrl;
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Storage search error:", err);
+            }
+
+            return {
+                abstractStatus: speakerRow?.abstract_status || (Object.keys(map).length > 0 ? "submitted" : null),
+                abstractUrl: speakerRow?.abstract_url || (Object.keys(map).length > 0 ? JSON.stringify(map) : null),
+                map
+            };
+        }
+    } catch (e) {
+        console.error("Error fetching speaker abstract data:", e);
+    }
+    return null;
 }
 
 export async function fetchAllAbstractFiles() {

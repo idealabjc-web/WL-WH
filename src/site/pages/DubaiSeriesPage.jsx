@@ -27,6 +27,7 @@ import {
     Star,
     Layers,
     Share2,
+    Phone,
 } from "lucide-react";
 
 // Icon lookup for the "What is Provided" cards
@@ -477,6 +478,31 @@ export default function DubaiSeriesPage({ onAdminClick }) {
                                     </div>
                                     <h3>{item.title}</h3>
                                     <p>{item.text}</p>
+                                    {item.phone && (
+                                        <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", flexDirection: "column", gap: "8px" }}>
+                                            <span style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--sc-gold)" }}>
+                                                {item.phoneLabel || "On-Site & Photography Contact (DOP)"}
+                                            </span>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                                <a 
+                                                    href={`tel:${item.phone.replace(/\s+/g, '')}`} 
+                                                    style={{ fontSize: "13px", fontWeight: 700, color: "#fff", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                                                    title="Call DOP"
+                                                >
+                                                    <Phone size={13} style={{ color: "var(--sc-gold)" }} />
+                                                    <span>{item.phone}</span>
+                                                </a>
+                                                <a 
+                                                    href="https://wa.me/33754445418" 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer" 
+                                                    style={{ fontSize: "11px", fontWeight: 700, color: "#4ade80", background: "rgba(74, 222, 128, 0.12)", border: "1px solid rgba(74, 222, 128, 0.3)", padding: "2px 8px", borderRadius: "6px", textDecoration: "none" }}
+                                                >
+                                                    WhatsApp
+                                                </a>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}
@@ -545,6 +571,67 @@ export default function DubaiSeriesPage({ onAdminClick }) {
                                     <ExternalLink size={13} />
                                 </a>
                             </div>
+
+                            {/* Dedicated On-Site & Photography Contact (DOP) Spotlight Card */}
+                            {DUBAI_EVENT.onsiteContact && (
+                                <div
+                                    style={{
+                                        marginTop: "26px",
+                                        padding: "22px 24px",
+                                        borderRadius: "18px",
+                                        background: "linear-gradient(135deg, rgba(226, 184, 92, 0.12) 0%, rgba(11, 16, 48, 0.95) 100%)",
+                                        border: "1px solid rgba(226, 184, 92, 0.35)",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        gap: "12px",
+                                        boxShadow: "0 12px 30px rgba(0, 0, 0, 0.35)",
+                                    }}
+                                >
+                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                            <div style={{ width: "38px", height: "38px", borderRadius: "10px", background: "rgba(226, 184, 92, 0.2)", color: "var(--sc-gold)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                                <Camera size={20} />
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: "10.5px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--sc-gold)" }}>
+                                                    {DUBAI_EVENT.onsiteContact.role}
+                                                </div>
+                                                <div style={{ fontSize: "15px", fontWeight: 800, color: "#fff" }}>
+                                                    {DUBAI_EVENT.onsiteContact.title}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <span style={{ fontSize: "11px", fontWeight: 700, padding: "3px 9px", borderRadius: "999px", background: "rgba(74, 222, 128, 0.15)", color: "#4ade80", border: "1px solid rgba(74, 222, 128, 0.3)" }}>
+                                            ● On-Site Direct Line
+                                        </span>
+                                    </div>
+
+                                    <p style={{ fontSize: "13.5px", color: "#d2d6ea", margin: "2px 0 4px 0", lineHeight: "1.6" }}>
+                                        {DUBAI_EVENT.onsiteContact.note}
+                                    </p>
+
+                                    <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", paddingTop: "4px" }}>
+                                        <a
+                                            href={DUBAI_EVENT.onsiteContact.tel}
+                                            className="sc-btn sc-btn-gold"
+                                            style={{ height: "40px", padding: "0 20px", fontSize: "13.5px", fontWeight: 700 }}
+                                        >
+                                            <Phone size={14} />
+                                            <span>Call: {DUBAI_EVENT.onsiteContact.phone}</span>
+                                        </a>
+                                        <a
+                                            href={DUBAI_EVENT.onsiteContact.whatsapp}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="sc-btn sc-btn-outline"
+                                            style={{ height: "40px", padding: "0 18px", fontSize: "13px", background: "rgba(255,255,255,0.04)" }}
+                                        >
+                                            <ExternalLink size={13} />
+                                            <span>WhatsApp DOP</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 

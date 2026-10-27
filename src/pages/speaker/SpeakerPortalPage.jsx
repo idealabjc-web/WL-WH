@@ -6,7 +6,7 @@ import {
     Sparkles, CheckCircle2, Megaphone, Award,
     Sun, Moon, BookOpen, TrendingUp, Star,
     Camera, Upload, Image as ImageIcon, X, FileText, Bus,
-    Info, Download, ExternalLink, ZoomIn
+    Info, Download, ExternalLink, ZoomIn, Phone
 } from "lucide-react";
 
 import CheckinPage, { formatStayDates } from "../CheckinPage";
@@ -535,7 +535,7 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                             )}
                         </div>
 
-                        {/* Hero Footer Row with Conference Dates & City */}
+                        {/* Hero Footer Row with Conference Dates, City & On-Site Contact */}
                         <div className="relative z-10 w-full max-w-7xl mx-auto pb-4 pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 text-xs font-semibold text-[#B4BEE6]">
                             <div className="flex items-center gap-2">
                                 <Calendar size={14} className="text-[#8B9BFF]" />
@@ -545,6 +545,14 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                                 <MapPin size={14} className="text-[#8B9BFF]" />
                                 <span>Dubai, United Arab Emirates</span>
                             </div>
+                            <a 
+                                href="tel:+33754445418" 
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:text-white hover:bg-amber-500/25 transition-all text-xs"
+                                title="On-Site & Photography Contact (DOP)"
+                            >
+                                <Phone size={12} className="text-amber-400" />
+                                <span>On-Site Contact (DOP): <strong className="text-white">+33 7 54 44 54 18</strong></span>
+                            </a>
                         </div>
                     </section>
 
@@ -667,6 +675,40 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                                             <FileText size={13} />
                                             <span>View PDF</span>
                                         </button>
+                                    </div>
+
+                                    {/* On-Site Contact & Photography (DOP) Notice */}
+                                    <div className="mt-2.5 p-3 sm:p-3.5 rounded-2xl bg-[#050A1F]/80 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#d2d6ea]">
+                                        <div className="flex items-center gap-2.5">
+                                            <span className="w-7 h-7 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
+                                                <Camera size={14} />
+                                            </span>
+                                            <div className="leading-snug">
+                                                <div className="flex items-center gap-1.5">
+                                                    <b className="text-white font-semibold">On-Site &amp; Photography Contact (DOP)</b>
+                                                    <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/20">Official DOP</span>
+                                                </div>
+                                                <span className="text-[#9AA5CC] text-[11px]">Direct on-site support, keynote photography &amp; speaker portraits.</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <a
+                                                href="tel:+33754445418"
+                                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-bold rounded-xl transition-all shadow-md active:scale-95"
+                                            >
+                                                <Phone size={12} />
+                                                <span>+33 7 54 44 54 18</span>
+                                            </a>
+                                            <a
+                                                href="https://wa.me/33754445418"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/40 text-emerald-400 text-xs font-semibold rounded-xl transition-all active:scale-95"
+                                            >
+                                                <ExternalLink size={11} />
+                                                <span>WhatsApp</span>
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -860,6 +902,55 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                                                     <Upload size={18} className="group-hover/btn:-translate-y-0.5 transition-transform" />
                                                     <span>Upload Event Photos</span>
                                                 </label>
+
+                                                {/* On-Site Photography & DOP Contact Callout */}
+                                                <div className={`mt-6 p-4 rounded-2xl border text-left flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                                                    isDarkMode 
+                                                        ? 'bg-[#050A1F]/90 border-amber-500/30 shadow-lg shadow-amber-950/20' 
+                                                        : 'bg-amber-50/90 border-amber-200 shadow-sm'
+                                                }`}>
+                                                    <div className="flex items-start gap-3">
+                                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 text-slate-950 flex items-center justify-center shrink-0 shadow-md">
+                                                            <Camera size={18} />
+                                                        </div>
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-amber-400' : 'text-amber-700'}`}>
+                                                                    On-Site Contact &amp; Photography (DOP)
+                                                                </span>
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                                            </div>
+                                                            <div className={`text-sm font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                                                Official Event Photographer
+                                                            </div>
+                                                            <p className={`text-xs mt-0.5 max-w-sm ${isDarkMode ? 'text-[#9AA5CC]' : 'text-slate-600'}`}>
+                                                                Stage keynote coverage, speaker portraits &amp; on-site media assistance.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        <a
+                                                            href="tel:+33754445418"
+                                                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all active:scale-95"
+                                                        >
+                                                            <Phone size={13} />
+                                                            <span>+33 7 54 44 54 18</span>
+                                                        </a>
+                                                        <a
+                                                            href="https://wa.me/33754445418"
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className={`inline-flex items-center gap-1.5 px-3 py-2 border rounded-xl text-xs font-semibold transition-all active:scale-95 ${
+                                                                isDarkMode 
+                                                                    ? 'border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400' 
+                                                                    : 'border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
+                                                            }`}
+                                                        >
+                                                            <ExternalLink size={12} />
+                                                            <span>WhatsApp</span>
+                                                        </a>
+                                                    </div>
+                                                </div>
                                             </div>
                                             
                                             {/* Visual Side */}

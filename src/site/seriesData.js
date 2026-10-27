@@ -98,13 +98,27 @@ export const DUBAI_EVENT = {
         { value: 25, suffix: "+", label: "Countries" },
         { value: 8, suffix: "", label: "Partner networks" },
     ],
+    onsiteContact: {
+        role: "On-Site & Photography Contact (DOP)",
+        title: "Official Event Photographer & On-Site Coordinator",
+        phone: "+33 7 54 44 54 18",
+        tel: "tel:+33754445418",
+        whatsapp: "https://wa.me/33754445418",
+        note: "Official event DOP covering keynote stages, speaker portraits & on-site assistance during the Dubai Series."
+    },
     provided: [
         { icon: "Hotel", title: "Hotel Accommodation", text: "Comfortable stay at the official venue hotel for confirmed speakers." },
         { icon: "Utensils", title: "Meals & Refreshments", text: "Breakfast, lunch, coffee breaks and refreshments throughout both days." },
         { icon: "Plane", title: "Airport Assistance", text: "Venue is right opposite DXB Terminal 3 — minutes from arrival." },
         { icon: "Award", title: "Certificate & Award", text: "Verifiable digital certificate of participation for every speaker." },
         { icon: "BadgeCheck", title: "Speaker Kit & ID Badge", text: "Personalised speaker badge, welcome kit and event materials." },
-        { icon: "Camera", title: "Photo & Media Coverage", text: "Professional photography and features across partner channels." },
+        { 
+            icon: "Camera", 
+            title: "Photo & Media Coverage", 
+            text: "Professional photography & stage coverage by our official DOP.",
+            phone: "+33 7 54 44 54 18",
+            phoneLabel: "On-Site & Photography Contact (DOP)"
+        },
         { icon: "Users", title: "Networking Sessions", text: "Curated networking with speakers and delegates from 25+ countries." },
         { icon: "Compass", title: "Dubai City Tour", text: "Optional guided tour to experience the best of Dubai." },
     ],
