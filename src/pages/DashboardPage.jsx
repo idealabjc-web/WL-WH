@@ -116,13 +116,13 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                         const normRoom = (r) => (r || "Room TBA").trim();
                         // Check spk.sessions
                         const hasConflictInSessions = spk.sessions && spk.sessions.some(s => 
-                            (s.day === sess.day || (sess.day === "November 25" && s.day === "Day 1") || (sess.day === "November 26" && s.day === "Day 2")) && 
+                            (s.day === sess.day || (sess.day && sess.day.includes("25") && (s.day === "November 25" || s.day === "Day 1" || s.day === "NOV25-DAY1")) || (sess.day && sess.day.includes("26") && (s.day === "November 26" || s.day === "Day 2" || s.day === "NOV26-DAY2"))) && 
                             normRoom(s.conferenceRoom) === normRoom(sess.conferenceRoom) &&
                             s.timeSlot === sess.timeSlot
                         );
                         // Check fallback spk.day, etc.
                         const hasConflictInLegacy = 
-                            (spk.day === sess.day || (sess.day === "November 25" && spk.day === "Day 1") || (sess.day === "November 26" && spk.day === "Day 2")) && 
+                            (spk.day === sess.day || (sess.day && sess.day.includes("25") && (spk.day === "November 25" || spk.day === "Day 1" || spk.day === "NOV25-DAY1")) || (sess.day && sess.day.includes("26") && (spk.day === "November 26" || spk.day === "Day 2" || spk.day === "NOV26-DAY2"))) && 
                             normRoom(spk.conferenceRoom) === normRoom(sess.conferenceRoom) &&
                             spk.timeSlot === sess.timeSlot;
 
@@ -406,12 +406,12 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                                     isBookedByOther = allSpeakers.some(spk => {
                                         if (spk.id === form.id) return false;
                                         const hasConflictInSessions = spk.sessions && spk.sessions.some(s => 
-                                            (s.day === viewDay || (viewDay === "November 25" && s.day === "Day 1") || (viewDay === "November 26" && s.day === "Day 2")) && 
+                                            (s.day === viewDay || (viewDay && viewDay.includes("25") && (s.day === "November 25" || s.day === "Day 1" || s.day === "NOV25-DAY1")) || (viewDay && viewDay.includes("26") && (s.day === "November 26" || s.day === "Day 2" || s.day === "NOV26-DAY2"))) && 
                                             normRoom(s.conferenceRoom) === normRoom(viewRoom) &&
                                             s.timeSlot === slot
                                         );
                                         const hasConflictInLegacy = 
-                                            (spk.day === viewDay || (viewDay === "November 25" && spk.day === "Day 1") || (viewDay === "November 26" && spk.day === "Day 2")) && 
+                                            (spk.day === viewDay || (viewDay && viewDay.includes("25") && (spk.day === "November 25" || spk.day === "Day 1" || spk.day === "NOV25-DAY1")) || (viewDay && viewDay.includes("26") && (spk.day === "November 26" || spk.day === "Day 2" || spk.day === "NOV26-DAY2"))) && 
                                             normRoom(spk.conferenceRoom) === normRoom(viewRoom) &&
                                             spk.timeSlot === slot;
                                         return hasConflictInSessions || hasConflictInLegacy;

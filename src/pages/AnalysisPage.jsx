@@ -112,8 +112,8 @@ export default function AnalysisPage({ speakers, toast }) {
                     if (normRoom === "Room 1") room1Filled++;
                     if (normRoom === "Room 2") room2Filled++;
                     
-                    if (day === EVENT_DAYS[0] || day === "Day 1") daysScheduled.add(EVENT_DAYS[0]);
-                    if (day === EVENT_DAYS[1] || day === "Day 2") daysScheduled.add(EVENT_DAYS[1]);
+                    if (day === EVENT_DAYS[0] || day === "Day 1" || day === "November 25" || day === "NOV25-DAY1") daysScheduled.add(EVENT_DAYS[0]);
+                    if (day === EVENT_DAYS[1] || day === "Day 2" || day === "November 26" || day === "NOV26-DAY2") daysScheduled.add(EVENT_DAYS[1]);
                 }
             });
 

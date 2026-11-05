@@ -71,12 +71,12 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
             if (s.day && s.timeSlot) {
                 const isBlocked = speakers.some(spk => 
                     spk.sessions && spk.sessions.some(sess => 
-                        (sess.day === s.day || (s.day === "November 25" && sess.day === "Day 1") || (s.day === "November 26" && sess.day === "Day 2")) && 
+                        (sess.day === s.day || (s.day && s.day.includes("25") && (sess.day === "November 25" || sess.day === "Day 1" || sess.day === "NOV25-DAY1")) || (s.day && s.day.includes("26") && (sess.day === "November 26" || sess.day === "Day 2" || sess.day === "NOV26-DAY2"))) && 
                         sess.timeSlot === s.timeSlot &&
                         sess.conferenceRoom === s.conferenceRoom
                     )
                 ) || speakers.some(spk => 
-                    (spk.day === s.day || (s.day === "November 25" && spk.day === "Day 1") || (s.day === "November 26" && spk.day === "Day 2")) && 
+                    (spk.day === s.day || (s.day && s.day.includes("25") && (spk.day === "November 25" || spk.day === "Day 1" || spk.day === "NOV25-DAY1")) || (s.day && s.day.includes("26") && (spk.day === "November 26" || spk.day === "Day 2" || spk.day === "NOV26-DAY2"))) && 
                     spk.timeSlot === s.timeSlot &&
                     spk.conferenceRoom === s.conferenceRoom
                 );
@@ -438,13 +438,13 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                                 isBookedByOther = speakers.some(spk => 
                                     spk.sessions && spk.sessions.some(sess => {
                                         const normRoom = (r) => (r || "Room TBA").trim();
-                                        return (sess.day === viewDay || (viewDay === "November 25" && sess.day === "Day 1") || (viewDay === "November 26" && sess.day === "Day 2")) && 
+                                        return (sess.day === viewDay || (viewDay && viewDay.includes("25") && (sess.day === "November 25" || sess.day === "Day 1" || sess.day === "NOV25-DAY1")) || (viewDay && viewDay.includes("26") && (sess.day === "November 26" || sess.day === "Day 2" || sess.day === "NOV26-DAY2"))) && 
                                         normRoom(sess.conferenceRoom) === normRoom(viewRoom) &&
                                         sess.timeSlot === slot
                                     })
                                 ) || speakers.some(spk => {
                                     const normRoom = (r) => (r || "Room TBA").trim();
-                                    return (spk.day === viewDay || (viewDay === "November 25" && spk.day === "Day 1") || (viewDay === "November 26" && spk.day === "Day 2")) && 
+                                    return (spk.day === viewDay || (viewDay && viewDay.includes("25") && (spk.day === "November 25" || spk.day === "Day 1" || spk.day === "NOV25-DAY1")) || (viewDay && viewDay.includes("26") && (spk.day === "November 26" || spk.day === "Day 2" || spk.day === "NOV26-DAY2"))) && 
                                     normRoom(spk.conferenceRoom) === normRoom(viewRoom) &&
                                     spk.timeSlot === slot
                                 });

@@ -49,12 +49,12 @@ export const EVENT_DAYS = [
 ];
 
 export const TIME_SLOTS = [
-    "08:00 - 08:25", "08:25 - 08:50", "08:50 - 09:15", "09:15 - 09:40",
-    "09:40 - 10:05", "10:05 - 10:30", "10:30 - 10:55", "10:55 - 11:20",
-    "11:20 - 11:45", "11:45 - 12:10", "12:10 - 12:35", "12:35 - 13:00",
-    "13:00 - 13:25", "13:25 - 14:10 (Lunch)", "14:10 - 14:35", "14:35 - 15:00",
-    "15:00 - 15:25", "15:25 - 15:50", "15:50 - 16:15", "16:15 - 16:40",
-    "16:40 - 17:05", "17:05 - 17:30", "17:30 - 17:55", "17:55 - 18:20"
+    "08:00 - 08:30", "08:30 - 09:00", "09:00 - 09:30", "09:30 - 10:00",
+    "10:00 - 10:30", "10:30 - 11:00", "11:00 - 11:30", "11:30 - 12:00",
+    "12:00 - 12:30", "12:30 - 13:00", "13:00 - 14:00 (Lunch)",
+    "14:00 - 14:30", "14:30 - 15:00", "15:00 - 15:30", "15:30 - 16:00",
+    "16:00 - 16:30", "16:30 - 17:00", "17:00 - 17:30", "17:30 - 18:00",
+    "18:00 - 18:30", "18:30 - 19:00"
 ];
 
 export const TEAMS = [
@@ -645,5 +645,44 @@ export async function getSubmittedPeerCiteSpeakerIds() {
     } catch (e) {
         console.error("Failed to list submitted peercite IDs:", e);
         return new Set();
+    }
+}
+
+export async function clearAllSessionSlots() {
+    try {
+        if (!supabase) throw new Error("Supabase is not configured");
+
+        // 1. Update all sessions table rows: clear day, time_slot, and conference_room/room
+        const { error: sessErr } = await supabase
+            .from("sessions")
+            .update({
+                day: null,
+                time_slot: null,
+                conference_room: null
+            })
+            .not("id", "is", null);
+
+        if (sessErr) {
+            console.warn("Could not update via .not(id), attempting general reset:", sessErr);
+        }
+
+        // 2. Clear legacy top-level day, time_slot, and conference_room on speakers table if present
+        try {
+            await supabase
+                .from("speakers")
+                .update({
+                    day: null,
+                    time_slot: null,
+                    conference_room: null
+                })
+                .not("id", "is", null);
+        } catch (e) {
+            console.log("Speakers table legacy fields update skipped/finished", e);
+        }
+
+        return { success: true };
+    } catch (err) {
+        console.error("Failed to clear session slots:", err);
+        return { success: false, error: err.message };
     }
 }

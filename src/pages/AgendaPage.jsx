@@ -1,10 +1,18 @@
+export const formatDayHeader = (d) => {
+    if (!d) return "";
+    if (d.includes("25")) return "NOV25-DAY1";
+    if (d.includes("26")) return "NOV26-DAY2";
+    return d.toUpperCase().replace(/\s+/g, "");
+};
 import React, { useState, useMemo } from "react";
-import { Calendar, UserPlus, X, ArrowRightLeft, UserMinus, Clock, LayoutList, Table as TableIcon, Download, ClipboardList, ClipboardCopy, ChevronDown, ChevronRight } from "lucide-react";
+import { createPortal } from "react-dom";
+import { clearAllSessionSlots } from "../api/speakersApi";
+import { Calendar, UserPlus, X, ArrowRightLeft, UserMinus, Clock, LayoutList, Table as TableIcon, Download, ClipboardList, ClipboardCopy, ChevronDown, ChevronRight, Search, RotateCcw, AlertTriangle } from "lucide-react";
 import { TIME_SLOTS, EVENT_DAYS } from "../api/speakersApi";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
 import AgendaPoster from "../components/AgendaPoster";
 
-export default function AgendaPage({ speakers, onUpdate, toast }) {
+export default function AgendaPage({ speakers, onUpdate, onRefresh, toast }) {
     const [selectedRoom, setSelectedRoom] = useState("Room 1");
     const [viewMode, setViewMode] = useState("calendar"); // "list" | "calendar"
     
@@ -17,6 +25,29 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
     const [moveState, setMoveState] = useState({ room: "", day: "", timeSlot: "" });
 
     const rooms = ["Room 1", "Room 2"];
+    const [searchQuery, setSearchQuery] = useState("");
+    const [showResetConfirm, setShowResetConfirm] = useState(false);
+    const [resettingSlots, setResettingSlots] = useState(false);
+
+    const handleClearAllSlots = async () => {
+        setResettingSlots(true);
+        try {
+            const res = await clearAllSessionSlots();
+            if (res.success) {
+                toast("All speaker slots have been cleared. Session titles & details are preserved.");
+                setShowResetConfirm(false);
+                if (onRefresh) await onRefresh();
+            } else {
+                toast("Failed to clear slots: " + (res.error || "Unknown error"));
+            }
+        } catch (e) {
+            console.error("Reset error:", e);
+            toast("Error clearing slots: " + e.message);
+        } finally {
+            setResettingSlots(false);
+        }
+    };
+
 
     // Find speaker assigned to a specific slot
     const getSpeakerForSlot = (timeSlot, day, room = selectedRoom) => {
@@ -33,7 +64,7 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
                     if (!sessDay || !sessTime || !sessRoom) return false;
                     
                     return normRoom(sessRoom) === normRoom(room) && 
-                           (sessDay === day || (day === "November 25" && sessDay === "Day 1") || (day === "November 26" && sessDay === "Day 2")) && 
+                           (sessDay === day || (day.includes("25") && (sessDay === "November 25" || sessDay === "Day 1" || sessDay === "NOV25-DAY1")) || (day.includes("26") && (sessDay === "November 26" || sessDay === "Day 2" || sessDay === "NOV26-DAY2"))) && 
                            sessTime === timeSlot;
                 });
             }
@@ -42,12 +73,13 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
             if (!s.day || !s.timeSlot || !s.conferenceRoom) return false;
             
             return normRoom(s.conferenceRoom) === normRoom(room) && 
-                (s.day === day || (day === "November 25" && s.day === "Day 1") || (day === "November 26" && s.day === "Day 2")) && 
+                (s.day === day || (day.includes("25") && (s.day === "November 25" || s.day === "Day 1" || s.day === "NOV25-DAY1")) || (day.includes("26") && (s.day === "November 26" || s.day === "Day 2" || s.day === "NOV26-DAY2"))) && 
                 s.timeSlot === timeSlot;
         });
     };
 
     const handleAssignClick = (timeSlot, day, room = selectedRoom) => {
+        setSearchQuery("");
         setSlotAction({ type: "assign", timeSlot, day, room });
     };
 
@@ -55,18 +87,33 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
         setSlotAction({ type: "manage", timeSlot, speaker, day, room });
     };
 
-    const closeModal = () => setSlotAction(null);
+    const closeModal = () => {
+        setSlotAction(null);
+        setSearchQuery("");
+    };
 
     // Filter unassigned speakers (those without any complete timeSlot/day/room)
     const unassignedSpeakers = useMemo(() => {
         return speakers.filter(s => {
             if (s.sessions && s.sessions.length > 0) {
-                // Return true only if they have NO complete slots
                 return !s.sessions.some(sess => sess.day && (sess.timeSlot || sess.time_slot) && (sess.conferenceRoom || sess.conference_room || sess.room));
             }
             return !s.timeSlot || !s.day || !s.conferenceRoom;
         });
     }, [speakers]);
+
+    const filteredUnassigned = useMemo(() => {
+        if (!searchQuery.trim()) return unassignedSpeakers;
+        const q = searchQuery.toLowerCase().trim();
+        return unassignedSpeakers.filter(s => {
+            const name = (s.name || "").toLowerCase();
+            const tag = (s.speakerTag || "").toLowerCase();
+            const email = (s.email || "").toLowerCase();
+            const title = (s.sessionTitle || (s.sessions && s.sessions[0]?.session_title) || "").toLowerCase();
+            return name.includes(q) || tag.includes(q) || email.includes(q) || title.includes(q);
+        });
+    }, [unassignedSpeakers, searchQuery]);
+
 
     const assignSpeakerToSlot = async (speaker) => {
         const updatedSessions = [...(speaker.sessions || [])];
@@ -209,11 +256,22 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
     return (
         <div className="p-4 sm:p-6 w-full max-w-none mx-auto animate-in fade-in duration-300 pb-24">
             <div className="mb-6">
-                <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-                    <Calendar size={28} className="text-emerald-500" />
-                    Event Agenda
-                </h1>
-                <p className="text-slate-500 text-sm mt-1">Manage and assign speakers to available time slots.</p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+                            <Calendar size={28} className="text-emerald-500" />
+                            Event Agenda
+                        </h1>
+                        <p className="text-slate-500 text-sm mt-1">Manage and assign speakers to available 30-minute time slots.</p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setShowResetConfirm(true)}
+                        className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-all shadow-sm w-fit"
+                    >
+                        <RotateCcw size={14} /> Clear All Day/Time Slots
+                    </button>
+                </div>
             </div>
 
             {/* Controls (Room Filter) */}
@@ -506,10 +564,10 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
                                 <div className="p-3 font-extrabold text-blue-800 bg-blue-50 text-center text-sm uppercase tracking-wider">Room 2</div>
                             </div>
                             <div className="grid grid-cols-4 divide-x divide-slate-100">
-                                <div className="p-2 font-bold text-emerald-600 text-center text-xs bg-emerald-50/50">{EVENT_DAYS[0]}</div>
-                                <div className="p-2 font-bold text-emerald-600 text-center text-xs bg-emerald-50/50">{EVENT_DAYS[1]}</div>
-                                <div className="p-2 font-bold text-blue-600 text-center text-xs bg-blue-50/50">{EVENT_DAYS[0]}</div>
-                                <div className="p-2 font-bold text-blue-600 text-center text-xs bg-blue-50/50">{EVENT_DAYS[1]}</div>
+                                <div className="p-2 font-bold text-emerald-600 text-center text-xs bg-emerald-50/50">{formatDayHeader(EVENT_DAYS[0])}</div>
+                                <div className="p-2 font-bold text-emerald-600 text-center text-xs bg-emerald-50/50">{formatDayHeader(EVENT_DAYS[1])}</div>
+                                <div className="p-2 font-bold text-blue-600 text-center text-xs bg-blue-50/50">{formatDayHeader(EVENT_DAYS[0])}</div>
+                                <div className="p-2 font-bold text-blue-600 text-center text-xs bg-blue-50/50">{formatDayHeader(EVENT_DAYS[1])}</div>
                             </div>
                         </div>
                         <div className="divide-y divide-slate-100">
@@ -550,7 +608,7 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
                                             if (speaker) {
                                                 return (
                                                     <div key={`${col.room}-${col.day}`} className="p-2 relative">
-                                                        <div className="md:hidden text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 ml-1">{col.room} - {col.day}</div>
+                                                        <div className="md:hidden text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 ml-1">{col.room} - {formatDayHeader(col.day)}</div>
                                                         <div 
                                                             onClick={() => handleManageClick(slot, speaker, col.day, col.room)}
                                                             className={`group flex flex-col h-full p-3 rounded-xl border cursor-pointer transition-all relative ${cardBgCls}`}
@@ -575,7 +633,7 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
                                             } else {
                                                 return (
                                                     <div key={`${col.room}-${col.day}`} className="p-2 relative">
-                                                        <div className="md:hidden text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 ml-1">{col.room} - {col.day}</div>
+                                                        <div className="md:hidden text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 ml-1">{col.room} - {formatDayHeader(col.day)}</div>
                                                         <div 
                                                             onClick={() => handleAssignClick(slot, col.day, col.room)}
                                                             className={`group flex flex-col items-center justify-center h-full min-h-[70px] p-2 rounded-xl cursor-pointer transition-all relative ${emptyCardCls}`}
@@ -599,15 +657,20 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
                 </div>
             )}
 
-            {/* Modals */}
-            {slotAction && (
-                <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm p-4 flex items-center justify-center animate-in fade-in duration-200" onClick={closeModal}>
-                    <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
-                        
+            {/* Modals rendered directly into document.body to ensure true fixed overlay without parent transform interference */}
+            {typeof document !== "undefined" && slotAction && createPortal(
+                <div 
+                    className="fixed inset-0 z-[9999] bg-slate-950/70 backdrop-blur-sm p-4 flex items-center justify-center" 
+                    onClick={closeModal}
+                >
+                    <div 
+                        className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[85vh] border border-slate-200" 
+                        onClick={e => e.stopPropagation()}
+                    >
                         {/* Assign Modal */}
                         {slotAction.type === "assign" && (
                             <>
-                                <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                                <div className="p-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
                                     <div>
                                         <h3 className="font-bold text-lg text-slate-900">Assign Speaker</h3>
                                         <p className="text-xs text-slate-500 font-medium">Slot: {slotAction.room} &middot; {slotAction.day} &middot; {slotAction.timeSlot}</p>
@@ -616,26 +679,78 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
                                         <X size={20} />
                                     </button>
                                 </div>
-                                <div className="overflow-y-auto p-4 space-y-2">
-                                    {unassignedSpeakers.length === 0 ? (
-                                        <div className="text-center py-10 text-slate-500 text-sm">
-                                            No unassigned speakers available.
+
+                                {/* Instant Speaker Search Bar */}
+                                <div className="p-3 border-b border-slate-100 bg-slate-50/70 shrink-0">
+                                    <div className="relative">
+                                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            placeholder="Search speaker name, title, tag..."
+                                            autoFocus
+                                            className="w-full pl-9 pr-8 py-2 text-xs font-medium bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900 placeholder-slate-400"
+                                        />
+                                        {searchQuery && (
+                                            <button
+                                                onClick={() => setSearchQuery("")}
+                                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1.5 px-1 font-medium">
+                                        <span>Showing {filteredUnassigned.length} unassigned speakers</span>
+                                        {searchQuery && <span>Filtered from {unassignedSpeakers.length}</span>}
+                                    </div>
+                                </div>
+
+                                <div className="overflow-y-auto p-4 space-y-2 flex-1 min-h-0">
+                                    {filteredUnassigned.length === 0 ? (
+                                        <div className="text-center py-12 text-slate-500 text-sm">
+                                            {searchQuery ? (
+                                                <>
+                                                    <p className="font-semibold text-slate-700">No speaker matching "{searchQuery}"</p>
+                                                    <p className="text-xs text-slate-400 mt-1">Try another keyword or name.</p>
+                                                </>
+                                            ) : (
+                                                "No unassigned speakers available."
+                                            )}
                                         </div>
                                     ) : (
-                                        unassignedSpeakers.map(s => (
-                                            <div 
-                                                key={s.id} 
-                                                onClick={() => assignSpeakerToSlot(s)}
-                                                className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50 cursor-pointer transition-all"
-                                            >
-                                                <SpeakerAvatar src={s.photoUrl} size={36} />
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="font-bold text-slate-900 truncate">{s.name}</div>
-                                                    <div className="text-xs font-semibold text-slate-500 truncate">{s.speakerTag || "Speaker"}</div>
+                                        filteredUnassigned.map(s => {
+                                            const displayTitle = s.sessionTitle || (s.sessions && s.sessions[0]?.session_title) || "";
+                                            return (
+                                                <div 
+                                                    key={s.id} 
+                                                    onClick={() => assignSpeakerToSlot(s)}
+                                                    className="group flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/50 cursor-pointer transition-all shadow-xs"
+                                                >
+                                                    <SpeakerAvatar src={s.photoUrl} size={38} />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="font-bold text-slate-900 group-hover:text-emerald-900 truncate text-sm">{s.name}</div>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/70 px-1.5 py-0.5 rounded uppercase tracking-wide">
+                                                                {s.speakerTag || "Speaker"}
+                                                            </span>
+                                                            {s.country && (
+                                                                <span className="text-[11px] text-slate-400 truncate">{s.country}</span>
+                                                            )}
+                                                        </div>
+                                                        {displayTitle && (
+                                                            <p className="text-xs text-slate-500 mt-1 line-clamp-1 italic">
+                                                                "{displayTitle}"
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    <span className="px-2.5 py-1 text-xs font-bold text-emerald-700 bg-emerald-100 group-hover:bg-emerald-600 group-hover:text-white rounded-lg transition-colors shrink-0 flex items-center gap-1">
+                                                        <UserPlus size={14} /> Assign
+                                                    </span>
                                                 </div>
-                                                <UserPlus size={16} className="text-slate-400" />
-                                            </div>
-                                        ))
+                                            );
+                                        })
                                     )}
                                 </div>
                             </>
@@ -765,7 +880,56 @@ export default function AgendaPage({ speakers, onUpdate, toast }) {
                             </>
                         )}
                     </div>
-                </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Reset All Slots Confirmation Modal */}
+            {typeof document !== "undefined" && showResetConfirm && createPortal(
+                <div 
+                    className="fixed inset-0 z-[9999] bg-slate-950/70 backdrop-blur-sm p-4 flex items-center justify-center"
+                    onClick={() => setShowResetConfirm(false)}
+                >
+                    <div 
+                        className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="flex items-center gap-3 text-rose-600 mb-3">
+                            <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center shrink-0">
+                                <AlertTriangle size={22} className="text-rose-600" />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-slate-900 text-base">Reset All Agenda Slots?</h3>
+                                <p className="text-xs text-slate-500">Agenda Schedule Change</p>
+                            </div>
+                        </div>
+                        <p className="text-sm text-slate-600 mb-4 leading-relaxed">
+                            This will empty the <strong className="text-slate-800">Day</strong>, <strong className="text-slate-800">Time Slot</strong>, and <strong className="text-slate-800">Conference Room</strong> for all sessions, allowing you to re-assign speakers to the new <strong className="text-emerald-700">30-minute slots</strong>.
+                        </p>
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 mb-5">
+                            ✓ <strong>Preserved:</strong> Session titles, speaker details, and IDs remain intact.
+                        </div>
+                        <div className="flex items-center justify-end gap-3">
+                            <button
+                                type="button"
+                                disabled={resettingSlots}
+                                onClick={() => setShowResetConfirm(false)}
+                                className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                disabled={resettingSlots}
+                                onClick={handleClearAllSlots}
+                                className="px-4 py-2 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-xl shadow-sm transition-colors flex items-center gap-1.5"
+                            >
+                                {resettingSlots ? "Clearing..." : "Yes, Clear Slots"}
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
             )}
         </div>
     );

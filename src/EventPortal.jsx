@@ -412,7 +412,7 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
                                 />
                             )}
                             {tab === "feedback" && <FeedbackPage feedback={feedback} onAdd={addFeedback} toast={toast} />}
-                            {tab === "agenda" && userRole === "admin" && <AgendaPage speakers={speakers} onUpdate={updateSpeaker} toast={toast} />}
+                            {tab === "agenda" && userRole === "admin" && <AgendaPage speakers={speakers} onUpdate={updateSpeaker} onRefresh={refresh} toast={toast} />}
                             {tab === "advanced-slots" && userRole === "admin" && (
                                 <AdvancedSlotManagement
                                     speakers={speakers}
