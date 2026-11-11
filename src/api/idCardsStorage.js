@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from "../supabaseClient";
+import { getEventTables } from "../eventsConfig";
 
 const CACHE_KEY = "wlwh_id_cards_cache_v10";
 
@@ -27,7 +28,8 @@ export async function uploadIdCardToStorage(speaker, blob, filename) {
             if (publicUrl) {
                 publicUrl = `${publicUrl}?t=${Date.now()}`;
                 try {
-                    await supabase.from("speakers").update({ id_card_url: publicUrl }).eq("id", speaker.id);
+                    const tables = getEventTables(speaker?.eventSlug);
+                    await supabase.from(tables.speakers).update({ id_card_url: publicUrl }).eq("id", speaker.id);
                 } catch (colErr) {
                     console.warn("Could not write id_card_url column (may need SQL migration):", colErr);
                 }
@@ -50,7 +52,8 @@ export async function uploadIdCardToStorage(speaker, blob, filename) {
             if (publicUrl) {
                 publicUrl = `${publicUrl}?t=${Date.now()}`;
                 try {
-                    await supabase.from("speakers").update({ id_card_url: publicUrl }).eq("id", speaker.id);
+                    const tables = getEventTables(speaker?.eventSlug);
+                    await supabase.from(tables.speakers).update({ id_card_url: publicUrl }).eq("id", speaker.id);
                 } catch (colErr) {
                     console.warn("Could not write id_card_url column (may need SQL migration):", colErr);
                 }

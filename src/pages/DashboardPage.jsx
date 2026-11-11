@@ -12,13 +12,14 @@ import { TIME_SLOTS, EVENT_DAYS, generatePortalToken, uploadSpeakerAbstract, upl
 import { supabase } from "../supabaseClient";
 import * as XLSX from "xlsx-js-style";
 import { slugify } from "../site/publicApi";
+import { getEventTables } from "../eventsConfig";
 
 
 
 import PhoneField from "../components/common/PhoneField";
 import CountryField from "../components/common/CountryField";
 
-function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, onRefresh, allSpeakers, isSpeaker = false, currentSpeaker = null }) {
+function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, onRefresh, allSpeakers, isSpeaker = false, currentSpeaker = null, currentEvent = null }) {
     const [isEditing, setIsEditing] = useState(false);
     const [form, setForm] = useState(speaker);
     const [saving, setSaving] = useState(false);
@@ -209,14 +210,16 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
         // Existing speaker with no token yet — generate one and save it now.
         if (!token) {
             token = generatePortalToken();
+            const tables = getEventTables(speaker.eventSlug || currentEvent?.slug);
             await supabase
-                .from("speakers")
+                .from(tables.speakers)
                 .update({ portal_token: token })
                 .eq("id", speaker.id);
         }
 
         const speakerSlug = slugify(speaker.name || speaker.id);
-        const link = `${window.location.origin}/dubai-series/${speakerSlug}?s=${speaker.id}&t=${token}`;
+        const seriesSlug = (speaker.eventSlug === "paris" || currentEvent?.slug === "paris") ? "paris-series" : "dubai-series";
+        const link = `${window.location.origin}/${seriesSlug}/${speakerSlug}?s=${speaker.id}&t=${token}`;
         navigator.clipboard.writeText(link).then(() => {
             alert("Speaker portal link copied to clipboard:\n" + link);
         });
@@ -1013,7 +1016,7 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
     );
 }
 
-export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete, onUndoCheckout, isSpeaker = false, currentSpeaker = null }) {
+export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete, onUndoCheckout, isSpeaker = false, currentSpeaker = null, currentEvent = null }) {
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState("all");
     const [dayFilter, setDayFilter] = useState("all");
@@ -1130,6 +1133,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                 allSpeakers={speakers}
                                 isSpeaker={isSpeaker}
                                 currentSpeaker={currentSpeaker}
+                                currentEvent={currentEvent}
                             />
                         </div>
                     )}
@@ -1153,7 +1157,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                     <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100">
                         {isSpeaker ? "Conference Speakers & Schedule" : "All speakers"}{" "}
                         <span className="font-normal text-slate-500 text-xs sm:text-sm block sm:inline mt-0.5 sm:mt-0">
-                            — {isSpeaker ? "Live directory for WLWH Dubai 2026" : "live with ops team"}
+                            — {isSpeaker ? `Live directory for ${currentEvent?.fullName || "WLWH Conference"}` : `live with ${currentEvent?.shortName || "Dubai"} ops team`}
                         </span>
                     </h2>
 
@@ -1316,6 +1320,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                                 allSpeakers={speakers}
                                                 isSpeaker={isSpeaker}
                                                 currentSpeaker={currentSpeaker}
+                                                currentEvent={currentEvent}
                                             />
                                         </div>
                                     )}
@@ -1427,6 +1432,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                                                 allSpeakers={speakers}
                                                                 isSpeaker={isSpeaker}
                                                                 currentSpeaker={currentSpeaker}
+                                                                currentEvent={currentEvent}
                                                             />
                                                         </div>
                                                     </td>

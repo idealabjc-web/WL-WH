@@ -71,7 +71,8 @@ export default function CheckinPage({
     isSpeaker = false, 
     currentSpeaker = null, 
     forcedSubTab = null,
-    onNavigateTab = null
+    onNavigateTab = null,
+    currentEvent = null
 }) {
     // Top subnav bar state: "home" | "qr"
     const [activeSubTabState, setActiveSubTabState] = useState("home");
@@ -765,7 +766,7 @@ export default function CheckinPage({
                                                             </div>
 
                                                             <p className="text-xs text-[#9AA5CC] leading-relaxed pt-1 border-t border-[#1E2A5A]">
-                                                                Thank you for your valuable session and insights at WL-WH Dubai 2026. We hope you had an extraordinary conference experience!
+                                                                Thank you for your valuable session and insights at {currentEvent?.fullName || "WL-WH Conference"}. We hope you had an extraordinary conference experience!
                                                             </p>
 
                                                             <div className="flex flex-wrap items-center gap-2.5 pt-1">
@@ -861,7 +862,7 @@ export default function CheckinPage({
                                                                     Awaiting Arrival Check-In
                                                                 </div>
                                                                 <div className="text-[11px] sm:text-xs text-amber-300/80 mt-0.5 leading-relaxed">
-                                                                    Please present your live QR pass below at the reception desk upon your arrival at Holiday Inn Express Dubai Airport.
+                                                                    Please present your live QR pass below at the reception desk upon your arrival at {currentEvent?.venue || "the event venue"}.
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -991,7 +992,7 @@ export default function CheckinPage({
                                         </div>
 
                                         <div className="pt-4 border-t border-[#1E2A5A] flex flex-wrap items-center justify-between gap-3 text-xs text-[#9AA5CC]">
-                                            <span>WL-WH Dubai 2026 · Official IHG Operations Center</span>
+                                            <span>{currentEvent?.fullName || "WL-WH Conference"} · Official Operations Center</span>
                                             <button
                                                 type="button"
                                                 onClick={() => setIsBadgeFlipped(false)}

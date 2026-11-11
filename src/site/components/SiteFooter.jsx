@@ -39,6 +39,8 @@ export default function SiteFooter({ onAdminClick }) {
                                         <span>{s.city} Series</span>
                                         {s.status === "live" ? (
                                             <span className="sc-pill sc-pill-live" style={{ padding: "1px 6px", fontSize: "9px" }}>Live</span>
+                                        ) : s.status === "upcoming" ? (
+                                            <span className="sc-pill sc-pill-upcoming" style={{ padding: "1px 6px", fontSize: "9px" }}>March 2027</span>
                                         ) : null}
                                     </Link>
                                 </li>

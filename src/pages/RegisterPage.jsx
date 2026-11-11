@@ -7,8 +7,13 @@ import { uid, generatePortalToken, emptyForm, generateAndStoreQrBadge, uploadSpe
 import PhoneField from "../components/common/PhoneField";
 import CountryField from "../components/common/CountryField";
 
-export default function RegisterPage({ speakers = [], onAdd, toast }) {
-    const [form, setForm] = useState(emptyForm);
+export default function RegisterPage({ speakers = [], onAdd, toast, currentEvent }) {
+    const eventDays = currentEvent?.days || EVENT_DAYS;
+    const eventRooms = currentEvent?.rooms || ["Room 1", "Room 2"];
+    const [form, setForm] = useState(() => ({
+        ...emptyForm,
+        eventSlug: currentEvent?.slug || "dubai"
+    }));
     const [viewDay, setViewDay] = useState("");
     const [viewRoom, setViewRoom] = useState("");
     const [saving, setSaving] = useState(false);
@@ -90,7 +95,16 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
         setSaving(true);
         const id = uid();
         const portalToken = generatePortalToken();
-        const rec = { id, portalToken, ...form, name: form.name.trim(), checkedIn: false, checkedInAt: null, createdAt: Date.now() };
+        const rec = { 
+            id, 
+            portalToken, 
+            ...form, 
+            name: form.name.trim(), 
+            checkedIn: false, 
+            checkedInAt: null, 
+            createdAt: Date.now(),
+            eventSlug: currentEvent?.slug || form.eventSlug || "dubai"
+        };
 
 
         const uploadTasks = [];
@@ -414,7 +428,7 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                 <Field label="Day">
                     <select className={inputCls} value={viewDay} onChange={(e) => setViewDay(e.target.value)}>
                         <option value="">Select a day...</option>
-                        {EVENT_DAYS.map(d => (
+                        {eventDays.map(d => (
                             <option key={d} value={d}>{d}</option>
                         ))}
                     </select>
@@ -422,8 +436,9 @@ export default function RegisterPage({ speakers = [], onAdd, toast }) {
                 <Field label="Conference Room">
                     <select className={inputCls} value={viewRoom} onChange={(e) => setViewRoom(e.target.value)}>
                         <option value="">Select Room...</option>
-                        <option value="Room 1">Room 1</option>
-                        <option value="Room 2">Room 2</option>
+                        {eventRooms.map(r => (
+                            <option key={r} value={r}>{r}</option>
+                        ))}
                     </select>
                 </Field>
             </div>

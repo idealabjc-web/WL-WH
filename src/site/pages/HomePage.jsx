@@ -130,7 +130,7 @@ export default function HomePage({ onAdminClick }) {
                         {[
                             "DUBAI SERIES · NOV 25–26, 2026",
                             "KEYNOTE SESSIONS",
-                            "PARIS SERIES · SPRING 2027",
+                            "PARIS SERIES · MARCH 2027",
                             "VERIFIED SPEAKER PORTAL",
                             "CANADA SERIES · SUMMER 2027",
                             "GLOBAL RESEARCH & INNOVATION",
@@ -141,7 +141,7 @@ export default function HomePage({ onAdminClick }) {
                         ].concat([
                             "DUBAI SERIES · NOV 25–26, 2026",
                             "KEYNOTE SESSIONS",
-                            "PARIS SERIES · SPRING 2027",
+                            "PARIS SERIES · MARCH 2027",
                             "VERIFIED SPEAKER PORTAL",
                             "CANADA SERIES · SUMMER 2027",
                             "GLOBAL RESEARCH & INNOVATION",
@@ -209,7 +209,11 @@ export default function HomePage({ onAdminClick }) {
                                 <img src={s.cover} alt={s.city} />
                                 <div className="sc-series-top">
                                     <span className="sc-series-flag">{s.flag}</span>
-                                    <span className="sc-pill sc-pill-soon">Coming Soon</span>
+                                    {s.status === "upcoming" ? (
+                                        <span className="sc-pill sc-pill-upcoming">March 2027</span>
+                                    ) : (
+                                        <span className="sc-pill sc-pill-soon">Coming Soon</span>
+                                    )}
                                 </div>
                                 <div className="sc-series-body">
                                     <h3 className="sc-series-city" style={{ fontSize: "30px" }}>{s.city} Series</h3>
@@ -217,8 +221,8 @@ export default function HomePage({ onAdminClick }) {
                                         <Calendar size={13} />
                                         <span>{s.dates} · {s.country}</span>
                                     </div>
-                                    <div className="sc-series-cta" style={{ color: "var(--sc-muted)" }}>
-                                        <span>View Chapter Preview</span>
+                                    <div className="sc-series-cta" style={{ color: s.status === "upcoming" ? "#9bb5ff" : "var(--sc-muted)" }}>
+                                        <span>{s.status === "upcoming" ? "Explore Chapter & Call for Speakers" : "View Chapter Preview"}</span>
                                         <ChevronRight size={16} />
                                     </div>
                                 </div>

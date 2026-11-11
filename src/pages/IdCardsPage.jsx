@@ -16,6 +16,7 @@ import {
     saveLocalCachedCards,
 } from "../api/idCardsStorage";
 import { supabase } from "../supabaseClient";
+import { getEventTables } from "../eventsConfig";
 import { inputCls } from "../components/common/UIAtoms";
 import Cropper from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
@@ -26,7 +27,14 @@ export default function IdCardsPage({
     cards: externalCards,
     setCards: externalSetCards,
     toast,
+    currentEvent = null,
 }) {
+    const prepareSpeakerForCard = (s) => ({
+        ...s,
+        eventName: currentEvent?.fullName || s.eventName,
+        dates: currentEvent?.dates || s.dates,
+        cityCountry: currentEvent ? `${currentEvent.city}, ${currentEvent.country}` : s.cityCountry,
+    });
     // Cache map: { [speakerId]: { id, speaker, dataUrl, publicUrl, blob, filename, isStored } }
     const [internalCards, setInternalCards] = useState({});
     const cards = externalCards !== undefined ? externalCards : internalCards;
@@ -142,7 +150,7 @@ export default function IdCardsPage({
                 // If speaker has no card or has an old template card
                 if (!currentCards[s.id] || currentCards[s.id].templateVersion !== "v12_speaker_tag") {
                     try {
-                        const card = await generateIdCardJpeg(s);
+                        const card = await generateIdCardJpeg(prepareSpeakerForCard(s));
                         currentCards[s.id] = card;
                         hasNewGenerations = true;
                     } catch (err) {
@@ -173,7 +181,7 @@ export default function IdCardsPage({
                     currentCards[s.id] = stored;
                 } else if (!currentCards[s.id] || currentCards[s.id].templateVersion !== "v12_speaker_tag") {
                     try {
-                        const card = await generateIdCardJpeg(s);
+                        const card = await generateIdCardJpeg(prepareSpeakerForCard(s));
                         currentCards[s.id] = card;
                     } catch (err) {
                         console.error("Auto card generation failed for", s.name, err);
@@ -196,7 +204,7 @@ export default function IdCardsPage({
     const generateAndStoreSingleCard = async (speaker) => {
         if (toast) toast(`Generating badge for ${speaker.name}...`);
         try {
-            const card = await generateIdCardJpeg(speaker);
+            const card = await generateIdCardJpeg(prepareSpeakerForCard(speaker));
             const uploadRes = await uploadIdCardToStorage(speaker, card.blob, card.filename);
             if (uploadRes.publicUrl) {
                 card.publicUrl = uploadRes.publicUrl;
@@ -235,7 +243,7 @@ export default function IdCardsPage({
         for (const s of targetSpeakers) {
             setProgress(`Generating & uploading ${done + 1} of ${targetSpeakers.length}: ${s.name}...`);
             try {
-                const card = await generateIdCardJpeg(s);
+                const card = await generateIdCardJpeg(prepareSpeakerForCard(s));
                 const uploadRes = await uploadIdCardToStorage(s, card.blob, card.filename);
                 if (uploadRes.publicUrl) {
                     card.publicUrl = uploadRes.publicUrl;
@@ -274,7 +282,7 @@ export default function IdCardsPage({
 
             // Generate new card with cropped image
             const updatedSpeaker = { ...editingSpeaker, croppedPhotoUrl: croppedImgUrl };
-            const card = await generateIdCardJpeg(updatedSpeaker);
+            const card = await generateIdCardJpeg(prepareSpeakerForCard(updatedSpeaker));
 
             // Upload to storage
             const uploadRes = await uploadIdCardToStorage(editingSpeaker, card.blob, card.filename);
@@ -285,7 +293,8 @@ export default function IdCardsPage({
 
             // Save position in DB
             const idCardPosition = { crop, zoom };
-            await supabase.from("speakers").update({ id_card_position: idCardPosition }).eq("id", editingSpeaker.id);
+            const tables = getEventTables(editingSpeaker.eventSlug || currentEvent?.slug);
+            await supabase.from(tables.speakers).update({ id_card_position: idCardPosition }).eq("id", editingSpeaker.id);
 
             // Update local speaker obj
             editingSpeaker.idCardPosition = idCardPosition;
@@ -344,7 +353,7 @@ export default function IdCardsPage({
             for (const s of missing) {
                 setProgress(`Generating ID badge ${done + 1} of ${missing.length}: ${s.name}...`);
                 try {
-                    const card = await generateIdCardJpeg(s);
+                    const card = await generateIdCardJpeg(prepareSpeakerForCard(s));
                     const uploadRes = await uploadIdCardToStorage(s, card.blob, card.filename);
                     if (uploadRes.publicUrl) {
                         card.publicUrl = uploadRes.publicUrl;

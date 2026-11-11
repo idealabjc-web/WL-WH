@@ -23,6 +23,7 @@ import SpeakerAbstractPage from "./SpeakerAbstractPage";
 import PeerCiteProceedingsPage from "./PeerCiteProceedingsPage";
 import HangingBadgePull from "../../components/HangingBadgePull";
 import { getCountryFlagUrl, getCountryName } from "../../utils/countryFlags";
+import { getEventConfig, getEventTables } from "../../eventsConfig";
 
 const TABS = [
     { id: "home", label: "Home", icon: BadgeCheck },
@@ -39,7 +40,8 @@ function getInitialTab() {
     return VALID_TABS.includes(hash) ? hash : "home";
 }
 
-export default function SpeakerPortalPage({ speaker, onLogout }) {
+export default function SpeakerPortalPage({ speaker, onLogout, currentEvent }) {
+    const eventConfig = currentEvent || getEventConfig(speaker?.eventSlug || "dubai");
     const [tab, setTab] = useState(getInitialTab);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [isDarkMode, setIsDarkMode] = useState(() => {
@@ -235,7 +237,8 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
         setSpeakers((prev) => prev.map((s) => (s.id === id ? { ...s, concerns: notes } : s)));
         
         if (isSupabaseConfigured && supabase) {
-            const { error } = await supabase.from("speakers").update({ concerns: notes }).eq("id", id);
+            const tables = getEventTables(speaker?.eventSlug || speaker?.event_slug);
+            const { error } = await supabase.from(tables.speakers).update({ concerns: notes }).eq("id", id);
             if (error) {
                 toast("Notes saved locally but failed to sync.");
                 return;
@@ -269,10 +272,10 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
 
     const speakerName = currentSpeaker.name || "Speaker";
     const firstName = speakerName.split(" ")[0];
-    const sessionTopic = currentSpeaker.sessionTitle || currentSpeaker.session_title || "Future of Women";
-    const eventDay = currentSpeaker.day ? `${currentSpeaker.day}${currentSpeaker.timeSlot ? ` · ${currentSpeaker.timeSlot}` : ""}` : "November 25 · 10:30 – 10:55";
-    const venueText = `${currentSpeaker.conferenceRoom || currentSpeaker.room || "Room 1"} · Holiday Inn Express Dubai Airport`;
-    const hotelRoomText = currentSpeaker.hotelRoom ? (currentSpeaker.hotelRoom.toLowerCase().startsWith("room") ? currentSpeaker.hotelRoom : `Room ${currentSpeaker.hotelRoom}`) : (currentSpeaker.room || "Room 1999");
+    const sessionTopic = currentSpeaker.sessionTitle || currentSpeaker.session_title || "Keynote Session";
+    const eventDay = currentSpeaker.day ? `${currentSpeaker.day}${currentSpeaker.timeSlot ? ` · ${currentSpeaker.timeSlot}` : ""}` : (eventConfig.days[0] || "Day 1");
+    const venueText = `${currentSpeaker.conferenceRoom || currentSpeaker.room || (eventConfig.rooms[0] || "Auditorium")} · ${eventConfig.venue}`;
+    const hotelRoomText = currentSpeaker.hotelRoom ? (currentSpeaker.hotelRoom.toLowerCase().startsWith("room") ? currentSpeaker.hotelRoom : `Room ${currentSpeaker.hotelRoom}`) : (currentSpeaker.room || "Room TBA");
     const stayDatesText = formatStayDates(
         currentSpeaker.checkinDate || currentSpeaker.checkin_date,
         currentSpeaker.checkoutDate || currentSpeaker.checkout_date,
@@ -292,11 +295,11 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                         {/* Brand Logo & Event Tag */}
                         <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
                             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-[#4457F5] via-[#3B6CF6] to-[#7A4DF0] flex items-center justify-center font-black text-white text-xs shadow-md shadow-blue-600/30">
-                                WL
+                                {eventConfig.slug === "paris" ? "PR" : "WL"}
                             </div>
                             <div>
                                 <div className="text-[9px] sm:text-[10px] font-bold tracking-[0.14em] text-[#8B9BFF] uppercase leading-none">
-                                    WL‑WH DUBAI 2026
+                                    {eventConfig.fullName.toUpperCase()}
                                 </div>
                                 <div className="text-sm sm:text-base font-black text-white leading-tight mt-0.5 tracking-tight">
                                     Speaker Portal
@@ -902,55 +905,6 @@ export default function SpeakerPortalPage({ speaker, onLogout }) {
                                                     <Upload size={18} className="group-hover/btn:-translate-y-0.5 transition-transform" />
                                                     <span>Upload Event Photos</span>
                                                 </label>
-
-                                                {/* On-Site Photography & DOP Contact Callout */}
-                                                <div className={`mt-6 p-4 rounded-2xl border text-left flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                                                    isDarkMode 
-                                                        ? 'bg-[#050A1F]/90 border-amber-500/30 shadow-lg shadow-amber-950/20' 
-                                                        : 'bg-amber-50/90 border-amber-200 shadow-sm'
-                                                }`}>
-                                                    <div className="flex items-start gap-3">
-                                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 text-slate-950 flex items-center justify-center shrink-0 shadow-md">
-                                                            <Camera size={18} />
-                                                        </div>
-                                                        <div>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className={`text-[10px] font-bold uppercase tracking-wider ${isDarkMode ? 'text-amber-400' : 'text-amber-700'}`}>
-                                                                    On-Site Contact &amp; Photography (DOP)
-                                                                </span>
-                                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                                            </div>
-                                                            <div className={`text-sm font-extrabold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                                                                Official Event Photographer
-                                                            </div>
-                                                            <p className={`text-xs mt-0.5 max-w-sm ${isDarkMode ? 'text-[#9AA5CC]' : 'text-slate-600'}`}>
-                                                                Stage keynote coverage, speaker portraits &amp; on-site media assistance.
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 shrink-0">
-                                                        <a
-                                                            href="tel:+33754445418"
-                                                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs rounded-xl shadow-md transition-all active:scale-95"
-                                                        >
-                                                            <Phone size={13} />
-                                                            <span>+33 7 54 44 54 18</span>
-                                                        </a>
-                                                        <a
-                                                            href="https://wa.me/33754445418"
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className={`inline-flex items-center gap-1.5 px-3 py-2 border rounded-xl text-xs font-semibold transition-all active:scale-95 ${
-                                                                isDarkMode 
-                                                                    ? 'border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400' 
-                                                                    : 'border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-700'
-                                                            }`}
-                                                        >
-                                                            <ExternalLink size={12} />
-                                                            <span>WhatsApp</span>
-                                                        </a>
-                                                    </div>
-                                                </div>
                                             </div>
                                             
                                             {/* Visual Side */}

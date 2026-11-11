@@ -1,5 +1,6 @@
 import { supabase } from "../supabaseClient";
 import QRCode from "qrcode";
+import { getEventTables } from "../eventsConfig";
 
 const QUEUE_KEY = "offline_speaker_queue";
 
@@ -73,7 +74,8 @@ export const emptyForm = {
     sessionTitle: "", accommodationStatus: "", hotelRoom: "", checkinDate: "", checkoutDate: "", nights: "", diet: "No preference",
     allergy: "", tour: "yes", concerns: "", photoUrl: "",
     abstractProvided: "no", abstractUrl: "", whoseSpeaker: "", team: "", speakerTag: "",
-    accompanyingPerson: "no", accompanyingPersonsList: []
+    accompanyingPerson: "no", accompanyingPersonsList: [],
+    eventSlug: "dubai"
 };
 
 // Supabase <-> app-state mapping
@@ -101,10 +103,11 @@ export function speakerToRow(s) {
     };
 }
 
-export function rowToSpeaker(r) {
+export function rowToSpeaker(r, defaultEventSlug = null) {
     // Flatten the joined data into the single speaker object so UI doesn't break.
-    // Supabase can return arrays or objects depending on foreign key setup (one-to-many vs one-to-one).
-    const rawSessions = Array.isArray(r.sessions) ? r.sessions : (r.sessions ? [r.sessions] : []);
+    // Handles both Dubai (sessions) and Paris (paris_sessions) joined tables.
+    const rawSessionsData = r.paris_sessions || r.sessions || [];
+    const rawSessions = Array.isArray(rawSessionsData) ? rawSessionsData : (rawSessionsData ? [rawSessionsData] : []);
     const normalizedSessions = rawSessions.map(s => ({
         ...s,
         id: s.id,
@@ -126,8 +129,10 @@ export function rowToSpeaker(r) {
     });
 
     const session = normalizedSessions[0] || {};
-    const accomm = Array.isArray(r.accommodations) ? (r.accommodations[0] || {}) : (r.accommodations || {});
-    const att = Array.isArray(r.attendance) ? (r.attendance[0] || {}) : (r.attendance || {});
+    const accommData = r.paris_accommodations || r.accommodations || {};
+    const accomm = Array.isArray(accommData) ? (accommData[0] || {}) : (accommData || {});
+    const attData = r.paris_attendance || r.attendance || {};
+    const att = Array.isArray(attData) ? (attData[0] || {}) : (attData || {});
     
     // Parse team from whose_speaker if stored as "Name [Team]" or "Team"
     let parsedWhoseSpeaker = r.whose_speaker || null;
@@ -182,25 +187,105 @@ export function rowToSpeaker(r) {
         idCardPosition: r.id_card_position || null,
         accompanyingPersonsList: Array.isArray(r.accompanying_persons) ? r.accompanying_persons : (r.accompanying_persons ? JSON.parse(r.accompanying_persons) : []),
         accompanyingPerson: (Array.isArray(r.accompanying_persons) && r.accompanying_persons.length > 0) ? "yes" : "no",
+        eventSlug: defaultEventSlug || r.event_slug || "dubai",
     };
 }
 
-export async function fetchSpeakers() {
-    const { data, error } = await supabase
-        .from("speakers")
-        .select("*, sessions(*), accommodations(*), attendance(*)")
-        .order("created_at", { ascending: true });
+export async function fetchSpeakers(eventSlug = "dubai") {
+    if (eventSlug === "all") {
+        const [dubaiRes, parisRes] = await Promise.allSettled([
+            fetchSpeakers("dubai"),
+            fetchSpeakers("paris")
+        ]);
+        const dubaiList = dubaiRes.status === "fulfilled" ? dubaiRes.value : [];
+        const parisList = parisRes.status === "fulfilled" ? parisRes.value : [];
+        return [...dubaiList, ...parisList];
+    }
+
+    const isParis = String(eventSlug || "").toLowerCase().includes("paris");
+    const tables = getEventTables(eventSlug);
+
+    let data = [];
+    let error = null;
+
+    if (isParis) {
+        // Paris uses paris_speakers with paris_sessions & paris_attendance, plus unified accommodations
+        const [spkRes, accRes] = await Promise.all([
+            supabase
+                .from("paris_speakers")
+                .select("*, paris_sessions(*), paris_attendance(*)")
+                .order("created_at", { ascending: true }),
+            supabase
+                .from("accommodations")
+                .select("*")
+        ]);
+
+        if (spkRes.error) {
+            const simple = await supabase.from("paris_speakers").select("*").order("created_at", { ascending: true });
+            if (!simple.error) {
+                data = simple.data || [];
+            } else {
+                error = spkRes.error;
+            }
+        } else {
+            data = spkRes.data || [];
+        }
+
+        // Attach matching accommodations by speaker_id
+        const accList = accRes.data || [];
+        const accMap = {};
+        for (const a of accList) {
+            if (a.speaker_id) accMap[a.speaker_id] = a;
+        }
+
+        data = data.map(r => ({
+            ...r,
+            accommodations: accMap[r.id] ? [accMap[r.id]] : []
+        }));
+    } else {
+        const query = supabase
+            .from(tables.speakers)
+            .select(`*, ${tables.sessions}(*), ${tables.accommodations}(*), ${tables.attendance}(*)`)
+            .order("created_at", { ascending: true });
+
+        const res = await query;
+        data = res.data;
+        error = res.error;
+
+        if (error) {
+            const simple = await supabase
+                .from(tables.speakers)
+                .select("*")
+                .order("created_at", { ascending: true });
+
+            if (!simple.error) {
+                data = simple.data || [];
+                error = null;
+            }
+        }
+    }
+
     if (error) throw error;
-    return (data || []).map(rowToSpeaker);
+    return (data || []).map(r => rowToSpeaker(r, isParis ? "paris" : "dubai"));
 }
 
 export async function createSpeakerRecord(rec, skipQueue = false) {
+    const isParis = String(rec.eventSlug || "").toLowerCase().includes("paris");
+    const tables = getEventTables(rec.eventSlug);
+
     if (!navigator.onLine && !skipQueue) {
         queueOfflineAction("CREATE", rec.id, rec);
         return true; // Optimistic success
     }
     const speakerRow = speakerToRow(rec);
-    const { error: spkError } = await supabase.from("speakers").insert(speakerRow);
+    delete speakerRow.event_slug;
+
+    let { error: spkError } = await supabase.from(tables.speakers).insert(speakerRow);
+    if (spkError && (spkError.code === "42703" || String(spkError.message || "").toLowerCase().includes("event_slug"))) {
+        delete speakerRow.event_slug;
+        const retry = await supabase.from(tables.speakers).insert(speakerRow);
+        spkError = retry.error;
+    }
     if (spkError) throw spkError;
     
     if (rec.sessions && rec.sessions.length > 0) {
@@ -212,18 +297,18 @@ export async function createSpeakerRecord(rec, skipQueue = false) {
             conference_room: s.conferenceRoom || null
         }));
         if (sessionsToInsert.length > 0) {
-            const { error: sessError } = await supabase.from("sessions").insert(sessionsToInsert);
-            if (sessError) throw sessError;
+            const { error: sessError } = await supabase.from(tables.sessions).insert(sessionsToInsert);
+            if (sessError) console.warn("Sessions insert warning:", sessError);
         }
     } else if (rec.sessionTitle || rec.day || rec.timeSlot || rec.conferenceRoom) {
-        const { error: sessError } = await supabase.from("sessions").insert({
+        const { error: sessError } = await supabase.from(tables.sessions).insert({
             speaker_id: rec.id,
             session_title: rec.sessionTitle || null,
             day: rec.day || null,
             time_slot: rec.timeSlot || null,
             conference_room: rec.conferenceRoom || null
         });
-        if (sessError) throw sessError;
+        if (sessError) console.warn("Session insert warning:", sessError);
     }
     
     if (rec.accommodationStatus || rec.checkinDate || rec.checkoutDate || rec.nights || rec.hotelRoom) {
@@ -233,13 +318,14 @@ export async function createSpeakerRecord(rec, skipQueue = false) {
             checkin_date: rec.checkinDate || null,
             checkout_date: rec.checkoutDate || null,
             nights: rec.nights || null,
-            hotel_room: rec.hotelRoom || null
+            hotel_room: rec.hotelRoom || null,
+            event: isParis ? "paris" : "dubai"
         });
-        if (accError) throw accError;
+        if (accError) console.warn("Accommodation insert warning:", accError);
     }
 
     // Always insert a default attendance record for tracking check-ins
-    const { error: attError } = await supabase.from("attendance").insert({
+    const { error: attError } = await supabase.from(tables.attendance).insert({
         speaker_id: rec.id,
         checked_in: !!rec.checkedIn,
         checked_in_at: rec.checkedInAt ? new Date(rec.checkedInAt).toISOString() : null,
@@ -247,26 +333,35 @@ export async function createSpeakerRecord(rec, skipQueue = false) {
         checked_out_at: rec.checkedOutAt ? new Date(rec.checkedOutAt).toISOString() : null,
         checkout_notes: rec.checkoutNotes || null
     });
-    if (attError) throw attError;
+    if (attError) console.warn("Attendance insert warning:", attError);
     
     return true;
 }
 
 export async function updateSpeakerRecord(id, mergedRec, skipQueue = false) {
+    const isParis = String(mergedRec.eventSlug || "").toLowerCase().includes("paris");
+    const tables = getEventTables(mergedRec.eventSlug);
+
     if (!navigator.onLine && !skipQueue) {
         queueOfflineAction("UPDATE", id, mergedRec);
         return true; // Optimistic success
     }
 
     const speakerRow = speakerToRow(mergedRec);
-    const { error: spkError } = await supabase.from("speakers").update(speakerRow).eq("id", id);
+    delete speakerRow.event_slug;
+
+    let { error: spkError } = await supabase.from(tables.speakers).update(speakerRow).eq("id", id);
+    if (spkError && (spkError.code === "42703" || String(spkError.message || "").toLowerCase().includes("event_slug"))) {
+        delete speakerRow.event_slug;
+        const retry = await supabase.from(tables.speakers).update(speakerRow).eq("id", id);
+        spkError = retry.error;
+    }
     if (spkError) throw spkError;
     
     // Upsert sessions
-    // If the record provides an explicit array of sessions, we replace all existing ones.
     if (mergedRec.sessions) {
         // Delete existing ones
-        await supabase.from("sessions").delete().eq("speaker_id", id);
+        await supabase.from(tables.sessions).delete().eq("speaker_id", id);
         const sessionsToInsert = mergedRec.sessions.filter(s => s.day || s.timeSlot || s.time_slot || s.conferenceRoom || s.conference_room).map(s => ({
             speaker_id: id,
             session_title: mergedRec.sessionTitle || null,
@@ -275,74 +370,60 @@ export async function updateSpeakerRecord(id, mergedRec, skipQueue = false) {
             conference_room: s.conferenceRoom || s.conference_room || s.room || null
         }));
         if (sessionsToInsert.length > 0) {
-            const { error: sessInsError } = await supabase.from("sessions").insert(sessionsToInsert);
-            if (sessInsError) throw sessInsError;
+            await supabase.from(tables.sessions).insert(sessionsToInsert);
         }
     } else {
         // Fallback for old single-session edit form
-        const { data: sessData } = await supabase.from("sessions").select("id").eq("speaker_id", id).maybeSingle();
+        const { data: sessData } = await supabase.from(tables.sessions).select("id").eq("speaker_id", id).maybeSingle();
         if (sessData) {
-            const { error: sessUpdError } = await supabase.from("sessions").update({
+            await supabase.from(tables.sessions).update({
                 session_title: mergedRec.sessionTitle || null,
                 day: mergedRec.day || null,
                 time_slot: mergedRec.timeSlot || null,
                 conference_room: mergedRec.conferenceRoom || null
             }).eq("id", sessData.id);
-            if (sessUpdError) throw sessUpdError;
         } else if (mergedRec.sessionTitle || mergedRec.day || mergedRec.timeSlot || mergedRec.conferenceRoom) {
-            const { error: sessInsError } = await supabase.from("sessions").insert({
+            await supabase.from(tables.sessions).insert({
                 speaker_id: id,
                 session_title: mergedRec.sessionTitle || null,
                 day: mergedRec.day || null,
                 time_slot: mergedRec.timeSlot || null,
                 conference_room: mergedRec.conferenceRoom || null
             });
-            if (sessInsError) throw sessInsError;
         }
     }
 
     // Upsert accommodation
     const { data: accData } = await supabase.from("accommodations").select("id").eq("speaker_id", id).maybeSingle();
+    const accPayload = {
+        speaker_id: id,
+        accommodation_status: mergedRec.accommodationStatus || null,
+        checkin_date: mergedRec.checkinDate || null,
+        checkout_date: mergedRec.checkoutDate || null,
+        nights: mergedRec.nights || null,
+        hotel_room: mergedRec.hotelRoom || null,
+        event: isParis ? "paris" : "dubai"
+    };
     if (accData) {
-        const { error: accUpdError } = await supabase.from("accommodations").update({
-            accommodation_status: mergedRec.accommodationStatus || null,
-            checkin_date: mergedRec.checkinDate || null,
-            checkout_date: mergedRec.checkoutDate || null,
-            nights: mergedRec.nights || null,
-            hotel_room: mergedRec.hotelRoom || null
-        }).eq("id", accData.id);
-        if (accUpdError) throw accUpdError;
+        await supabase.from("accommodations").update(accPayload).eq("id", accData.id);
     } else if (mergedRec.accommodationStatus || mergedRec.checkinDate || mergedRec.checkoutDate || mergedRec.nights || mergedRec.hotelRoom) {
-        const { error: accInsError } = await supabase.from("accommodations").insert({
-            speaker_id: id,
-            accommodation_status: mergedRec.accommodationStatus || null,
-            checkin_date: mergedRec.checkinDate || null,
-            checkout_date: mergedRec.checkoutDate || null,
-            nights: mergedRec.nights || null,
-            hotel_room: mergedRec.hotelRoom || null
-        });
-        if (accInsError) throw accInsError;
+        await supabase.from("accommodations").insert(accPayload);
     }
 
     // Upsert attendance
-    const { data: attData } = await supabase.from("attendance").select("id").eq("speaker_id", id).maybeSingle();
+    const { data: attData } = await supabase.from(tables.attendance).select("id").eq("speaker_id", id).maybeSingle();
+    const attPayload = {
+        speaker_id: id,
+        checked_in: !!mergedRec.checkedIn,
+        checked_in_at: mergedRec.checkedInAt ? new Date(mergedRec.checkedInAt).toISOString() : null,
+        checked_out: !!mergedRec.checkedOut,
+        checked_out_at: mergedRec.checkedOutAt ? new Date(mergedRec.checkedOutAt).toISOString() : null,
+        checkout_notes: mergedRec.checkoutNotes || null
+    };
     if (attData) {
-        await supabase.from("attendance").update({
-            checked_in: !!mergedRec.checkedIn,
-            checked_in_at: mergedRec.checkedInAt ? new Date(mergedRec.checkedInAt).toISOString() : null,
-            checked_out: !!mergedRec.checkedOut,
-            checked_out_at: mergedRec.checkedOutAt ? new Date(mergedRec.checkedOutAt).toISOString() : null,
-            checkout_notes: mergedRec.checkoutNotes || null
-        }).eq("id", attData.id);
+        await supabase.from(tables.attendance).update(attPayload).eq("id", attData.id);
     } else {
-        await supabase.from("attendance").insert({
-            speaker_id: id,
-            checked_in: !!mergedRec.checkedIn,
-            checked_in_at: mergedRec.checkedInAt ? new Date(mergedRec.checkedInAt).toISOString() : null,
-            checked_out: !!mergedRec.checkedOut,
-            checked_out_at: mergedRec.checkedOutAt ? new Date(mergedRec.checkedOutAt).toISOString() : null,
-            checkout_notes: mergedRec.checkoutNotes || null
-        });
+        await supabase.from(tables.attendance).insert(attPayload);
     }
 
     return true;
@@ -543,16 +624,37 @@ export function getAbstractsMap(abstractUrlString) {
     return {};
 }
 
-export async function getSpeakerAbstractData(speakerId) {
+export async function getSpeakerAbstractData(speakerId, eventSlug = null) {
     if (!speakerId) return null;
     try {
         if (supabase) {
-            // 1. Check speakers table row
-            const { data: speakerRow } = await supabase
-                .from("speakers")
-                .select("id, abstract_url, abstract_status")
-                .eq("id", speakerId)
-                .maybeSingle();
+            // 1. Check speakers / paris_speakers table row
+            const tables = eventSlug ? getEventTables(eventSlug) : null;
+            let speakerRow = null;
+            if (tables) {
+                const { data } = await supabase
+                    .from(tables.speakers)
+                    .select('id, abstract_url, abstract_status')
+                    .eq('id', speakerId)
+                    .maybeSingle();
+                speakerRow = data;
+            } else {
+                const { data: dRow } = await supabase
+                    .from('speakers')
+                    .select('id, abstract_url, abstract_status')
+                    .eq('id', speakerId)
+                    .maybeSingle();
+                if (dRow) {
+                    speakerRow = dRow;
+                } else {
+                    const { data: pRow } = await supabase
+                        .from('paris_speakers')
+                        .select('id, abstract_url, abstract_status')
+                        .eq('id', speakerId)
+                        .maybeSingle();
+                    speakerRow = pRow;
+                }
+            }
 
             const map = getAbstractsMap(speakerRow?.abstract_url);
 

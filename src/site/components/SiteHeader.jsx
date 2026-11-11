@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, navigate } from "../router";
 import { BRAND, SERIES } from "../seriesData";
 import { ChevronDown, Sparkles, Menu, X, ArrowRight } from "lucide-react";
+import AeroplaneAnimation from "./AeroplaneAnimation";
 
 export default function SiteHeader({ activeSeries = null, onAdminClick }) {
     const [scrolled, setScrolled] = useState(false);
@@ -27,6 +28,18 @@ export default function SiteHeader({ activeSeries = null, onAdminClick }) {
         e.preventDefault();
         setMobileOpen(false);
         const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
+
+        if (activeSeries === "paris-series" || currentPath === "/paris-series") {
+            const el = document.getElementById("speakers");
+            if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "start" });
+                window.history.pushState({}, "", "/paris-series#speakers");
+                return;
+            }
+            navigate("/paris-series#speakers");
+            return;
+        }
+
         if (currentPath === "/dubai-series") {
             const el = document.getElementById("speakers");
             if (el) {
@@ -123,6 +136,8 @@ export default function SiteHeader({ activeSeries = null, onAdminClick }) {
                                                         <span>{s.flag}</span>
                                                         {s.status === "live" ? (
                                                             <span className="sc-pill sc-pill-live">Live</span>
+                                                        ) : s.status === "upcoming" ? (
+                                                            <span className="sc-pill sc-pill-upcoming">March 2027</span>
                                                         ) : (
                                                             <span className="sc-pill sc-pill-soon">Soon</span>
                                                         )}
@@ -139,34 +154,20 @@ export default function SiteHeader({ activeSeries = null, onAdminClick }) {
                                 Supporting Partners
                             </a>
 
-                            <Link
-                                to="/dubai-series#speakers"
-                                className="sc-nav-link"
-                                onClick={handleNavigateToSpeakers}
-                            >
-                                Speakers Directory
-                            </Link>
-                        </nav>
-
-                        {/* Right Action buttons */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                            {activeSeries === "paris-series" ? (
+                            {activeSeries && (
                                 <Link
-                                    to="/dubai-series"
-                                    className="sc-btn sc-btn-gold sc-header-cta"
+                                    to={activeSeries === "paris-series" ? "/paris-series#speakers" : "/dubai-series#speakers"}
+                                    className="sc-nav-link"
+                                    onClick={handleNavigateToSpeakers}
                                 >
-                                    <span>Explore Dubai Series 🇦🇪</span>
-                                    <ArrowRight size={14} className="sc-arrow" />
-                                </Link>
-                            ) : (
-                                <Link
-                                    to="/paris-series"
-                                    className="sc-btn sc-btn-blue sc-header-cta"
-                                >
-                                    <span>Explore Paris Series 🇫🇷</span>
-                                    <ArrowRight size={14} className="sc-arrow" />
+                                    Speakers Directory
                                 </Link>
                             )}
+                        </nav>
+
+                        {/* Right Action: Aeroplane Animation */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            <AeroplaneAnimation activeSeries={activeSeries} />
 
                             {/* Mobile burger */}
                             <button
@@ -189,10 +190,10 @@ export default function SiteHeader({ activeSeries = null, onAdminClick }) {
                         Home
                     </Link>
                     <Link to="/dubai-series" className="sc-nav-link" onClick={() => setMobileOpen(false)}>
-                        🇦🇪 Dubai Series (Live)
+                        🇦🇪 Dubai Series (Live Event)
                     </Link>
                     <Link to="/paris-series" className="sc-nav-link" onClick={() => setMobileOpen(false)}>
-                        🇫🇷 Paris Series (Live)
+                        🇫🇷 Paris Series (March 2027)
                     </Link>
 
                     <h4>Other Destinations</h4>
@@ -219,9 +220,15 @@ export default function SiteHeader({ activeSeries = null, onAdminClick }) {
                     <Link to="/dubai-series#hotel" className="sc-nav-link" onClick={handleSectionNav("hotel")}>
                         Speaker Hotel & Stay
                     </Link>
-                    <Link to="/dubai-series#speakers" className="sc-nav-link" onClick={handleNavigateToSpeakers}>
-                        Speakers Directory
-                    </Link>
+                    {activeSeries && (
+                        <Link
+                            to={activeSeries === "paris-series" ? "/paris-series#speakers" : "/dubai-series#speakers"}
+                            className="sc-nav-link"
+                            onClick={handleNavigateToSpeakers}
+                        >
+                            Speakers Directory
+                        </Link>
+                    )}
                     <Link to="/dubai-series#gallery" className="sc-nav-link" onClick={handleSectionNav("gallery")}>
                         Experience Gallery
                     </Link>
@@ -230,11 +237,11 @@ export default function SiteHeader({ activeSeries = null, onAdminClick }) {
                     </a>
 
                     <div style={{ marginTop: "24px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                        <Link to="/paris-series" className="sc-btn sc-btn-blue" onClick={() => setMobileOpen(false)}>
-                            Explore Paris Series 🇫🇷
-                        </Link>
                         <Link to="/dubai-series" className="sc-btn sc-btn-gold" onClick={() => setMobileOpen(false)}>
-                            Explore Dubai Series 🇦🇪
+                            Explore Dubai Series 🇦🇪 (Current Event)
+                        </Link>
+                        <Link to="/paris-series" className="sc-btn sc-btn-ghost" onClick={() => setMobileOpen(false)}>
+                            Paris Series 🇫🇷 (March 2027)
                         </Link>
                     </div>
                 </div>

@@ -7,6 +7,7 @@ import { supabase } from "../../supabaseClient";
 import { rowToSpeaker } from "../../api/speakersApi";
 import { loginSpeaker, slugify } from "../publicApi";
 import { getCountryFlagUrl, getCountryName } from "../../utils/countryFlags";
+import { getEventConfig, getEventTables } from '../../eventsConfig';
 import {
     Lock,
     Mail,
@@ -29,9 +30,14 @@ export default function SpeakerIndividualPage({
     onLogin,
     onLogout,
     onAdminClick,
+    eventSlug,
 }) {
+    const detectedEventSlug = eventSlug || (typeof window !== "undefined" && window.location.pathname.includes("paris") ? "paris" : "dubai");
     const [targetSpeaker, setTargetSpeaker] = useState(null);
     const [loadingTarget, setLoadingTarget] = useState(true);
+
+    const currentEvent = getEventConfig(targetSpeaker?.eventSlug || detectedEventSlug);
+    const isParis = currentEvent.slug === "paris";
 
     const [identifier, setIdentifier] = useState("");
     const [password, setPassword] = useState("");
@@ -48,23 +54,46 @@ export default function SpeakerIndividualPage({
         async function findSpeaker() {
             if (!supabase) return;
             try {
-                // Fetch all speakers to find match by slug
-                const { data } = await supabase
-                    .from("speakers")
-                    .select("*, sessions(*), accommodations(*), attendance(*)");
+                const tables = getEventTables(detectedEventSlug);
+                let { data, error } = await supabase
+                    .from(tables.speakers)
+                    .select("*, " + tables.sessions + "(*), " + tables.accommodations + "(*), " + tables.attendance + "(*)");
 
-                if (data && mounted) {
-                    const matched = data.find((r) => slugify(r.name) === slug || slugify(r.id) === slug);
-                    if (matched) {
-                        const speakerObj = rowToSpeaker(matched);
-                        setTargetSpeaker(speakerObj);
-                        // Pre-populate identifier with their registered email if available, otherwise their ID
-                        if (speakerObj.email) setIdentifier(speakerObj.email);
-                        else if (speakerObj.id) setIdentifier(speakerObj.id);
+                if (error || !data || data.length === 0) {
+                    const simple = await supabase.from(tables.speakers).select('*');
+                    data = simple.data || [];
+                }
+
+                let matched = (data || []).find((r) => slugify(r.name) === slug || slugify(r.id) === slug);
+                let matchedEvent = detectedEventSlug;
+
+                if (!matched) {
+                    const altSlug = detectedEventSlug === 'paris' ? 'dubai' : 'paris';
+                    const altTables = getEventTables(altSlug);
+                    const altRes = await supabase.from(altTables.speakers).select("*, " + altTables.sessions + "(*), " + altTables.accommodations + "(*), " + altTables.attendance + "(*)");
+                    if (altRes.data) {
+                        const found = altRes.data.find((r) => slugify(r.name) === slug || slugify(r.id) === slug);
+                        if (found) {
+                            matched = found;
+                            matchedEvent = altSlug;
+                        }
                     }
                 }
+
+                if (matched && mounted) {
+                    if (!matched.accommodations || matched.accommodations.length === 0) {
+                        try {
+                            const { data: acc } = await supabase.from("accommodations").select("*").eq("speaker_id", matched.id).maybeSingle();
+                            if (acc) matched.accommodations = [acc];
+                        } catch {}
+                    }
+                    const speakerObj = rowToSpeaker(matched, matchedEvent);
+                    setTargetSpeaker(speakerObj);
+                    if (speakerObj.email) setIdentifier(speakerObj.email);
+                    else if (speakerObj.id) setIdentifier(speakerObj.id);
+                }
             } catch (err) {
-                console.error("Error finding speaker:", err);
+                console.error('Error finding speaker:', err);
             } finally {
                 if (mounted) setLoadingTarget(false);
             }
@@ -100,10 +129,10 @@ export default function SpeakerIndividualPage({
                         </span>
                     </div>
                     <Link
-                        to="/dubai-series"
+                        to={currentEvent.publicPath}
                         className="text-[#e2b85c] font-semibold hover:text-[#f4d17f] transition-colors shrink-0"
                     >
-                        ← Back to Dubai Series
+                        ← Back to {currentEvent.name}
                     </Link>
                 </div>
 
@@ -111,7 +140,7 @@ export default function SpeakerIndividualPage({
                     speaker={activeSpeaker}
                     onLogout={() => {
                         onLogout();
-                        navigate(`/dubai-series/${slug}`);
+                        navigate(`${currentEvent.publicPath}/${slug}`);
                     }}
                 />
             </div>
@@ -125,7 +154,7 @@ export default function SpeakerIndividualPage({
         setLoadingLogin(true);
 
         try {
-            const speakerData = await loginSpeaker(identifier, password, targetSpeaker?.id);
+            const speakerData = await loginSpeaker(identifier, password, targetSpeaker?.id, currentEvent.slug);
 
             // Save session
             const newSession = { type: "speaker", user: speakerData };
@@ -135,7 +164,7 @@ export default function SpeakerIndividualPage({
             // If the logged in speaker has a different slug, redirect to their proper slug
             const correctSlug = slugify(speakerData.name);
             if (correctSlug !== slug) {
-                navigate(`/dubai-series/${correctSlug}`, { replace: true });
+                navigate(`${currentEvent.publicPath}/${correctSlug}`, { replace: true });
             }
         } catch (err) {
             setErrorMsg(err.message || "Failed to sign in. Please verify your credentials.");
@@ -155,16 +184,16 @@ export default function SpeakerIndividualPage({
 
     return (
         <div className="sc-site sc-page">
-            <SiteHeader activeSeries="dubai-series" onAdminClick={onAdminClick} />
+            <SiteHeader activeSeries={currentEvent.seriesSlug} onAdminClick={onAdminClick} />
 
             <div className="sc-login-wrap">
                 {/* Left Visual Column */}
                 <div className="sc-login-visual">
-                    <img src="/dubai_bg.jpg" alt="Dubai Downtown Skyline" />
+                    <img src={isParis ? "/images/site/paris_eiffel_full_backdrop.jpg" : "/dubai_bg.jpg"} alt={`${currentEvent.name} Backdrop`} />
                     <div style={{ position: "relative", zIndex: 10, maxWidth: "520px" }}>
-                        <span className="sc-eyebrow">SPEAKER CHAPTERS · DUBAI SERIES</span>
+                        <span className="sc-eyebrow">SPEAKER CHAPTERS · {currentEvent.name.toUpperCase()}</span>
                         <h2 className="sc-display" style={{ fontSize: "42px", margin: "14px 0 10px" }}>
-                            Your Dedicated <span className="sc-gold-text">Speaker Portal</span>
+                            Your Dedicated <span className={isParis ? "text-blue-400" : "sc-gold-text"}>Speaker Portal</span>
                         </h2>
                         <p style={{ color: "#d2d6ea", fontSize: "16px", lineHeight: "1.7" }}>
                             Access your live itinerary, conference room allocation, presentation slot timings, hotel
@@ -173,12 +202,12 @@ export default function SpeakerIndividualPage({
 
                         <div style={{ marginTop: "24px", display: "flex", gap: "12px", flexWrap: "wrap" }}>
                             <div className="sc-meta-chip">
-                                <Calendar size={14} style={{ color: "var(--sc-gold)" }} />
-                                <span>Nov 25–26, 2026</span>
+                                <Calendar size={14} style={{ color: isParis ? "#60a5fa" : "var(--sc-gold)" }} />
+                                <span>{currentEvent.dates}</span>
                             </div>
                             <div className="sc-meta-chip">
-                                <Hotel size={14} style={{ color: "var(--sc-gold)" }} />
-                                <span>Holiday Inn Express DXB</span>
+                                <Hotel size={14} style={{ color: isParis ? "#60a5fa" : "var(--sc-gold)" }} />
+                                <span>{currentEvent.venueShort}</span>
                             </div>
                         </div>
                     </div>
@@ -187,9 +216,9 @@ export default function SpeakerIndividualPage({
                 {/* Right Form Column */}
                 <div className="sc-login-panel">
                     <div className="sc-login-card">
-                        <Link to="/dubai-series" className="sc-back">
+                        <Link to={currentEvent.publicPath} className="sc-back">
                             <ArrowLeft size={16} />
-                            <span>Back to Dubai Series Directory</span>
+                            <span>Back to {currentEvent.name} Directory</span>
                         </Link>
 
                         {/* Speaker Avatar / Badge */}
