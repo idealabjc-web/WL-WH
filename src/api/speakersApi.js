@@ -1,6 +1,6 @@
 import { supabase } from "../supabaseClient";
 import QRCode from "qrcode";
-import { getEventTables } from "../eventsConfig";
+import { getEventTables, resolveEventFolder } from "../eventsConfig";
 
 const QUEUE_KEY = "offline_speaker_queue";
 
@@ -432,16 +432,18 @@ export async function updateSpeakerRecord(id, mergedRec, skipQueue = false) {
 // Generates the QR badge locally (no external API call — works offline, and
 // isn't dependent on a third-party service being reachable) then uploads it
 // to Supabase Storage so it's a real persisted file.
-export async function generateAndStoreQrBadge(id) {
+export async function generateAndStoreQrBadge(id, eventSlug = null) {
+    const folder = resolveEventFolder(eventSlug);
+    const path = `${folder}/${id}.png`;
     const dataUrl = await QRCode.toDataURL(id, { width: 280, margin: 1 });
     try {
         const res = await fetch(dataUrl);
         const blob = await res.blob();
         const { error: uploadError } = await supabase.storage
             .from("qr-badges")
-            .upload(`${id}.png`, blob, { contentType: "image/png", upsert: true });
+            .upload(path, blob, { contentType: "image/png", upsert: true });
         if (uploadError) throw uploadError;
-        const { data } = supabase.storage.from("qr-badges").getPublicUrl(`${id}.png`);
+        const { data } = supabase.storage.from("qr-badges").getPublicUrl(path);
         return { dataUrl, publicUrl: data?.publicUrl || null };
     } catch (e) {
         console.error("QR badge upload failed:", e);
@@ -449,13 +451,14 @@ export async function generateAndStoreQrBadge(id) {
     }
 }
 
-export async function uploadSpeakerPhoto(id, file) {
+export async function uploadSpeakerPhoto(id, file, eventSlug = null) {
     try {
-        const ext = file.name.split(".").pop() || "jpg";
-        const path = `${id}.${ext}`;
+        const folder = resolveEventFolder(eventSlug);
+        const ext = file.name ? file.name.split(".").pop() : "jpg";
+        const path = `${folder}/${id}.${ext}`;
         const { error: uploadError } = await supabase.storage
             .from("speaker-photos")
-            .upload(path, file, { contentType: file.type, upsert: true });
+            .upload(path, file, { contentType: file.type || "image/jpeg", upsert: true });
         if (uploadError) throw uploadError;
         const { data } = supabase.storage.from("speaker-photos").getPublicUrl(path);
         return data?.publicUrl ? `${data.publicUrl}?t=${Date.now()}` : null;
@@ -465,16 +468,19 @@ export async function uploadSpeakerPhoto(id, file) {
     }
 }
 
-export async function uploadSpeakerAbstract(speakerId, sessionId, file) {
+export async function uploadSpeakerAbstract(speakerId, sessionId, file, eventSlug = null) {
     try {
-        // Support both (speakerId, sessionId, file) and (speakerId, file)
+        // Support both (speakerId, sessionId, file, eventSlug) and (speakerId, file, eventSlug)
         if (sessionId && !file && (sessionId instanceof File || sessionId instanceof Blob || sessionId?.name)) {
+            eventSlug = file || eventSlug;
             file = sessionId;
             sessionId = null;
         }
         if (!file) return null;
+        const folder = resolveEventFolder(eventSlug);
         const ext = file.name ? file.name.split(".").pop() : "pdf";
-        const path = sessionId ? `${speakerId}_${sessionId}.${ext}` : `${speakerId}.${ext}`;
+        const fileName = sessionId ? `${speakerId}_${sessionId}.${ext}` : `${speakerId}.${ext}`;
+        const path = `${folder}/${fileName}`;
         const { error: uploadError } = await supabase.storage
             .from("speaker-abstracts")
             .upload(path, file, { upsert: true });
@@ -487,9 +493,10 @@ export async function uploadSpeakerAbstract(speakerId, sessionId, file) {
     }
 }
 
-export async function uploadSpeakerPeerCitePdf(id, file) {
+export async function uploadSpeakerPeerCitePdf(id, file, eventSlug = null) {
     try {
-        const path = `peercite_${id}.pdf`;
+        const folder = resolveEventFolder(eventSlug);
+        const path = `${folder}/peercite_${id}.pdf`;
         const { error: uploadError } = await supabase.storage
             .from("peercite_proceedings")
             .upload(path, file, { contentType: "application/pdf", upsert: true });
@@ -526,13 +533,14 @@ export async function uploadSpeakerPeerCitePdf(id, file) {
         return null;
     }
 }
-export async function deleteSpeakerPeerCitePdf(id) {
+export async function deleteSpeakerPeerCitePdf(id, eventSlug = null) {
     if (!id) return false;
     try {
         if (supabase) {
+            const folder = resolveEventFolder(eventSlug);
             const { error } = await supabase.storage
                 .from("peercite_proceedings")
-                .remove([`peercite_${id}.pdf`]);
+                .remove([`${folder}/peercite_${id}.pdf`, `peercite_${id}.pdf`]);
             if (error) throw error;
         }
         
@@ -547,44 +555,59 @@ export async function deleteSpeakerPeerCitePdf(id) {
     }
 }
 
-export async function getSpeakerPeerCitePdf(id) {
+export async function getSpeakerPeerCitePdf(id, eventSlug = null) {
     if (!id) return null;
 
     try {
         if (supabase) {
-            const { data, error } = await supabase.storage
-                .from("peercite_proceedings")
-                .list("", { search: `peercite_${id}.pdf` });
-            if (!error && data && data.length > 0) {
-                const searchLower = `peercite_${String(id).toLowerCase()}.pdf`;
-                const found = data.find(f => f.name.toLowerCase() === searchLower || f.name === `peercite_${id}.pdf`);
-                if (found) {
-                    const { data: urlData } = supabase.storage
-                        .from("peercite_proceedings")
-                        .getPublicUrl(found.name);
-                    const fileVersion = found.updated_at ? new Date(found.updated_at).getTime() : Date.now();
-                    const meta = {
-                        url: urlData?.publicUrl ? `${urlData.publicUrl}?t=${fileVersion}` : null,
-                        fileName: found.name || `PeerCite_${id}_Proceedings.pdf`,
-                        fileSize: found.metadata?.size ? (found.metadata.size / (1024 * 1024)).toFixed(2) + " MB" : "Official PDF",
-                        uploadedAt: found.created_at ? new Date(found.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "November 25, 2026",
-                        publisher: "PeerCite Academic Press",
-                        isbn: "978-981-18-9412-3",
-                        doi: `10.58921/peercite.wlwh.2026.${String(id).toLowerCase()}`
-                    };
-                    try {
-                        localStorage.setItem(`peercite_proceedings_${id}`, JSON.stringify(meta));
-                    } catch (e) {}
-                    return meta;
+            const folder = resolveEventFolder(eventSlug);
+            const searchLower = `peercite_${String(id).toLowerCase()}.pdf`;
+            const searchName = `peercite_${id}.pdf`;
+
+            // Search in event folder first, fallback to root
+            const foldersToSearch = [folder, ""];
+            let found = null;
+            let foundPath = null;
+
+            for (const fld of foldersToSearch) {
+                const { data, error } = await supabase.storage
+                    .from("peercite_proceedings")
+                    .list(fld, { search: searchName });
+                if (!error && data && data.length > 0) {
+                    const match = data.find(f => f.name.toLowerCase() === searchLower || f.name === searchName);
+                    if (match) {
+                        found = match;
+                        foundPath = fld ? `${fld}/${match.name}` : match.name;
+                        break;
+                    }
                 }
             }
-            // If checked in Supabase and no proceeding file exists, clear any stale local cache
-            if (!error) {
+
+            if (found && foundPath) {
+                const { data: urlData } = supabase.storage
+                    .from("peercite_proceedings")
+                    .getPublicUrl(foundPath);
+                const fileVersion = found.updated_at ? new Date(found.updated_at).getTime() : Date.now();
+                const meta = {
+                    url: urlData?.publicUrl ? `${urlData.publicUrl}?t=${fileVersion}` : null,
+                    fileName: found.name || `PeerCite_${id}_Proceedings.pdf`,
+                    fileSize: found.metadata?.size ? (found.metadata.size / (1024 * 1024)).toFixed(2) + " MB" : "Official PDF",
+                    uploadedAt: found.created_at ? new Date(found.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "November 25, 2026",
+                    publisher: "PeerCite Academic Press",
+                    isbn: "978-981-18-9412-3",
+                    doi: `10.58921/peercite.wlwh.2026.${String(id).toLowerCase()}`
+                };
                 try {
-                    localStorage.removeItem(`peercite_proceedings_${id}`);
+                    localStorage.setItem(`peercite_proceedings_${id}`, JSON.stringify(meta));
                 } catch (e) {}
-                return null;
+                return meta;
             }
+
+            // If checked in Supabase and no proceeding file exists, clear any stale local cache
+            try {
+                localStorage.removeItem(`peercite_proceedings_${id}`);
+            } catch (e) {}
+            return null;
         }
     } catch (e) {
         console.error("Error checking PeerCite PDF in storage:", e);
@@ -658,31 +681,36 @@ export async function getSpeakerAbstractData(speakerId, eventSlug = null) {
 
             const map = getAbstractsMap(speakerRow?.abstract_url);
 
-            // 2. Also check speaker-abstracts storage bucket for files belonging to this speaker
+            // 2. Also check speaker-abstracts storage bucket across event folder, opposite folder, and root
             try {
-                const { data: storageFiles } = await supabase.storage
-                    .from("speaker-abstracts")
-                    .list("", { search: speakerId });
-                if (storageFiles && storageFiles.length > 0) {
-                    const speakerFiles = storageFiles.filter(f => 
-                        f.name.startsWith(`${speakerId}.`) || 
-                        f.name.startsWith(`${speakerId}_`) ||
-                        f.name.toLowerCase().includes(String(speakerId).toLowerCase())
-                    );
-                    for (const f of speakerFiles) {
-                        const { data: urlData } = supabase.storage
-                            .from("speaker-abstracts")
-                            .getPublicUrl(f.name);
-                        if (urlData?.publicUrl) {
-                            const fileVersion = f.updated_at ? new Date(f.updated_at).getTime() : Date.now();
-                            const fullUrl = `${urlData.publicUrl}?t=${fileVersion}`;
-                            const nameWithoutExt = f.name.replace(/\.[^/.]+$/, "");
-                            const parts = nameWithoutExt.split("_");
-                            if (parts.length > 1 && parts[0] === speakerId) {
-                                const sessKey = parts.slice(1).join("_");
-                                if (!map[sessKey]) map[sessKey] = fullUrl;
-                            } else {
-                                if (!map.legacy) map.legacy = fullUrl;
+                const folder = resolveEventFolder(eventSlug);
+                const foldersToCheck = [folder, folder === "dubai" ? "paris" : "dubai", ""];
+                for (const fld of foldersToCheck) {
+                    const { data: storageFiles } = await supabase.storage
+                        .from("speaker-abstracts")
+                        .list(fld, { search: speakerId });
+                    if (storageFiles && storageFiles.length > 0) {
+                        const speakerFiles = storageFiles.filter(f => 
+                            f.name.startsWith(`${speakerId}.`) || 
+                            f.name.startsWith(`${speakerId}_`) ||
+                            f.name.toLowerCase().includes(String(speakerId).toLowerCase())
+                        );
+                        for (const f of speakerFiles) {
+                            const fullPath = fld ? `${fld}/${f.name}` : f.name;
+                            const { data: urlData } = supabase.storage
+                                .from("speaker-abstracts")
+                                .getPublicUrl(fullPath);
+                            if (urlData?.publicUrl) {
+                                const fileVersion = f.updated_at ? new Date(f.updated_at).getTime() : Date.now();
+                                const fullUrl = `${urlData.publicUrl}?t=${fileVersion}`;
+                                const nameWithoutExt = f.name.replace(/\.[^/.]+$/, "");
+                                const parts = nameWithoutExt.split("_");
+                                if (parts.length > 1 && parts[0] === speakerId) {
+                                    const sessKey = parts.slice(1).join("_");
+                                    if (!map[sessKey]) map[sessKey] = fullUrl;
+                                } else {
+                                    if (!map.legacy) map.legacy = fullUrl;
+                                }
                             }
                         }
                     }
@@ -705,14 +733,35 @@ export async function getSpeakerAbstractData(speakerId, eventSlug = null) {
 
 export async function fetchAllAbstractFiles() {
     try {
-        const { data, error } = await supabase.storage.from("speaker-abstracts").list('', {
-            limit: 1000,
-            offset: 0,
-            sortBy: { column: 'created_at', order: 'desc' }
-        });
-        if (error) throw error;
-        // Filter out the hidden placeholder file often created by Supabase
-        return (data || []).filter(f => f.name !== '.emptyFolderPlaceholder');
+        const [dubaiRes, parisRes, rootRes] = await Promise.allSettled([
+            supabase.storage.from("speaker-abstracts").list('dubai', { limit: 1000, sortBy: { column: 'created_at', order: 'desc' } }),
+            supabase.storage.from("speaker-abstracts").list('paris', { limit: 1000, sortBy: { column: 'created_at', order: 'desc' } }),
+            supabase.storage.from("speaker-abstracts").list('', { limit: 1000, sortBy: { column: 'created_at', order: 'desc' } })
+        ]);
+
+        const allFiles = [];
+        if (dubaiRes.status === "fulfilled" && Array.isArray(dubaiRes.value?.data)) {
+            dubaiRes.value.data.forEach(f => {
+                if (f.name !== '.emptyFolderPlaceholder') {
+                    allFiles.push({ ...f, path: `dubai/${f.name}`, event: 'dubai' });
+                }
+            });
+        }
+        if (parisRes.status === "fulfilled" && Array.isArray(parisRes.value?.data)) {
+            parisRes.value.data.forEach(f => {
+                if (f.name !== '.emptyFolderPlaceholder') {
+                    allFiles.push({ ...f, path: `paris/${f.name}`, event: 'paris' });
+                }
+            });
+        }
+        if (rootRes.status === "fulfilled" && Array.isArray(rootRes.value?.data)) {
+            rootRes.value.data.forEach(f => {
+                if (f.name !== '.emptyFolderPlaceholder' && f.name !== 'dubai' && f.name !== 'paris') {
+                    allFiles.push({ ...f, path: f.name, event: 'root' });
+                }
+            });
+        }
+        return allFiles;
     } catch (e) {
         console.error("Failed to list abstract files:", e);
         return [];
@@ -721,7 +770,11 @@ export async function fetchAllAbstractFiles() {
 
 export async function deleteAbstractFile(fileName) {
     try {
-        const { error } = await supabase.storage.from("speaker-abstracts").remove([fileName]);
+        const pathsToDelete = [fileName];
+        if (!fileName.includes('/')) {
+            pathsToDelete.push(`dubai/${fileName}`, `paris/${fileName}`);
+        }
+        const { error } = await supabase.storage.from("speaker-abstracts").remove(pathsToDelete);
         if (error) throw error;
         return true;
     } catch (e) {
@@ -730,20 +783,24 @@ export async function deleteAbstractFile(fileName) {
     }
 }
 
-export async function getSubmittedPeerCiteSpeakerIds() {
+export async function getSubmittedPeerCiteSpeakerIds(eventSlug = null) {
     try {
         if (!supabase) return new Set();
-        const { data, error } = await supabase.storage
-            .from("peercite_proceedings")
-            .list("", { limit: 1000 });
-        if (error || !data) return new Set();
-        const ids = data
-            .map(f => {
-                const match = f.name.match(/^peercite_(.*?)\.pdf$/i);
-                return match ? match[1].toUpperCase() : null;
-            })
-            .filter(Boolean);
-        return new Set(ids);
+        const folder = eventSlug ? resolveEventFolder(eventSlug) : null;
+        const foldersToList = folder ? [folder, ""] : ["dubai", "paris", ""];
+        const ids = new Set();
+        for (const fld of foldersToList) {
+            const { data, error } = await supabase.storage
+                .from("peercite_proceedings")
+                .list(fld, { limit: 1000 });
+            if (!error && data && Array.isArray(data)) {
+                data.forEach(f => {
+                    const match = f.name.match(/^peercite_(.*?)\.pdf$/i);
+                    if (match) ids.add(match[1].toUpperCase());
+                });
+            }
+        }
+        return ids;
     } catch (e) {
         console.error("Failed to list submitted peercite IDs:", e);
         return new Set();

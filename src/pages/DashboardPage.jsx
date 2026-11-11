@@ -37,11 +37,11 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
 
     useEffect(() => {
         let isMounted = true;
-        getSpeakerPeerCitePdf(speaker.id).then(data => {
+        getSpeakerPeerCitePdf(speaker.id, speaker.eventSlug || currentEvent?.slug).then(data => {
             if (isMounted) setPeerciteData(data);
         });
         return () => { isMounted = false; };
-    }, [speaker.id]);
+    }, [speaker.id, speaker.eventSlug, currentEvent?.slug]);
 
     const handlePeerciteUpload = async (file) => {
         if (!file) return;
@@ -54,7 +54,7 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
             return;
         }
         setPeerciteUploading(true);
-        const res = await uploadSpeakerPeerCitePdf(speaker.id, file);
+        const res = await uploadSpeakerPeerCitePdf(speaker.id, file, speaker.eventSlug || currentEvent?.slug);
         setPeerciteUploading(false);
         if (res) {
             setPeerciteData(res);
@@ -68,7 +68,7 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
     const handleRemovePeercite = async () => {
         if (window.confirm("Are you sure you want to remove the PeerCite proceedings PDF for this speaker?")) {
             setPeerciteUploading(true);
-            const success = await deleteSpeakerPeerCitePdf(speaker.id);
+            const success = await deleteSpeakerPeerCitePdf(speaker.id, speaker.eventSlug || currentEvent?.slug);
             setPeerciteUploading(false);
             if (success) {
                 setPeerciteData(null);
@@ -162,7 +162,8 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                 if (!isNaN(key) && form.sessions && form.sessions[key]) {
                     sessionId = form.sessions[key].id || `session_${key}`;
                 }
-                const url = await uploadSpeakerAbstract(speaker.id, sessionId, file);
+                const activeSlug = speaker.eventSlug || currentEvent?.slug;
+                const url = await uploadSpeakerAbstract(speaker.id, sessionId, file, activeSlug);
                 if (url) {
                     currentAbstracts[sessionId] = url;
                 }
@@ -179,7 +180,8 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
         // Upload photo file if one was selected
         if (photoFile) {
             setPhotoUploading(true);
-            const photoUrl = await uploadSpeakerPhoto(speaker.id, photoFile);
+            const activeSlug = speaker.eventSlug || currentEvent?.slug;
+            const photoUrl = await uploadSpeakerPhoto(speaker.id, photoFile, activeSlug);
             setPhotoUploading(false);
             if (photoUrl) {
                 updatedForm = { ...updatedForm, photoUrl: photoUrl };

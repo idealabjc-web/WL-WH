@@ -53,19 +53,19 @@ export const EVENTS = {
         city: "Paris",
         country: "France",
         flag: "🇫🇷",
-        dates: "March 2027",
-        days: ["Day 1 (Keynote & AI)", "Day 2 (Clinical Leadership)"],
-        targetDateIso: "2027-03-25T09:00:00+01:00",
-        venue: "Central Paris Congress Center",
-        venueShort: "Central Paris",
-        venueAddress: "Central Paris, France",
+        dates: "March 8 – 12, 2027",
+        days: ["March 8", "March 9", "March 10", "March 11", "March 12"],
+        targetDateIso: "2027-03-08T09:00:00+01:00",
+        venue: "Coming Soon",
+        venueShort: "Coming Soon",
+        venueAddress: "Central Paris, France (Coming Soon)",
         mapsUrl: "https://www.google.com/maps/search/Paris+France",
         accent: "#2563EB",
         accentRgb: "37, 99, 235",
         badgeAccent: "#3B82F6",
         badgeGradient: "from-blue-500 to-indigo-600",
         badgeTag: "PARIS · EUROPEAN SUMMIT",
-        rooms: ["Grand Auditorium Paris", "Seine Conference Hall", "Sorbonne Hall"],
+        rooms: ["Room 1", "Room 2"],
         defaultPassword: "paris2027",
         publicPath: "/paris-series",
         adminPath: "/admin/paris",
@@ -103,5 +103,20 @@ export function getEventConfig(slug) {
 
 export function getAllEvents() {
     return Object.values(EVENTS);
+}
+
+export function resolveEventFolder(slug = null) {
+    if (slug) {
+        return String(slug).toLowerCase().includes("paris") ? "paris" : "dubai";
+    }
+    if (typeof window !== "undefined") {
+        const path = window.location.pathname.toLowerCase();
+        if (path.includes("paris")) return "paris";
+        try {
+            const stored = localStorage.getItem("wlwh_admin_active_event") || localStorage.getItem("admin_active_event");
+            if (stored && stored.toLowerCase().includes("paris")) return "paris";
+        } catch {}
+    }
+    return "dubai";
 }
 

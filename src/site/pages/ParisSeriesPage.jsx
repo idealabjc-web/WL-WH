@@ -89,11 +89,11 @@ export default function ParisSeriesPage({ onAdminClick }) {
     const [formSubmitted, setFormSubmitted] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
-    // Event countdown timer to March 2027
+    // Event countdown timer to March 8, 2027
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
 
     useEffect(() => {
-        const target = new Date("2027-03-20T09:00:00+01:00").getTime();
+        const target = new Date("2027-03-08T09:00:00+01:00").getTime();
         const update = () => {
             const diff = target - Date.now();
             if (diff <= 0) return;
@@ -198,7 +198,7 @@ export default function ParisSeriesPage({ onAdminClick }) {
                 <ScrollFlyIn onComplete={handleIntroDismiss}>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "14px" }}>
                         <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "6px 18px", borderRadius: "999px", background: "rgba(8, 14, 38, 0.85)", border: "1px solid rgba(226, 184, 92, 0.45)", backdropFilter: "blur(12px)", fontSize: "12px", fontWeight: 700, letterSpacing: "0.14em", color: "#ffffff" }}>
-                            <span>EUROPEAN SUMMIT · MARCH 2027</span>
+                            <span>EUROPEAN SUMMIT · MARCH 8 – 12, 2027</span>
                             <span style={{ color: "#fde047" }}>✦</span>
                             <span>CENTRAL PARIS 🇫🇷</span>
                         </div>
@@ -233,11 +233,11 @@ export default function ParisSeriesPage({ onAdminClick }) {
                             </div>
 
                             <span className="sc-eyebrow" style={{ color: "#7C9BFA" }}>
-                                SPEAKER CHAPTERS · UPCOMING EUROPEAN EDITION (MARCH 2027)
+                                SPEAKER CHAPTERS · UPCOMING EUROPEAN EDITION (MARCH 8 – 12, 2027)
                             </span>
 
                             <h1 className="sc-hero-title sc-display" style={{ margin: "14px 0 0", fontSize: "clamp(42px, 6vw, 76px)" }}>
-                                Paris Series <span className="sc-blue-text">March 2027</span>
+                                Paris Series <span className="sc-blue-text">March 8 – 12, 2027</span>
                             </h1>
 
                             <p className="sc-section-lead" style={{ marginTop: "18px", fontSize: "19px" }}>
@@ -341,7 +341,7 @@ export default function ParisSeriesPage({ onAdminClick }) {
                                         France · Paris 🇫🇷
                                     </div>
                                     <div style={{ fontSize: "12.5px", color: "var(--sc-muted)", marginTop: "4px" }}>
-                                        Central Paris · Venue Announcement Coming Soon
+                                        Venue: Coming Soon
                                     </div>
                                 </div>
                             </div>
@@ -431,7 +431,7 @@ export default function ParisSeriesPage({ onAdminClick }) {
                             Paris Keynote <span className="sc-blue-text">Speakers & Faculty</span>
                         </h2>
                         <p className="sc-section-lead" style={{ margin: "0 auto" }}>
-                            Meet the confirmed session chairs and invited keynote faculty for the <b>Paris Series (March 2027)</b>.
+                            Meet the confirmed session chairs and invited keynote faculty for the <b>Paris Series (March 8 – 12, 2027)</b>.
                             Speaker nominations and abstract submissions are actively open for qualified clinical researchers.
                         </p>
                     </div>
@@ -671,10 +671,10 @@ export default function ParisSeriesPage({ onAdminClick }) {
                                         </span>
                                     </div>
                                     <strong style={{ fontSize: "14px", display: "block" }}>
-                                        Central Paris Venue & Hotel
+                                        Venue & Accommodations
                                     </strong>
-                                    <span style={{ fontSize: "12px", color: "var(--sc-muted)" }}>
-                                        Venue Announcement Coming Soon
+                                    <span style={{ fontSize: "12px", color: "#60a5fa", fontWeight: 600 }}>
+                                        Coming Soon
                                     </span>
                                 </div>
                             </div>
@@ -687,7 +687,7 @@ export default function ParisSeriesPage({ onAdminClick }) {
                                 Venue & Hotel <span className="sc-blue-text">Arrangements</span>
                             </h2>
                             <p style={{ color: "#d2d6ea", fontSize: "16.5px", lineHeight: "1.7" }}>
-                                The host venue and official 4-star hotel accommodations for the <b>Paris Series (March 2027)</b> are
+                                The host venue and official 4-star hotel accommodations for the <b>Paris Series (March 8 – 12, 2027)</b> are
                                 currently undergoing final selection and contractual review with our French hospitality partners.
                                 Confirmed international keynote speakers will receive guaranteed, fully-hosted luxury accommodations
                                 in prime Central Paris once the official venue contract is announced.

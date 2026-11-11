@@ -33,6 +33,10 @@ export default function AgendaPage({ speakers = [], onUpdate, onRefresh, toast, 
         return EVENT_DAYS;
     }, [currentEvent]);
 
+    const columns = useMemo(() => {
+        return rooms.flatMap(room => eventDays.map(day => ({ room, day })));
+    }, [rooms, eventDays]);
+
     const [selectedRoom, setSelectedRoom] = useState(rooms[0] || "Room 1");
     const [viewMode, setViewMode] = useState("calendar"); // "list" | "calendar" | "poster" | "stats"
     
@@ -875,41 +879,39 @@ export default function AgendaPage({ speakers = [], onUpdate, onRefresh, toast, 
             ) : (
                 /* CALENDAR GRID VIEW */
                 <div className="space-y-8">
-                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-                        <div className="hidden md:flex flex-col border-b border-slate-100 bg-slate-50/50">
-                            <div className="grid grid-cols-2 divide-x divide-slate-200 border-b border-slate-200">
-                                <div className="p-3 font-extrabold text-emerald-800 bg-emerald-50 text-center text-sm uppercase tracking-wider">{rooms[0]}</div>
-                                <div className="p-3 font-extrabold text-blue-800 bg-blue-50 text-center text-sm uppercase tracking-wider">{rooms[1]}</div>
-                            </div>
-                            <div className="grid grid-cols-4 divide-x divide-slate-100">
-                                <div className="p-2 font-bold text-emerald-600 text-center text-xs bg-emerald-50/50">{formatDayHeader(eventDays[0])}</div>
-                                <div className="p-2 font-bold text-emerald-600 text-center text-xs bg-emerald-50/50">{formatDayHeader(eventDays[1])}</div>
-                                <div className="p-2 font-bold text-blue-600 text-center text-xs bg-blue-50/50">{formatDayHeader(eventDays[0])}</div>
-                                <div className="p-2 font-bold text-blue-600 text-center text-xs bg-blue-50/50">{formatDayHeader(eventDays[1])}</div>
-                            </div>
-                        </div>
-
-                        <div className="divide-y divide-slate-100">
-                            {TIME_SLOTS.map(slot => {
-                                const isLunch = slot.toLowerCase().includes("lunch");
-                                if (isLunch) {
-                                    return (
-                                        <div key={slot} className="p-4 bg-slate-50 flex items-center justify-center gap-3">
-                                            <Clock size={16} className="text-slate-400" />
-                                            <span className="font-bold text-slate-600 tracking-wide text-sm">{slot}</span>
+                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-x-auto">
+                        <div style={{ minWidth: columns.length > 4 ? `${columns.length * 200}px` : "100%" }}>
+                            <div className="hidden md:flex flex-col border-b border-slate-100 bg-slate-50/50">
+                                <div className="grid divide-x divide-slate-200 border-b border-slate-200" style={{ gridTemplateColumns: `repeat(${rooms.length}, minmax(0, 1fr))` }}>
+                                    {rooms.map((room, rIdx) => (
+                                        <div key={room} className={`p-3 font-extrabold text-center text-sm uppercase tracking-wider ${rIdx === 0 ? "text-emerald-800 bg-emerald-50" : "text-blue-800 bg-blue-50"}`}>
+                                            {room}
                                         </div>
-                                    );
-                                }
+                                    ))}
+                                </div>
+                                <div className="grid divide-x divide-slate-100" style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}>
+                                    {columns.map((col, idx) => (
+                                        <div key={idx} className={`p-2 font-bold text-center text-xs ${col.room === rooms[0] ? "text-emerald-600 bg-emerald-50/50" : "text-blue-600 bg-blue-50/50"}`}>
+                                            {formatDayHeader(col.day)}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
 
-                                const columns = [
-                                    { room: rooms[0], day: eventDays[0] },
-                                    { room: rooms[0], day: eventDays[1] },
-                                    { room: rooms[1], day: eventDays[0] },
-                                    { room: rooms[1], day: eventDays[1] },
-                                ];
+                            <div className="divide-y divide-slate-100">
+                                {TIME_SLOTS.map(slot => {
+                                    const isLunch = slot.toLowerCase().includes("lunch");
+                                    if (isLunch) {
+                                        return (
+                                            <div key={slot} className="p-4 bg-slate-50 flex items-center justify-center gap-3">
+                                                <Clock size={16} className="text-slate-400" />
+                                                <span className="font-bold text-slate-600 tracking-wide text-sm">{slot}</span>
+                                            </div>
+                                        );
+                                    }
 
-                                return (
-                                    <div key={slot} className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+                                    return (
+                                        <div key={slot} className="grid divide-y md:divide-y-0 md:divide-x divide-slate-100" style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}>
                                         {columns.map((col) => {
                                             const speaker = getSpeakerForSlot(slot, col.day, col.room);
                                             const isRoom2 = col.room === rooms[1];
@@ -1018,6 +1020,7 @@ export default function AgendaPage({ speakers = [], onUpdate, onRefresh, toast, 
                                     </div>
                                 );
                             })}
+                        </div>
                         </div>
                     </div>
                 </div>

@@ -112,7 +112,7 @@ export default function RegisterPage({ speakers = [], onAdd, toast, currentEvent
         // Upload speaker photo if one was selected
         if (photoFile) {
             uploadTasks.push(
-                uploadSpeakerPhoto(id, photoFile).then(photoPublicUrl => {
+                uploadSpeakerPhoto(id, photoFile, rec.eventSlug).then(photoPublicUrl => {
                     rec.photoUrl = photoPublicUrl;
                 })
             );
@@ -122,7 +122,7 @@ export default function RegisterPage({ speakers = [], onAdd, toast, currentEvent
         if (form.abstractProvided === "yes") {
             if (abstractFile) {
                 uploadTasks.push(
-                    uploadSpeakerAbstract(id, abstractFile).then(abstractUrl => {
+                    uploadSpeakerAbstract(id, abstractFile, rec.eventSlug).then(abstractUrl => {
                         rec.abstractUrl = abstractUrl;
                         rec.abstractStatus = "submitted";
                     })
@@ -137,7 +137,7 @@ export default function RegisterPage({ speakers = [], onAdd, toast, currentEvent
         // Handle PeerCite Proceeding PDF
         if (peerciteFile) {
             uploadTasks.push(
-                uploadSpeakerPeerCitePdf(id, peerciteFile).then(res => {
+                uploadSpeakerPeerCitePdf(id, peerciteFile, rec.eventSlug).then(res => {
                     if (res?.url) {
                         rec.proceedingsUrl = res.url;
                     }
@@ -150,7 +150,7 @@ export default function RegisterPage({ speakers = [], onAdd, toast, currentEvent
         let localQrDataUrl = null;
         let localBadgeStored = false;
         uploadTasks.push(
-            generateAndStoreQrBadge(id).then(({ dataUrl, publicUrl }) => {
+            generateAndStoreQrBadge(id, rec.eventSlug).then(({ dataUrl, publicUrl }) => {
                 rec.qrUrl = publicUrl;
                 localQrDataUrl = dataUrl;
                 localBadgeStored = !!publicUrl;

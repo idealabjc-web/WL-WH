@@ -1,46 +1,49 @@
 import { supabase, isSupabaseConfigured } from "../supabaseClient";
-import { getEventTables } from "../eventsConfig";
+import { getEventTables, resolveEventFolder } from "../eventsConfig";
 
 const CACHE_KEY = "wlwh_id_cards_cache_v10";
 
 /**
  * Uploads a generated ID card JPEG blob to Supabase storage.
+ * Stores in an event subfolder ('dubai/' or 'paris/') within the 'id-cards' bucket.
  * Tries the dedicated 'id-cards' bucket first. If not found, falls back
- * to storing in 'qr-badges/id-cards/' which is already provisioned with public RLS.
+ * to storing in 'qr-badges/<folder>/id-cards/' which is already provisioned with public RLS.
  */
 export async function uploadIdCardToStorage(speaker, blob, filename) {
     if (!isSupabaseConfigured || !supabase) {
         return { publicUrl: null, error: "Supabase not configured" };
     }
 
+    const folder = resolveEventFolder(speaker?.eventSlug || speaker?.event);
     const safeName = (speaker.name || "speaker").replace(/[^a-zA-Z0-9_-]/g, "_");
     const name = filename || `ID_Badge_${safeName}_${speaker.id}.jpg`;
+    const storagePath = `${folder}/${name}`;
 
     // 1. Try dedicated 'id-cards' bucket first
     try {
         const { data, error } = await supabase.storage
             .from("id-cards")
-            .upload(name, blob, { contentType: "image/jpeg", upsert: true });
+            .upload(storagePath, blob, { contentType: "image/jpeg", upsert: true });
 
         if (!error) {
-            const { data: urlData } = supabase.storage.from("id-cards").getPublicUrl(name);
+            const { data: urlData } = supabase.storage.from("id-cards").getPublicUrl(storagePath);
             let publicUrl = urlData?.publicUrl || null;
             if (publicUrl) {
                 publicUrl = `${publicUrl}?t=${Date.now()}`;
                 try {
-                    const tables = getEventTables(speaker?.eventSlug);
+                    const tables = getEventTables(speaker?.eventSlug || folder);
                     await supabase.from(tables.speakers).update({ id_card_url: publicUrl }).eq("id", speaker.id);
                 } catch (colErr) {
                     console.warn("Could not write id_card_url column (may need SQL migration):", colErr);
                 }
             }
-            return { publicUrl, bucket: "id-cards", filename: name };
+            return { publicUrl, bucket: "id-cards", filename: name, path: storagePath };
         }
 
         // If bucket doesn't exist, proceed to fallback
         if (error.message?.includes("Bucket not found") || error.statusCode === "404") {
-            // Fallback to 'qr-badges' bucket in 'id-cards/' subfolder
-            const fallbackPath = `id-cards/${name}`;
+            // Fallback to 'qr-badges' bucket in '<folder>/id-cards/' subfolder
+            const fallbackPath = `${folder}/id-cards/${name}`;
             const { data: fbData, error: fbError } = await supabase.storage
                 .from("qr-badges")
                 .upload(fallbackPath, blob, { contentType: "image/jpeg", upsert: true });
@@ -52,7 +55,7 @@ export async function uploadIdCardToStorage(speaker, blob, filename) {
             if (publicUrl) {
                 publicUrl = `${publicUrl}?t=${Date.now()}`;
                 try {
-                    const tables = getEventTables(speaker?.eventSlug);
+                    const tables = getEventTables(speaker?.eventSlug || folder);
                     await supabase.from(tables.speakers).update({ id_card_url: publicUrl }).eq("id", speaker.id);
                 } catch (colErr) {
                     console.warn("Could not write id_card_url column (may need SQL migration):", colErr);
@@ -70,7 +73,7 @@ export async function uploadIdCardToStorage(speaker, blob, filename) {
 
 /**
  * Scans Supabase storage buckets ('id-cards' and 'qr-badges/id-cards/')
- * to find all previously generated ID cards for the registered speakers.
+ * to find all previously generated ID cards for the registered speakers across dubai/, paris/, and root.
  */
 export async function fetchStoredIdCards(speakers = []) {
     if (!isSupabaseConfigured || !supabase || speakers.length === 0) {
@@ -110,26 +113,44 @@ export async function fetchStoredIdCards(speakers = []) {
         return null;
     };
 
-    // 1. Check dedicated 'id-cards' bucket
+    // 1. Check dedicated 'id-cards' bucket across dubai, paris, and root
     try {
-        const { data: files } = await supabase.storage.from("id-cards").list();
-        if (Array.isArray(files)) {
-            for (const f of files) {
-                if (!f.name || f.name.endsWith(".txt") || !f.name.startsWith("ID_Badge_")) continue;
-                const spk = findSpeakerForFilename(f.name);
-                if (spk) {
-                    const { data: urlData } = supabase.storage.from("id-cards").getPublicUrl(f.name);
-                    if (urlData?.publicUrl) {
-                        discovered[spk.id] = {
-                            id: spk.id,
-                            speaker: spk,
-                            filename: f.name,
-                            publicUrl: urlData.publicUrl,
-                            dataUrl: urlData.publicUrl,
-                            isStored: true,
-                            templateVersion: "v4_dubai_famous"
-                        };
-                    }
+        const [dubaiRes, parisRes, rootRes] = await Promise.allSettled([
+            supabase.storage.from("id-cards").list("dubai"),
+            supabase.storage.from("id-cards").list("paris"),
+            supabase.storage.from("id-cards").list("")
+        ]);
+
+        const candidateFiles = [];
+        if (dubaiRes.status === "fulfilled" && Array.isArray(dubaiRes.value?.data)) {
+            dubaiRes.value.data.forEach(f => candidateFiles.push({ ...f, path: `dubai/${f.name}` }));
+        }
+        if (parisRes.status === "fulfilled" && Array.isArray(parisRes.value?.data)) {
+            parisRes.value.data.forEach(f => candidateFiles.push({ ...f, path: `paris/${f.name}` }));
+        }
+        if (rootRes.status === "fulfilled" && Array.isArray(rootRes.value?.data)) {
+            rootRes.value.data.forEach(f => {
+                if (f.name !== "dubai" && f.name !== "paris") {
+                    candidateFiles.push({ ...f, path: f.name });
+                }
+            });
+        }
+
+        for (const f of candidateFiles) {
+            if (!f.name || f.name.endsWith(".txt") || !f.name.startsWith("ID_Badge_")) continue;
+            const spk = findSpeakerForFilename(f.name);
+            if (spk && !discovered[spk.id]) {
+                const { data: urlData } = supabase.storage.from("id-cards").getPublicUrl(f.path);
+                if (urlData?.publicUrl) {
+                    discovered[spk.id] = {
+                        id: spk.id,
+                        speaker: spk,
+                        filename: f.name,
+                        publicUrl: urlData.publicUrl,
+                        dataUrl: urlData.publicUrl,
+                        isStored: true,
+                        templateVersion: "v4_dubai_famous"
+                    };
                 }
             }
         }

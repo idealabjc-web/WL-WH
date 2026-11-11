@@ -30,7 +30,7 @@ export const SERIES = [
         country: "France",
         flag: "🇫🇷",
         status: "upcoming",
-        dates: "March 2027",
+        dates: "March 8 – 12, 2027",
         cover: "/images/site/paris_series_cover.jpg",
         accent: "#5B7CFA",
     },
@@ -147,16 +147,16 @@ export const DUBAI_EVENT = {
 export const PARIS_EVENT = {
     title: "Speaker Chapters · Paris Series",
     headline: "Where European heritage meets global leadership & healthcare innovation.",
-    dates: "March 2027",
-    venue: "Central Paris (Venue Announcement Coming Soon)",
-    venueAddress: "Central Paris, France",
+    dates: "March 8 – 12, 2027",
+    venue: "Coming Soon",
+    venueAddress: "Central Paris, France (Coming Soon)",
     mapsUrl: "https://www.google.com/maps/search/Paris+France",
     about: [
-        "The Paris Series (March 2027) is an upcoming European summit convening clinicians, researchers, hospital executives, policy makers, and emerging healthcare innovators in the City of Light.",
-        "Across two transformative days of keynote addresses, interactive debate sessions, executive roundtables, and Seine River networking, speakers explore the forefront of medicine, clinical leadership, artificial intelligence in patient care, and international health policy.",
+        "The Paris Series (March 8 – 12, 2027) is an upcoming European summit convening clinicians, researchers, hospital executives, policy makers, and emerging healthcare innovators in the City of Light.",
+        "Across five transformative days of keynote addresses, interactive debate sessions, executive roundtables, and Seine River networking, speakers explore the forefront of medicine, clinical leadership, artificial intelligence in patient care, and international health policy.",
     ],
     stats: [
-        { value: 2, suffix: "", label: "Days of Summits" },
+        { value: 5, suffix: "", label: "Days of Summits" },
         { value: 120, suffix: "+", label: "Global Keynote Speakers" },
         { value: 35, suffix: "+", label: "Countries Represented" },
         { value: 8, suffix: "", label: "Premier Partner Networks" },
@@ -210,7 +210,7 @@ export const PARIS_EVENT = {
         { icon: "Compass", title: "Seine River Cultural Gala", text: "Private evening excursion along the River Seine admiring the Eiffel Tower, Louvre, and Notre-Dame." },
     ],
     hotel: {
-        name: "4-Star Central Paris Hotel (Under Final Selection)",
+        name: "Coming Soon (Under Final Selection)",
         stars: 4,
         image: "/images/site/hotel_room_stay.jpg",
         highlights: [

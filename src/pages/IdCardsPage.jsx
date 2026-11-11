@@ -31,6 +31,7 @@ export default function IdCardsPage({
 }) {
     const prepareSpeakerForCard = (s) => ({
         ...s,
+        eventSlug: s.eventSlug || currentEvent?.slug || "dubai",
         eventName: currentEvent?.fullName || s.eventName,
         dates: currentEvent?.dates || s.dates,
         cityCountry: currentEvent ? `${currentEvent.city}, ${currentEvent.country}` : s.cityCountry,
@@ -204,8 +205,9 @@ export default function IdCardsPage({
     const generateAndStoreSingleCard = async (speaker) => {
         if (toast) toast(`Generating badge for ${speaker.name}...`);
         try {
-            const card = await generateIdCardJpeg(prepareSpeakerForCard(speaker));
-            const uploadRes = await uploadIdCardToStorage(speaker, card.blob, card.filename);
+            const prepSpeaker = prepareSpeakerForCard(speaker);
+            const card = await generateIdCardJpeg(prepSpeaker);
+            const uploadRes = await uploadIdCardToStorage(prepSpeaker, card.blob, card.filename);
             if (uploadRes.publicUrl) {
                 card.publicUrl = uploadRes.publicUrl;
                 card.isStored = true;
@@ -243,8 +245,9 @@ export default function IdCardsPage({
         for (const s of targetSpeakers) {
             setProgress(`Generating & uploading ${done + 1} of ${targetSpeakers.length}: ${s.name}...`);
             try {
-                const card = await generateIdCardJpeg(prepareSpeakerForCard(s));
-                const uploadRes = await uploadIdCardToStorage(s, card.blob, card.filename);
+                const prepSpeaker = prepareSpeakerForCard(s);
+                const card = await generateIdCardJpeg(prepSpeaker);
+                const uploadRes = await uploadIdCardToStorage(prepSpeaker, card.blob, card.filename);
                 if (uploadRes.publicUrl) {
                     card.publicUrl = uploadRes.publicUrl;
                     card.isStored = true;
@@ -282,10 +285,11 @@ export default function IdCardsPage({
 
             // Generate new card with cropped image
             const updatedSpeaker = { ...editingSpeaker, croppedPhotoUrl: croppedImgUrl };
-            const card = await generateIdCardJpeg(prepareSpeakerForCard(updatedSpeaker));
+            const prepSpeaker = prepareSpeakerForCard(updatedSpeaker);
+            const card = await generateIdCardJpeg(prepSpeaker);
 
             // Upload to storage
-            const uploadRes = await uploadIdCardToStorage(editingSpeaker, card.blob, card.filename);
+            const uploadRes = await uploadIdCardToStorage(prepSpeaker, card.blob, card.filename);
             if (uploadRes.publicUrl) {
                 card.publicUrl = uploadRes.publicUrl;
                 card.isStored = true;
@@ -353,8 +357,9 @@ export default function IdCardsPage({
             for (const s of missing) {
                 setProgress(`Generating ID badge ${done + 1} of ${missing.length}: ${s.name}...`);
                 try {
-                    const card = await generateIdCardJpeg(prepareSpeakerForCard(s));
-                    const uploadRes = await uploadIdCardToStorage(s, card.blob, card.filename);
+                    const prepSpeaker = prepareSpeakerForCard(s);
+                    const card = await generateIdCardJpeg(prepSpeaker);
+                    const uploadRes = await uploadIdCardToStorage(prepSpeaker, card.blob, card.filename);
                     if (uploadRes.publicUrl) {
                         card.publicUrl = uploadRes.publicUrl;
                         card.isStored = true;
