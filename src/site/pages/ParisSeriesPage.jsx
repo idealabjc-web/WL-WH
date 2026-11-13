@@ -1,9 +1,13 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Link, navigate } from "../router";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 import FrenchFlagAnimation from "../components/FrenchFlagAnimation";
-import { PARIS_EVENT, BRAND } from "../seriesData";
+import ParisFlightLandingIntro from "../components/ParisFlightLandingIntro";
+import ScrollFlyIn from "../components/ScrollFlyIn";
+import { PARIS_EVENT, PARIS_KEYNOTE_FACULTY, BRAND } from "../seriesData";
+import { getCountryFlagUrl } from "../../utils/countryFlags";
+import { fetchPublicSpeakers, slugify } from "../publicApi";
 import {
     Calendar,
     MapPin,
@@ -24,6 +28,8 @@ import {
     Send,
     FileText,
     ExternalLink,
+    Search,
+    UserCheck,
 } from "lucide-react";
 
 // Icon lookup for the "What is Provided" cards
@@ -41,8 +47,35 @@ const ICON_MAP = {
 };
 
 export default function ParisSeriesPage({ onAdminClick }) {
+    const [showLandingIntro, setShowLandingIntro] = useState(true);
+    const handleIntroDismiss = useCallback(() => {
+        setShowLandingIntro(false);
+    }, []);
+
+    // Re-trigger flight intro whenever user clicks on Paris event
+    useEffect(() => {
+        const handleNav = () => {
+            const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
+            if (currentPath === "/paris-series" && !window.location.hash) {
+                setShowLandingIntro(true);
+            }
+        };
+        window.addEventListener("sc:navigate", handleNav);
+        return () => window.removeEventListener("sc:navigate", handleNav);
+    }, []);
     const [lightboxImage, setLightboxImage] = useState(null);
     const [abstractModalOpen, setAbstractModalOpen] = useState(false);
+    const [speakerSearch, setSpeakerSearch] = useState("");
+    const [selectedTrack, setSelectedTrack] = useState("all");
+    const [dbSpeakers, setDbSpeakers] = useState([]);
+
+    useEffect(() => {
+        fetchPublicSpeakers("paris")
+            .then((data) => {
+                if (Array.isArray(data)) setDbSpeakers(data);
+            })
+            .catch((err) => console.warn("Could not fetch Paris public speakers:", err));
+    }, []);
 
     // Call for abstract form state
     const [formData, setFormData] = useState({
@@ -56,11 +89,11 @@ export default function ParisSeriesPage({ onAdminClick }) {
     const [formSubmitted, setFormSubmitted] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
-    // Event countdown timer to April 22, 2027
+    // Event countdown timer to March 8, 2027
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
 
     useEffect(() => {
-        const target = new Date("2027-04-22T09:00:00+02:00").getTime();
+        const target = new Date("2027-03-08T09:00:00+01:00").getTime();
         const update = () => {
             const diff = target - Date.now();
             if (diff <= 0) return;
@@ -129,8 +162,55 @@ export default function ParisSeriesPage({ onAdminClick }) {
         }, 800);
     };
 
+    const allParisSpeakers = useMemo(() => {
+        const validDbSpeakers = dbSpeakers.filter(
+            (s) => s.name && !s.name.toLowerCase().startsWith("test")
+        );
+        return validDbSpeakers.map((s) => ({
+            id: s.id,
+            name: s.name,
+            title: s.tag || "Invited Keynote Speaker",
+            institution: s.country ? `${s.country} Delegation` : "European Health Faculty",
+            talk: s.talk || "Confirmed Keynote Presentation",
+            country: s.country || "France",
+            track: "Clinical AI",
+            trackId: "ai",
+            isChair: false,
+            photoUrl: s.photoUrl,
+            slug: s.slug || slugify(s.name),
+        }));
+    }, [dbSpeakers]);
+
+    const filteredParisSpeakers = allParisSpeakers.filter((spk) => {
+        const matchesTrack = selectedTrack === "all" || spk.trackId === selectedTrack;
+        const q = speakerSearch.toLowerCase().trim();
+        const matchesSearch = !q ||
+            spk.name.toLowerCase().includes(q) ||
+            spk.talk.toLowerCase().includes(q) ||
+            spk.country.toLowerCase().includes(q) ||
+            spk.institution.toLowerCase().includes(q);
+        return matchesTrack && matchesSearch;
+    });
+
     return (
         <div ref={pageRef} className="sc-site sc-page">
+            {showLandingIntro && (
+                <ScrollFlyIn onComplete={handleIntroDismiss}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "14px" }}>
+                        <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "6px 18px", borderRadius: "999px", background: "rgba(8, 14, 38, 0.85)", border: "1px solid rgba(226, 184, 92, 0.45)", backdropFilter: "blur(12px)", fontSize: "12px", fontWeight: 700, letterSpacing: "0.14em", color: "#ffffff" }}>
+                            <span>EUROPEAN SUMMIT · MARCH 8 – 12, 2027</span>
+                            <span style={{ color: "#fde047" }}>✦</span>
+                            <span>CENTRAL PARIS 🇫🇷</span>
+                        </div>
+                        <h1 style={{ fontFamily: "var(--sc-display)", fontSize: "clamp(38px, 6vw, 76px)", lineHeight: 1.1, margin: "6px 0", color: "#ffffff" }}>
+                            Welcome to <span style={{ color: "#60a5fa" }}>Paris</span>
+                        </h1>
+                        <p style={{ color: "#cbd5e1", fontSize: "clamp(15px, 1.8vw, 19px)", maxWidth: "580px", margin: "0 auto", lineHeight: 1.6 }}>
+                            Speaker Chapters Global Conference Series · The European Flagship
+                        </p>
+                    </div>
+                </ScrollFlyIn>
+            )}
             <SiteHeader activeSeries="paris-series" onAdminClick={onAdminClick} />
 
             {/* ─── HERO WITH PARIS SKYLINE & FRENCH TRICOLOR ANIMATION ─────── */}
@@ -153,11 +233,11 @@ export default function ParisSeriesPage({ onAdminClick }) {
                             </div>
 
                             <span className="sc-eyebrow" style={{ color: "#7C9BFA" }}>
-                                SPEAKER CHAPTERS · EUROPEAN FLAGSHIP EDITION
+                                SPEAKER CHAPTERS · UPCOMING EUROPEAN EDITION (MARCH 8 – 12, 2027)
                             </span>
 
                             <h1 className="sc-hero-title sc-display" style={{ margin: "14px 0 0", fontSize: "clamp(42px, 6vw, 76px)" }}>
-                                Paris Series <span className="sc-blue-text">2027</span>
+                                Paris Series <span className="sc-blue-text">March 8 – 12, 2027</span>
                             </h1>
 
                             <p className="sc-section-lead" style={{ marginTop: "18px", fontSize: "19px" }}>
@@ -208,6 +288,21 @@ export default function ParisSeriesPage({ onAdminClick }) {
                                     <ArrowRight size={16} className="sc-arrow" />
                                 </button>
                                 <a
+                                    href="#speakers"
+                                    className="sc-btn sc-btn-ghost"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        const el = document.getElementById("speakers");
+                                        if (el) {
+                                            el.scrollIntoView({ behavior: "smooth", block: "start" });
+                                            window.history.pushState({}, "", "#speakers");
+                                        }
+                                    }}
+                                >
+                                    <Users size={16} />
+                                    <span>Paris Speakers & Faculty</span>
+                                </a>
+                                <a
                                     href="#tracks"
                                     className="sc-btn sc-btn-ghost"
                                     onClick={(e) => {
@@ -219,7 +314,7 @@ export default function ParisSeriesPage({ onAdminClick }) {
                                         }
                                     }}
                                 >
-                                    <span>Summit Tracks & Themes</span>
+                                    <span>Summit Tracks</span>
                                 </a>
                             </div>
                         </div>
@@ -246,7 +341,7 @@ export default function ParisSeriesPage({ onAdminClick }) {
                                         France · Paris 🇫🇷
                                     </div>
                                     <div style={{ fontSize: "12.5px", color: "var(--sc-muted)", marginTop: "4px" }}>
-                                        Pullman Paris Montparnasse & Congress Center
+                                        Venue: Coming Soon
                                     </div>
                                 </div>
                             </div>
@@ -321,6 +416,145 @@ export default function ParisSeriesPage({ onAdminClick }) {
                                 </button>
                             </div>
                         ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* ─── PARIS FACULTY & KEYNOTE SPEAKERS DIRECTORY ──── */}
+            <section id="speakers" className="sc-section">
+                <div className="sc-container">
+                    <div style={{ textAlign: "center", marginBottom: "30px" }} className="sc-reveal">
+                        <span className="sc-eyebrow" style={{ color: "#7C9BFA" }}>
+                            PARIS FACULTY · KEYNOTE SESSIONS & ADVISORY COMMITTEE
+                        </span>
+                        <h2 className="sc-section-title sc-display">
+                            Paris Keynote <span className="sc-blue-text">Speakers & Faculty</span>
+                        </h2>
+                        <p className="sc-section-lead" style={{ margin: "0 auto" }}>
+                            Meet the confirmed session chairs and invited keynote faculty for the <b>Paris Series (March 8 – 12, 2027)</b>.
+                            Speaker nominations and abstract submissions are actively open for qualified clinical researchers.
+                        </p>
+                    </div>
+
+                    {/* Toolbar: Search input & counter */}
+                    <div className="sc-speaker-toolbar">
+                        <div className="sc-search">
+                            <Search size={18} />
+                            <input
+                                type="text"
+                                value={speakerSearch}
+                                onChange={(e) => setSpeakerSearch(e.target.value)}
+                                placeholder="Search Paris faculty by name, topic, institution, or country..."
+                            />
+                        </div>
+
+                        <div style={{ fontSize: "14px", color: "var(--sc-muted)", display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span>Showing</span>
+                            <b style={{ color: "#5B7CFA" }}>{filteredParisSpeakers.length}</b>
+                            <span>Paris keynote speaker{filteredParisSpeakers.length !== 1 ? 's' : ''}</span>
+                        </div>
+                    </div>
+
+                    {/* Speakers Grid with Call for Keynotes card */}
+                    <div className="sc-speakers">
+                        {/* Open Call for Keynote Speakers Card */}
+                        <div
+                            className="sc-speaker"
+                            style={{
+                                border: "1px dashed rgba(91, 124, 250, 0.45)",
+                                background: "linear-gradient(145deg, rgba(91, 124, 250, 0.1), rgba(6, 9, 26, 0.8))",
+                                cursor: "pointer",
+                            }}
+                            onClick={() => setAbstractModalOpen(true)}
+                        >
+                            <div className="sc-speaker-photo" style={{ background: "rgba(91, 124, 250, 0.15)", display: "grid", placeItems: "center" }}>
+                                <div style={{ width: "64px", height: "64px", borderRadius: "50%", background: "rgba(91, 124, 250, 0.25)", border: "1px solid #5B7CFA", display: "grid", placeItems: "center", color: "#5B7CFA" }}>
+                                    <Sparkles size={30} />
+                                </div>
+                            </div>
+                            <div className="sc-speaker-body">
+                                <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#9bb5ff" }}>
+                                    CALL FOR PAPERS · OPEN
+                                </span>
+                                <div className="sc-speaker-name" style={{ marginTop: "4px" }}>
+                                    Join Paris Faculty
+                                </div>
+                                <div className="sc-speaker-talk">
+                                    Submit your research or clinical abstract to present as a keynote speaker at Pullman Paris Montparnasse.
+                                </div>
+                                <div style={{ marginTop: "14px", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "12.5px", color: "#5B7CFA", fontWeight: 600 }}>
+                                    <span>Submit Abstract</span>
+                                    <ArrowRight size={14} />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Confirmed Paris Keynote Chairs & Faculty */}
+                        {filteredParisSpeakers.map((spk) => {
+                            const initials = spk.name
+                                .replace(/Prof\.|Dr\.|MD|PhD|FRCPath|FACS/g, "")
+                                .trim()
+                                .split(" ")
+                                .filter(Boolean)
+                                .map((n) => n[0])
+                                .slice(0, 2)
+                                .join("")
+                                .toUpperCase();
+                            const spkSlug = spk.slug || slugify(spk.name);
+
+                            return (
+                                <Link
+                                    key={spk.id}
+                                    to={`/paris-series/${spkSlug}`}
+                                    className="sc-speaker"
+                                    style={{ borderColor: "rgba(91, 124, 250, 0.22)", textDecoration: "none", color: "inherit", cursor: "pointer" }}
+                                >
+                                    <div className="sc-speaker-photo">
+                                        {spk.photoUrl ? (
+                                            <img
+                                                src={spk.photoUrl}
+                                                alt={spk.name}
+                                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                            />
+                                        ) : (
+                                            <div className="sc-speaker-initials" style={{ background: "linear-gradient(135deg, #182352, #0d1430)", color: "#9bb5ff" }}>
+                                                {initials}
+                                            </div>
+                                        )}
+
+                                        {/* Country Flag Pill */}
+                                        <div className="sc-speaker-flag" title={spk.country}>
+                                            <img
+                                                src={getCountryFlagUrl(spk.country, "w80")}
+                                                alt={spk.country}
+                                            />
+                                        </div>
+
+                                        <div className="sc-speaker-lock" style={{ background: "rgba(91, 124, 250, 0.25)", borderColor: "#5B7CFA" }}>
+                                            <span>{spk.track}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="sc-speaker-body">
+                                        <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7C9BFA" }}>
+                                            {spk.isChair ? "Session Chair · Keynote" : "Invited Faculty · Keynote"}
+                                        </div>
+                                        <div className="sc-speaker-name" style={{ marginTop: "3px" }}>{spk.name}</div>
+                                        <div style={{ fontSize: "12px", color: "var(--sc-muted)", marginBottom: "6px" }}>
+                                            {spk.institution}
+                                        </div>
+                                        <div className="sc-speaker-talk">
+                                            "{spk.talk}"
+                                        </div>
+
+                                        <div style={{ marginTop: "12px", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "12px", color: "#9bb5ff", fontWeight: 600 }}>
+                                            <span>Access Portal →</span>
+                                            <span>🇫🇷</span>
+                                        </div>
+                                    </div>
+                                </Link>
+                            );
+                        })}
                     </div>
                 </div>
             </section>
@@ -418,43 +652,45 @@ export default function ParisSeriesPage({ onAdminClick }) {
                 </div>
             </section>
 
-            {/* ─── HOTEL BOOKED FOR SPEAKER STAY ───────────────── */}
+            {/* ─── VENUE & HOTEL ARRANGEMENTS IN PROGRESS ───── */}
             <section id="hotel" className="sc-section" style={{ background: "rgba(11, 16, 48, 0.35)", borderTop: "1px solid var(--sc-border)" }}>
                 <div className="sc-container">
                     <div className="sc-split sc-reveal">
-                        {/* Media image of hotel room stay */}
+                        {/* Media image of Central Paris */}
                         <div>
                             <div className="sc-media-frame">
                                 <img
-                                    src={PARIS_EVENT.hotel.image}
-                                    alt="Pullman Paris Montparnasse Hotel Room"
+                                    src="/images/site/paris_louvre_museum.jpg"
+                                    alt="Central Paris Historic & Conference Architecture"
                                 />
-                                <div className="sc-media-badge">
-                                    <div style={{ display: "flex", gap: "3px", color: "#f59e0b", marginBottom: "4px" }}>
-                                        {Array.from({ length: PARIS_EVENT.hotel.stars }).map((_, i) => (
-                                            <Star key={i} size={14} fill="#f59e0b" />
-                                        ))}
+                                <div className="sc-media-badge" style={{ borderColor: "rgba(91, 124, 250, 0.35)" }}>
+                                    <div style={{ display: "flex", gap: "6px", alignItems: "center", color: "#9bb5ff", marginBottom: "4px" }}>
+                                        <Sparkles size={14} />
+                                        <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase" }}>
+                                            4-Star European Standard
+                                        </span>
                                     </div>
                                     <strong style={{ fontSize: "14px", display: "block" }}>
-                                        Official Speaker Stay & Venue
+                                        Venue & Accommodations
                                     </strong>
-                                    <span style={{ fontSize: "12px", color: "var(--sc-muted)" }}>
-                                        Pullman Paris Montparnasse · 75014 Paris
+                                    <span style={{ fontSize: "12px", color: "#60a5fa", fontWeight: 600 }}>
+                                        Coming Soon
                                     </span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Hotel Details & Check-in Info */}
+                        {/* Venue Details & Selection Info */}
                         <div>
-                            <span className="sc-eyebrow" style={{ color: "#7C9BFA" }}>ACCOMMODATION & VENUE</span>
+                            <span className="sc-eyebrow" style={{ color: "#7C9BFA" }}>ACCOMMODATION & VENUE STATUS</span>
                             <h2 className="sc-section-title sc-display">
-                                Hotel Booked For <span className="sc-blue-text">Your Stay</span>
+                                Venue & Hotel <span className="sc-blue-text">Arrangements</span>
                             </h2>
                             <p style={{ color: "#d2d6ea", fontSize: "16.5px", lineHeight: "1.7" }}>
-                                All confirmed international keynote speakers are hosted at the prestigious
-                                <b> {PARIS_EVENT.hotel.name}</b>. Complete with world-class auditorium halls, private
-                                VIP networking suites, and high-speed transit links directly to Charles de Gaulle and Orly.
+                                The host venue and official 4-star hotel accommodations for the <b>Paris Series (March 8 – 12, 2027)</b> are
+                                currently undergoing final selection and contractual review with our French hospitality partners.
+                                Confirmed international keynote speakers will receive guaranteed, fully-hosted luxury accommodations
+                                in prime Central Paris once the official venue contract is announced.
                             </p>
 
                             <ul className="sc-check-list">
@@ -467,29 +703,18 @@ export default function ParisSeriesPage({ onAdminClick }) {
                             </ul>
 
                             <div style={{ marginTop: "26px", display: "flex", gap: "12px", flexWrap: "wrap" }}>
-                                <a
-                                    href={PARIS_EVENT.mapsUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                <button
+                                    type="button"
+                                    onClick={() => setAbstractModalOpen(true)}
                                     className="sc-btn sc-btn-blue"
                                     style={{ height: "46px", padding: "0 22px", fontSize: "14px" }}
                                 >
-                                    <MapPin size={15} />
-                                    <span>Get Directions on Google Maps</span>
-                                    <ExternalLink size={13} />
-                                </a>
+                                    <FileText size={15} />
+                                    <span>Submit Abstract Proposal</span>
+                                    <ArrowRight size={14} className="sc-arrow" />
+                                </button>
                             </div>
                         </div>
-                    </div>
-
-                    {/* Interactive Google Maps iframe for Pullman Paris Montparnasse */}
-                    <div className="sc-map sc-reveal" style={{ marginTop: "50px" }}>
-                        <iframe
-                            title="Pullman Paris Montparnasse Google Maps"
-                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2625.5977508935293!2d2.317546376899455!3d48.84074290152436!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x47e671c50b69123b%3A0xe510f0f46187bda!2sPullman%20Paris%20Montparnasse!5e0!3m2!1sen!2sfr!4v1700000000000!5m2!1sen!2sfr"
-                            loading="lazy"
-                            referrerPolicy="no-referrer-when-downgrade"
-                        />
                     </div>
                 </div>
             </section>

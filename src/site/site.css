@@ -184,11 +184,149 @@ html {
 }
 .sc-pill-live { background: rgba(34, 197, 94, 0.16); color: #4ade80; display: inline-flex; align-items: center; gap: 5px; }
 .sc-pill-live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #4ade80; animation: sc-blink 1.4s infinite; }
+.sc-pill-upcoming { background: rgba(91, 124, 250, 0.16); color: #9bb5ff; border: 1px solid rgba(91, 124, 250, 0.35); }
 .sc-pill-soon { background: rgba(255, 255, 255, 0.08); color: var(--sc-muted); }
 @keyframes sc-blink { 50% { opacity: 0.25; } }
 
 .sc-header-cta { display: none; }
 @media (min-width: 960px) { .sc-header-cta { display: inline-flex; height: 44px; padding: 0 22px; font-size: 14px; } }
+
+/* ─── Aeroplane Flight Animation ─────────────────────────── */
+.sc-flight-widget {
+  display: inline-flex;
+  align-items: center;
+  height: 42px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--sc-border-strong);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s var(--sc-ease);
+}
+.sc-flight-widget:hover {
+  border-color: rgba(226, 184, 92, 0.5);
+  box-shadow: 0 10px 30px -6px rgba(226, 184, 92, 0.25);
+}
+.sc-flight-route {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sc-flight-hub {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--sc-muted);
+  text-decoration: none;
+  transition: color 0.2s, transform 0.2s;
+  position: relative;
+}
+.sc-flight-hub:hover {
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+.sc-flight-hub.is-active {
+  color: #ffffff;
+}
+.sc-flight-flag {
+  font-size: 14px;
+  line-height: 1;
+}
+.sc-flight-code {
+  font-family: var(--sc-display);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+.sc-flight-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 8px #4ade80;
+  animation: sc-blink 1.4s infinite;
+}
+.sc-flight-paris-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #5B7CFA;
+  box-shadow: 0 0 8px #5B7CFA;
+  animation: sc-blink 1.4s infinite;
+}
+.sc-flight-track {
+  position: relative;
+  width: 64px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+}
+.sc-flight-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.sc-flight-path {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.28);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+  animation: sc-flight-dash 1.8s linear infinite;
+}
+@keyframes sc-flight-dash {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+.sc-flight-plane {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  display: flex;
+  align-items: center;
+  color: #f3d48a;
+  filter: drop-shadow(0 0 6px rgba(243, 212, 138, 0.8));
+  animation: sc-plane-cruise 4s cubic-bezier(0.4, 0.05, 0.6, 0.95) infinite;
+  pointer-events: none;
+}
+.sc-plane-icon {
+  transform: rotate(45deg);
+}
+.sc-plane-contrail {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 16px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(243, 212, 138, 0.7));
+  border-radius: 999px;
+  transform: translateY(-50%);
+  filter: blur(0.5px);
+}
+@keyframes sc-plane-cruise {
+  0% {
+    transform: translate(0px, 0px) scale(0.85);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+    transform: translate(8px, -4px) scale(1);
+  }
+  50% {
+    transform: translate(26px, -7px) scale(1.08);
+  }
+  85% {
+    opacity: 1;
+    transform: translate(44px, -3px) scale(1);
+  }
+  100% {
+    transform: translate(52px, 0px) scale(0.85);
+    opacity: 0;
+  }
+}
 .sc-burger {
   display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px;
   background: rgba(255, 255, 255, 0.06); border: 1px solid var(--sc-border); color: var(--sc-text); cursor: pointer;
@@ -545,3 +683,899 @@ html {
 /* page transition */
 .sc-page { animation: sc-page-in 0.7s var(--sc-ease); }
 @keyframes sc-page-in { from { opacity: 0; transform: translateY(14px); } }
+
+/* ─── Paris Flight Right-to-Left Flyby Intro (User Direction) ──── */
+.sc-paris-flyby-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: #030718;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: inherit;
+  transition: opacity 0.2s ease-out;
+}
+.sc-paris-flyby-intro.is-exiting {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Paris Full-View Eiffel Tower Backdrop */
+.sc-flyby-backdrop {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.sc-flyby-bg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 25%;
+  filter: saturate(1.15) brightness(0.92);
+}
+.sc-flyby-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 40%, rgba(3, 7, 24, 0.1) 0%, rgba(3, 7, 24, 0.45) 70%, rgba(2, 6, 23, 0.85) 100%);
+  pointer-events: none;
+}
+
+/* Rotating Luminous Searchlight at Eiffel Tower Spire Tip */
+.sc-eiffel-full-beacon {
+  position: absolute;
+  top: 7.2%;
+  left: 49.9%;
+  width: 380px;
+  height: 28px;
+  transform-origin: 0% 50%;
+  background: linear-gradient(90deg, rgba(254, 240, 138, 0.85) 0%, rgba(250, 204, 21, 0.25) 50%, transparent 100%);
+  border-radius: 999px;
+  filter: blur(3px);
+  pointer-events: none;
+  animation: sc-full-eiffel-sweep 9s linear infinite;
+  z-index: 2;
+}
+.sc-eiffel-full-beacon::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 16px #ffffff, 0 0 28px rgba(254, 240, 138, 0.9);
+}
+@keyframes sc-full-eiffel-sweep {
+  0% { transform: rotate(0deg); opacity: 0.85; }
+  50% { transform: rotate(180deg); opacity: 0.45; }
+  100% { transform: rotate(360deg); opacity: 0.85; }
+}
+
+.sc-flyby-dest-tag {
+  position: absolute;
+  bottom: 34px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 22px;
+  border-radius: 999px;
+  background: rgba(8, 14, 38, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(16px);
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
+  z-index: 10;
+  animation: sc-tag-fade-in 0.8s ease-out forwards;
+}
+@keyframes sc-tag-fade-in {
+  from { opacity: 0; transform: translate(-50%, 15px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* Flight Path & Assembly: Moving across twilight sky above Paris */
+.sc-flyby-flight-path {
+  position: absolute;
+  top: 24%;
+  left: 0;
+  width: 100%;
+  height: 180px;
+  pointer-events: none;
+  z-index: 20;
+}
+.sc-flyby-assembly {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: inline-flex;
+  align-items: center;
+  will-change: transform;
+  animation: sc-fly-constant-with-pause 4.4s linear forwards;
+}
+@keyframes sc-fly-constant-with-pause {
+  0% {
+    transform: translate3d(115vw, 6px, 0) rotate(1.2deg);
+  }
+  28% {
+    transform: translate3d(calc(50vw - 230px), 0, 0) rotate(0deg);
+  }
+  32% {
+    transform: translate3d(calc(50vw - 230px), -4px, 0) rotate(-0.5deg);
+  }
+  62% {
+    transform: translate3d(calc(50vw - 230px), -4px, 0) rotate(-0.5deg);
+  }
+  66% {
+    transform: translate3d(calc(50vw - 230px), 0, 0) rotate(0.8deg);
+  }
+  100% {
+    transform: translate3d(-145vw, -10px, 0) rotate(0deg);
+  }
+}
+
+/* Middle Celebration Pop-up while stopped in center */
+.sc-flyby-mid-celebration {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 175px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  z-index: 30;
+  animation: sc-mid-celebration-pop 4.4s ease-in-out forwards;
+}
+@keyframes sc-mid-celebration-pop {
+  0%, 28% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(16px) scale(0.7);
+  }
+  33%, 63% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  68%, 100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-14px) scale(0.85);
+  }
+}
+.sc-celebration-bubble {
+  background: rgba(8, 14, 38, 0.92);
+  border: 1px solid rgba(254, 240, 138, 0.75);
+  backdrop-filter: blur(18px);
+  padding: 10px 22px;
+  border-radius: 999px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.8), 0 0 32px rgba(234, 179, 8, 0.4);
+  text-align: center;
+  white-space: nowrap;
+}
+.sc-celebration-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 14.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #ffffff;
+}
+.sc-celebration-sub {
+  font-size: 11px;
+  color: #93c5fd;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* The Aeroplane facing left */
+.sc-flyby-plane {
+  width: 350px;
+  max-width: 44vw;
+  flex-shrink: 0;
+  position: relative;
+}
+.sc-flyby-plane-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 20px 35px rgba(0, 0, 0, 0.9));
+}
+
+/* Realistic Aircraft Lighting */
+.sc-plane-nav-red {
+  position: absolute;
+  top: 48%;
+  left: 17%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 14px #ef4444, 0 0 22px #ef4444;
+  animation: sc-strobe-blink 1.1s steps(1) infinite;
+  pointer-events: none;
+}
+.sc-plane-strobe-white {
+  position: absolute;
+  top: 24%;
+  right: 2.2%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 18px #ffffff, 0 0 28px #ffffff;
+  animation: sc-intense-strobe 0.8s steps(1) infinite;
+  pointer-events: none;
+}
+.sc-plane-beacon-red {
+  position: absolute;
+  top: 40%;
+  left: 31%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ff1e1e;
+  box-shadow: 0 0 16px #ff1e1e;
+  animation: sc-beacon-flash 1s steps(1) infinite;
+  pointer-events: none;
+}
+
+/* Engine Heat Trails & Exhaust Contrail */
+.sc-engine-heat-trail {
+  position: absolute;
+  right: -50px;
+  width: 70px;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.4), rgba(56, 189, 248, 0.2), transparent);
+  filter: blur(2.5px);
+  pointer-events: none;
+}
+.sc-engine-heat-trail.engine-1 {
+  top: 55%;
+}
+.sc-engine-heat-trail.engine-2 {
+  top: 61%;
+}
+.sc-flyby-thrust-glow {
+  position: absolute;
+  top: 55%;
+  right: -24px;
+  width: 44px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.9) 0%, rgba(254, 240, 138, 0.5) 45%, transparent 75%);
+  filter: blur(3px);
+  pointer-events: none;
+  animation: sc-thrust-pulse 4.4s linear forwards;
+}
+@keyframes sc-thrust-pulse {
+  0%, 28% { opacity: 0; transform: scale(0.5); }
+  32%, 64% { opacity: 0.95; transform: scale(1.4); }
+  68%, 100% { opacity: 0; transform: scale(0.5); }
+}
+
+/* Tow cable with realistic spreader bar */
+.sc-flyby-towcable {
+  position: relative;
+  width: 44px;
+  height: 38px;
+  flex-shrink: 0;
+  margin-left: -6px;
+  display: flex;
+  align-items: center;
+}
+.sc-cable-wire {
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.4));
+  transform: rotate(-4deg);
+  transform-origin: left center;
+}
+.sc-cable-spreader {
+  position: absolute;
+  right: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2.5px;
+  background: #64748b;
+  border-radius: 1px;
+}
+
+/* Trailing French Country Flag (Paris / France Flag) with 3D cloth physics */
+.sc-flyby-flag-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  animation: sc-flag-flutter 0.38s ease-in-out infinite alternate;
+  transform-origin: left center;
+  perspective: 700px;
+}
+@keyframes sc-flag-flutter {
+  0% { transform: rotate(-1.5deg) skewY(-2deg); }
+  100% { transform: rotate(2.5deg) skewY(2deg); }
+}
+
+.sc-flyby-french-flag {
+  width: 105px;
+  height: 68px;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.7), 0 0 18px rgba(0, 38, 84, 0.45);
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  transform-style: preserve-3d;
+}
+.sc-flag-stripe {
+  height: 100%;
+}
+.sc-flag-stripe.blue {
+  width: 33.33%;
+  background: #002654;
+}
+.sc-flag-stripe.white {
+  width: 33.34%;
+  background: #ffffff;
+}
+.sc-flag-stripe.red {
+  width: 33.33%;
+  background: #ed2939;
+}
+.sc-flag-wave-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(0,0,0,0.22) 0%, transparent 22%, rgba(255,255,255,0.35) 48%, rgba(0,0,0,0.25) 74%, transparent 100%);
+  background-size: 200% 100%;
+  animation: sc-flag-ripple 0.5s linear infinite;
+  pointer-events: none;
+}
+@keyframes sc-flag-ripple {
+  0% { background-position: 0% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Banner text attached to flag */
+.sc-flyby-banner-label {
+  padding: 7px 16px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #002654;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  border-radius: 6px;
+  white-space: nowrap;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+  border-left: 4px solid #ed2939;
+}
+
+/* Skip Button */
+.sc-flyby-skip {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  transition: all 0.25s;
+}
+.sc-flyby-skip:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+}
+
+
+/* ─── ScrollFlyIn: Redesigned Theme Edition ──────────────────────── */
+.sc-scroll-fly-section {
+  position: relative;
+  height: 220vh;
+  width: 100%;
+  background: #020617;
+}
+
+.sc-scroll-fly-stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sc-scroll-fly-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.sc-scroll-bg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 25%;
+  filter: saturate(1.15) brightness(0.8);
+}
+
+.sc-scroll-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 45%, rgba(3, 7, 24, 0.2) 0%, rgba(3, 7, 24, 0.6) 70%, rgba(2, 6, 23, 0.92) 100%);
+  pointer-events: none;
+}
+
+.sc-scroll-eiffel-beacon {
+  position: absolute;
+  top: 7.2%;
+  left: 49.9%;
+  width: 380px;
+  height: 28px;
+  transform-origin: 0% 50%;
+  background: linear-gradient(90deg, rgba(254, 240, 138, 0.85) 0%, rgba(250, 204, 21, 0.25) 50%, transparent 100%);
+  border-radius: 999px;
+  filter: blur(3px);
+  pointer-events: none;
+  animation: sc-full-eiffel-sweep 9s linear infinite;
+  z-index: 2;
+}
+
+/* Flight Telemetry HUD */
+.sc-scroll-telemetry {
+  position: absolute;
+  top: 28px;
+  left: 24px;
+  right: 24px;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.sc-telemetry-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 24px;
+  border-radius: 18px;
+  background: rgba(6, 11, 30, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+}
+
+.sc-telemetry-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sc-tele-lbl {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: #93c5fd;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.sc-tele-val {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 14.5px;
+  color: #ffffff;
+  letter-spacing: 0.06em;
+}
+
+.sc-gold-val {
+  color: #fde047;
+  font-weight: 700;
+}
+
+.sc-tele-mode-btn {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.sc-tele-mode-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(226, 184, 92, 0.5);
+}
+
+.sc-tele-mode-btn.is-active {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.5);
+  color: #4ade80;
+}
+
+/* Center Static & Revealed Content */
+.sc-scroll-content-wrap {
+  position: relative;
+  z-index: 20;
+  max-width: 820px;
+  width: 90%;
+  text-align: center;
+  pointer-events: auto;
+  padding: 0 20px;
+}
+
+.sc-default-scroll-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.sc-badge-flight {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 18px;
+  border-radius: 999px;
+  background: rgba(8, 14, 38, 0.85);
+  border: 1px solid rgba(226, 184, 92, 0.45);
+  backdrop-filter: blur(12px);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #ffffff;
+}
+
+.sc-scroll-headline {
+  font-size: clamp(38px, 6vw, 76px);
+  line-height: 1.1;
+  margin: 0;
+}
+
+.sc-scroll-sub {
+  color: #cbd5e1;
+  font-size: clamp(15px, 1.8vw, 19px);
+  max-width: 620px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.sc-scroll-chips {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.sc-scroll-actions {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+/* Scroll-Driven Aircraft Track */
+.sc-scroll-aircraft-track {
+  position: absolute;
+  top: 24%;
+  left: 0;
+  width: 100%;
+  height: 200px;
+  z-index: 25;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sc-scroll-plane-assembly {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+.sc-scroll-plane-body {
+  width: 360px;
+  max-width: 44vw;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.sc-scroll-plane-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 22px 40px rgba(0, 0, 0, 0.95));
+}
+
+.sc-scroll-cue-hint {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--sc-muted);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  pointer-events: none;
+  z-index: 20;
+  animation: sc-cue-bob 1.8s ease-in-out infinite;
+}
+
+@keyframes sc-cue-bob {
+  0%, 100% { transform: translate(-50%, 0); opacity: 0.6; }
+  50% { transform: translate(-50%, 6px); opacity: 1; }
+}
+
+.sc-cue-arrows {
+  font-size: 10px;
+  color: var(--sc-gold);
+}
+
+/* ─── ScrollFlyIn: Massive Screen-Fitting Plane & Trailing Paris Banner ──── */
+.sc-scrollflyin-root {
+  perspective: 1200px;
+}
+
+.sc-scrollflyin-root.is-dismissing {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Flight assembly (Banner + Cables + Airplane) */
+.sc-flight-flythrough-assembly {
+  display: flex;
+  align-items: center;
+  position: relative;
+  pointer-events: none;
+  will-change: transform;
+  z-index: 25;
+}
+
+/* Banner Unit */
+.sc-flyin-banner-unit {
+  display: flex;
+  align-items: center;
+  position: relative;
+  margin-right: -10px;
+  z-index: 24;
+}
+
+/* Fluttering Cloth Banner - Sleek, focused, crystal clear */
+.sc-flyin-cloth-banner {
+  position: relative;
+  width: auto;
+  min-width: clamp(330px, 28vw, 460px);
+  padding: 16px 28px;
+  background: linear-gradient(135deg, rgba(4, 9, 28, 0.98) 0%, rgba(14, 28, 76, 0.98) 50%, rgba(4, 9, 28, 0.98) 100%);
+  border: 2px solid #e2b85c;
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.9), 0 0 35px rgba(30, 58, 138, 0.6);
+  backdrop-filter: blur(12px);
+  transform-origin: right center;
+  animation: sc-banner-flutter 3.5s ease-in-out infinite alternate;
+}
+
+@keyframes sc-banner-flutter {
+  0% {
+    transform: perspective(700px) rotateY(-1.5deg) translateY(0);
+  }
+  50% {
+    transform: perspective(700px) rotateY(1.2deg) translateY(-3px);
+  }
+  100% {
+    transform: perspective(700px) rotateY(-1.2deg) translateY(3px);
+  }
+}
+
+/* French Flag Tricolor Top & Bottom Stripes */
+.sc-flyin-tricolor-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #1d4ed8 0%, #1d4ed8 33.3%, #ffffff 33.3%, #ffffff 66.6%, #ef4444 66.6%, #ef4444 100%);
+}
+.sc-flyin-tricolor-bar.top {
+  top: 0;
+  border-radius: 8px 0 0 0;
+}
+.sc-flyin-tricolor-bar.bottom {
+  bottom: 0;
+  border-radius: 0 0 0 8px;
+}
+
+/* Banner Content - Welcome to Paris Event */
+.sc-flyin-banner-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+}
+.sc-flyin-banner-title {
+  font-family: var(--sc-display);
+  font-size: clamp(24px, 2.3vw, 34px);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #ffffff;
+  line-height: 1.1;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.98);
+}
+.sc-flyin-gold {
+  color: var(--sc-gold);
+  background: linear-gradient(135deg, #fef08a 0%, #e2b85c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Trailing aerodynamic ribbons on the left edge of banner */
+.sc-flyin-ribbon {
+  position: absolute;
+  left: -18px;
+  width: 22px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #e2b85c);
+  border-radius: 2px;
+  pointer-events: none;
+}
+.sc-flyin-ribbon.ribbon-1 {
+  top: 30%;
+  animation: sc-ribbon-wave 0.8s infinite alternate ease-in-out;
+}
+.sc-flyin-ribbon.ribbon-2 {
+  bottom: 30%;
+  animation: sc-ribbon-wave 0.7s infinite alternate-reverse ease-in-out;
+}
+@keyframes sc-ribbon-wave {
+  0% { transform: scaleX(0.7) rotate(-4deg); opacity: 0.6; }
+  100% { transform: scaleX(1.3) rotate(6deg); opacity: 0.95; }
+}
+
+/* Banner Tow Cables */
+.sc-flyin-cables {
+  width: clamp(70px, 7vw, 100px);
+  height: 40px;
+  position: relative;
+  flex-shrink: 0;
+}
+.sc-flyin-cables-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+/* Plane Wrapper */
+.sc-flyin-plane-wrap {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  z-index: 26;
+  flex-shrink: 0;
+}
+
+/* Fully Visible Airplane: sized to fit comfortably inside the viewport height */
+.sc-flyin-plane-img {
+  height: clamp(320px, 58vh, 460px);
+  width: auto;
+  max-width: none;
+  display: block;
+  filter: drop-shadow(0 32px 55px rgba(0, 0, 0, 0.88));
+}
+
+/* Aeronautical Strobe & Navigation Lights */
+.sc-flyin-light {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 30;
+}
+/* Port wingtip light (Aviation Red) - Top wing */
+.sc-flyin-light.port-light {
+  top: 2%;
+  left: 36%;
+  width: 10px;
+  height: 10px;
+  background: #ef4444;
+  box-shadow: 0 0 16px 6px #ef4444, 0 0 32px 12px rgba(239, 68, 68, 0.65);
+  animation: sc-strobe-blink 1.1s infinite;
+}
+/* Starboard wingtip light (Aviation Emerald Green) - Bottom wing */
+.sc-flyin-light.starboard-light {
+  bottom: 2%;
+  left: 36%;
+  width: 10px;
+  height: 10px;
+  background: #10b981;
+  box-shadow: 0 0 16px 6px #10b981, 0 0 32px 12px rgba(16, 185, 129, 0.65);
+  animation: sc-strobe-blink 1.1s infinite;
+}
+/* Fuselage Anti-Collision Strobe (Pulsing Crimson Red) */
+.sc-flyin-light.beacon-light {
+  top: 49.5%;
+  left: 58%;
+  width: 12px;
+  height: 12px;
+  background: #f87171;
+  box-shadow: 0 0 22px 9px #dc2626;
+  animation: sc-strobe-pulse 0.95s infinite;
+}
+/* Tail Xenon Strobe (Flashing Brilliant White) */
+.sc-flyin-light.tail-strobe {
+  top: 49.5%;
+  left: 2%;
+  width: 9px;
+  height: 9px;
+  background: #ffffff;
+  box-shadow: 0 0 20px 8px #ffffff;
+  animation: sc-strobe-flash 0.85s infinite;
+}
+
+@keyframes sc-strobe-blink {
+  0%, 100% { opacity: 1; transform: scale(1.15); }
+  50% { opacity: 0.2; transform: scale(0.85); }
+}
+@keyframes sc-strobe-pulse {
+  0%, 100% { opacity: 1; transform: scale(1.25); }
+  45% { opacity: 0.25; transform: scale(0.9); }
+}
+@keyframes sc-strobe-flash {
+  0%, 82%, 100% { opacity: 0.15; }
+  88%, 94% { opacity: 1; box-shadow: 0 0 30px 12px #ffffff; }
+}
+
+/* Jet Engine Exhaust Contrails */
+.sc-flyin-contrail {
+  position: absolute;
+  left: -240px;
+  width: 400px;
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.28) 55%, rgba(255, 255, 255, 0.75) 100%);
+  filter: blur(5px);
+  pointer-events: none;
+  z-index: 23;
+  animation: sc-contrail-flow 0.65s infinite alternate ease-in-out;
+}
+.sc-flyin-contrail.engine-port {
+  top: 30%;
+}
+.sc-flyin-contrail.engine-starboard {
+  bottom: 30%;
+}
+
+@keyframes sc-contrail-flow {
+  0% { opacity: 0.5; transform: scaleY(0.85) translateX(0); }
+  100% { opacity: 0.85; transform: scaleY(1.3) translateX(-12px); }
+}
+

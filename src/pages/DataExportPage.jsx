@@ -44,7 +44,7 @@ const ALL_EXPORT_COLUMNS = [
     { key: "checkoutNotes",label: "Checkout Notes", width: 30 },
 ];
 
-export default function DataExportPage({ speakers }) {
+export default function DataExportPage({ speakers, currentEvent }) {
     const [activeTab, setActiveTab] = useState("basic"); // 'basic' | 'advanced'
     const [selectedCols, setSelectedCols] = useState(ALL_EXPORT_COLUMNS.map(c => c.key));
 
@@ -188,7 +188,8 @@ export default function DataExportPage({ speakers }) {
     };
 
     const handleBasicExport = () => {
-        generateExcel(speakers, selectedCols, "speakers-export");
+        const prefix = currentEvent ? `${currentEvent.slug}-speakers-export` : "speakers-export";
+        generateExcel(speakers, selectedCols, prefix);
     };
 
     const handleAdvancedExport = (day, roomName) => {

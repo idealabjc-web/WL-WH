@@ -29,8 +29,8 @@ export const SERIES = [
         city: "Paris",
         country: "France",
         flag: "🇫🇷",
-        status: "live",
-        dates: "April 22 – 23, 2027",
+        status: "upcoming",
+        dates: "March 8 – 12, 2027",
         cover: "/images/site/paris_series_cover.jpg",
         accent: "#5B7CFA",
     },
@@ -147,16 +147,16 @@ export const DUBAI_EVENT = {
 export const PARIS_EVENT = {
     title: "Speaker Chapters · Paris Series",
     headline: "Where European heritage meets global leadership & healthcare innovation.",
-    dates: "April 22 – 23, 2027",
-    venue: "Pullman Paris Montparnasse & European Congress Center",
-    venueAddress: "19 Rue du Commandant René Mouchotte, 75014 Paris, France",
-    mapsUrl: "https://www.google.com/maps/search/Pullman+Paris+Montparnasse",
+    dates: "March 8 – 12, 2027",
+    venue: "Coming Soon",
+    venueAddress: "Central Paris, France (Coming Soon)",
+    mapsUrl: "https://www.google.com/maps/search/Paris+France",
     about: [
-        "The Paris Series 2027 is a prestigious European summit convening clinicians, researchers, hospital executives, policy makers, and emerging healthcare innovators in the City of Light.",
-        "Across two transformative days of keynote addresses, interactive debate sessions, executive roundtables, and Seine River networking, speakers explore the forefront of medicine, clinical leadership, artificial intelligence in patient care, and international health policy.",
+        "The Paris Series (March 8 – 12, 2027) is an upcoming European summit convening clinicians, researchers, hospital executives, policy makers, and emerging healthcare innovators in the City of Light.",
+        "Across five transformative days of keynote addresses, interactive debate sessions, executive roundtables, and Seine River networking, speakers explore the forefront of medicine, clinical leadership, artificial intelligence in patient care, and international health policy.",
     ],
     stats: [
-        { value: 2, suffix: "", label: "Days of Summits" },
+        { value: 5, suffix: "", label: "Days of Summits" },
         { value: 120, suffix: "+", label: "Global Keynote Speakers" },
         { value: 35, suffix: "+", label: "Countries Represented" },
         { value: 8, suffix: "", label: "Premier Partner Networks" },
@@ -200,9 +200,9 @@ export const PARIS_EVENT = {
         },
     ],
     provided: [
-        { icon: "Hotel", title: "Luxury Parisian Hotel Stay", text: "Complimentary luxury accommodations at Pullman Paris Montparnasse for confirmed speakers." },
+        { icon: "Hotel", title: "Luxury Parisian Hotel Stay", text: "Complimentary 4-star European accommodations in Central Paris for confirmed speakers (Announcement Coming Soon)." },
         { icon: "Utensils", title: "Gourmet French Hospitality", text: "Daily Parisian buffet breakfasts, chef-curated luncheon banquets, and artisan coffee lounges." },
-        { icon: "Plane", title: "Paris Airport & Metro Concierge", text: "Dedicated transit guidance from CDG & Orly airports and direct Montparnasse TGV access." },
+        { icon: "Plane", title: "Paris Airport & Transit Concierge", text: "Dedicated transit guidance from CDG & Orly airports and central Paris high-speed metro access." },
         { icon: "Award", title: "Accredited CPD/CME Certification", text: "Officially verified European CME/CPD credit certification for academic and professional standing." },
         { icon: "BadgeCheck", title: "Executive Speaker Credential Kit", text: "Personalized executive credential badge, summit catalog, and chapter membership folio." },
         { icon: "Camera", title: "Full Broadcast & Media Feature", text: "Multi-camera HD recording, professional stage portraits, and international press coverage." },
@@ -210,14 +210,14 @@ export const PARIS_EVENT = {
         { icon: "Compass", title: "Seine River Cultural Gala", text: "Private evening excursion along the River Seine admiring the Eiffel Tower, Louvre, and Notre-Dame." },
     ],
     hotel: {
-        name: "Pullman Paris Montparnasse Hotel",
+        name: "Coming Soon (Under Final Selection)",
         stars: 4,
         image: "/images/site/hotel_room_stay.jpg",
         highlights: [
-            "Located in the vibrant Montparnasse cultural & artistic district",
-            "Integrated European conference congress halls on site",
-            "Panoramic rooftop lounge overlooking the Eiffel Tower",
-            "High-speed transit to Charles de Gaulle (CDG) and Orly (ORY) airports",
+            "Prime Central Paris location with seamless Metro and RER airport connectivity",
+            "State-of-the-art European congress auditoriums and debate halls",
+            "Complimentary luxury room stay for confirmed keynote speakers",
+            "Official hotel venue announcement will be released to registered delegates",
         ],
     },
     gallery: [
@@ -228,4 +228,7 @@ export const PARIS_EVENT = {
         { src: "/images/site/paris_series_cover.jpg", title: "Parisian Architectural Heritage & Skylines" },
     ],
 };
+
+// Paris Series Keynote Faculty & Session Chairs Directory (Populated dynamically from database)
+export const PARIS_KEYNOTE_FACULTY = [];
 

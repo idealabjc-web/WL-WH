@@ -9,6 +9,7 @@ import { getCountryFlagUrl, getCountryName } from "../../utils/countryFlags";
 import { formatTimeAmPm } from "../CheckinPage";
 import { getAbstractsMap, uploadSpeakerAbstract, getSpeakerAbstractData } from "../../api/speakersApi";
 import { supabase } from "../../supabaseClient";
+import { getEventTables } from "../../eventsConfig";
 
 export default function SpeakerAbstractPage({ 
     speaker = {}, 
@@ -237,8 +238,9 @@ Keywords: Leadership, Healthcare Innovation, Clinical Governance, Patient Outcom
 
                 // Update Supabase speakers table
                 if (supabase) {
+                    const tables = getEventTables(speaker?.eventSlug || speaker?.event_slug);
                     await supabase
-                        .from("speakers")
+                        .from(tables.speakers)
                         .update({ abstract_url: serialized, abstract_status: "submitted" })
                         .eq("id", speakerId);
                 }

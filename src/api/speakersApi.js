@@ -1,5 +1,6 @@
 import { supabase } from "../supabaseClient";
 import QRCode from "qrcode";
+import { getEventTables, resolveEventFolder } from "../eventsConfig";
 
 const QUEUE_KEY = "offline_speaker_queue";
 
@@ -73,7 +74,8 @@ export const emptyForm = {
     sessionTitle: "", accommodationStatus: "", hotelRoom: "", checkinDate: "", checkoutDate: "", nights: "", diet: "No preference",
     allergy: "", tour: "yes", concerns: "", photoUrl: "",
     abstractProvided: "no", abstractUrl: "", whoseSpeaker: "", team: "", speakerTag: "",
-    accompanyingPerson: "no", accompanyingPersonsList: []
+    accompanyingPerson: "no", accompanyingPersonsList: [],
+    eventSlug: "dubai"
 };
 
 // Supabase <-> app-state mapping
@@ -101,10 +103,11 @@ export function speakerToRow(s) {
     };
 }
 
-export function rowToSpeaker(r) {
+export function rowToSpeaker(r, defaultEventSlug = null) {
     // Flatten the joined data into the single speaker object so UI doesn't break.
-    // Supabase can return arrays or objects depending on foreign key setup (one-to-many vs one-to-one).
-    const rawSessions = Array.isArray(r.sessions) ? r.sessions : (r.sessions ? [r.sessions] : []);
+    // Handles both Dubai (sessions) and Paris (paris_sessions) joined tables.
+    const rawSessionsData = r.paris_sessions || r.sessions || [];
+    const rawSessions = Array.isArray(rawSessionsData) ? rawSessionsData : (rawSessionsData ? [rawSessionsData] : []);
     const normalizedSessions = rawSessions.map(s => ({
         ...s,
         id: s.id,
@@ -126,8 +129,10 @@ export function rowToSpeaker(r) {
     });
 
     const session = normalizedSessions[0] || {};
-    const accomm = Array.isArray(r.accommodations) ? (r.accommodations[0] || {}) : (r.accommodations || {});
-    const att = Array.isArray(r.attendance) ? (r.attendance[0] || {}) : (r.attendance || {});
+    const accommData = r.paris_accommodations || r.accommodations || {};
+    const accomm = Array.isArray(accommData) ? (accommData[0] || {}) : (accommData || {});
+    const attData = r.paris_attendance || r.attendance || {};
+    const att = Array.isArray(attData) ? (attData[0] || {}) : (attData || {});
     
     // Parse team from whose_speaker if stored as "Name [Team]" or "Team"
     let parsedWhoseSpeaker = r.whose_speaker || null;
@@ -182,25 +187,105 @@ export function rowToSpeaker(r) {
         idCardPosition: r.id_card_position || null,
         accompanyingPersonsList: Array.isArray(r.accompanying_persons) ? r.accompanying_persons : (r.accompanying_persons ? JSON.parse(r.accompanying_persons) : []),
         accompanyingPerson: (Array.isArray(r.accompanying_persons) && r.accompanying_persons.length > 0) ? "yes" : "no",
+        eventSlug: defaultEventSlug || r.event_slug || "dubai",
     };
 }
 
-export async function fetchSpeakers() {
-    const { data, error } = await supabase
-        .from("speakers")
-        .select("*, sessions(*), accommodations(*), attendance(*)")
-        .order("created_at", { ascending: true });
+export async function fetchSpeakers(eventSlug = "dubai") {
+    if (eventSlug === "all") {
+        const [dubaiRes, parisRes] = await Promise.allSettled([
+            fetchSpeakers("dubai"),
+            fetchSpeakers("paris")
+        ]);
+        const dubaiList = dubaiRes.status === "fulfilled" ? dubaiRes.value : [];
+        const parisList = parisRes.status === "fulfilled" ? parisRes.value : [];
+        return [...dubaiList, ...parisList];
+    }
+
+    const isParis = String(eventSlug || "").toLowerCase().includes("paris");
+    const tables = getEventTables(eventSlug);
+
+    let data = [];
+    let error = null;
+
+    if (isParis) {
+        // Paris uses paris_speakers with paris_sessions & paris_attendance, plus unified accommodations
+        const [spkRes, accRes] = await Promise.all([
+            supabase
+                .from("paris_speakers")
+                .select("*, paris_sessions(*), paris_attendance(*)")
+                .order("created_at", { ascending: true }),
+            supabase
+                .from("accommodations")
+                .select("*")
+        ]);
+
+        if (spkRes.error) {
+            const simple = await supabase.from("paris_speakers").select("*").order("created_at", { ascending: true });
+            if (!simple.error) {
+                data = simple.data || [];
+            } else {
+                error = spkRes.error;
+            }
+        } else {
+            data = spkRes.data || [];
+        }
+
+        // Attach matching accommodations by speaker_id
+        const accList = accRes.data || [];
+        const accMap = {};
+        for (const a of accList) {
+            if (a.speaker_id) accMap[a.speaker_id] = a;
+        }
+
+        data = data.map(r => ({
+            ...r,
+            accommodations: accMap[r.id] ? [accMap[r.id]] : []
+        }));
+    } else {
+        const query = supabase
+            .from(tables.speakers)
+            .select(`*, ${tables.sessions}(*), ${tables.accommodations}(*), ${tables.attendance}(*)`)
+            .order("created_at", { ascending: true });
+
+        const res = await query;
+        data = res.data;
+        error = res.error;
+
+        if (error) {
+            const simple = await supabase
+                .from(tables.speakers)
+                .select("*")
+                .order("created_at", { ascending: true });
+
+            if (!simple.error) {
+                data = simple.data || [];
+                error = null;
+            }
+        }
+    }
+
     if (error) throw error;
-    return (data || []).map(rowToSpeaker);
+    return (data || []).map(r => rowToSpeaker(r, isParis ? "paris" : "dubai"));
 }
 
 export async function createSpeakerRecord(rec, skipQueue = false) {
+    const isParis = String(rec.eventSlug || "").toLowerCase().includes("paris");
+    const tables = getEventTables(rec.eventSlug);
+
     if (!navigator.onLine && !skipQueue) {
         queueOfflineAction("CREATE", rec.id, rec);
         return true; // Optimistic success
     }
     const speakerRow = speakerToRow(rec);
-    const { error: spkError } = await supabase.from("speakers").insert(speakerRow);
+    delete speakerRow.event_slug;
+
+    let { error: spkError } = await supabase.from(tables.speakers).insert(speakerRow);
+    if (spkError && (spkError.code === "42703" || String(spkError.message || "").toLowerCase().includes("event_slug"))) {
+        delete speakerRow.event_slug;
+        const retry = await supabase.from(tables.speakers).insert(speakerRow);
+        spkError = retry.error;
+    }
     if (spkError) throw spkError;
     
     if (rec.sessions && rec.sessions.length > 0) {
@@ -212,18 +297,18 @@ export async function createSpeakerRecord(rec, skipQueue = false) {
             conference_room: s.conferenceRoom || null
         }));
         if (sessionsToInsert.length > 0) {
-            const { error: sessError } = await supabase.from("sessions").insert(sessionsToInsert);
-            if (sessError) throw sessError;
+            const { error: sessError } = await supabase.from(tables.sessions).insert(sessionsToInsert);
+            if (sessError) console.warn("Sessions insert warning:", sessError);
         }
     } else if (rec.sessionTitle || rec.day || rec.timeSlot || rec.conferenceRoom) {
-        const { error: sessError } = await supabase.from("sessions").insert({
+        const { error: sessError } = await supabase.from(tables.sessions).insert({
             speaker_id: rec.id,
             session_title: rec.sessionTitle || null,
             day: rec.day || null,
             time_slot: rec.timeSlot || null,
             conference_room: rec.conferenceRoom || null
         });
-        if (sessError) throw sessError;
+        if (sessError) console.warn("Session insert warning:", sessError);
     }
     
     if (rec.accommodationStatus || rec.checkinDate || rec.checkoutDate || rec.nights || rec.hotelRoom) {
@@ -233,13 +318,14 @@ export async function createSpeakerRecord(rec, skipQueue = false) {
             checkin_date: rec.checkinDate || null,
             checkout_date: rec.checkoutDate || null,
             nights: rec.nights || null,
-            hotel_room: rec.hotelRoom || null
+            hotel_room: rec.hotelRoom || null,
+            event: isParis ? "paris" : "dubai"
         });
-        if (accError) throw accError;
+        if (accError) console.warn("Accommodation insert warning:", accError);
     }
 
     // Always insert a default attendance record for tracking check-ins
-    const { error: attError } = await supabase.from("attendance").insert({
+    const { error: attError } = await supabase.from(tables.attendance).insert({
         speaker_id: rec.id,
         checked_in: !!rec.checkedIn,
         checked_in_at: rec.checkedInAt ? new Date(rec.checkedInAt).toISOString() : null,
@@ -247,26 +333,35 @@ export async function createSpeakerRecord(rec, skipQueue = false) {
         checked_out_at: rec.checkedOutAt ? new Date(rec.checkedOutAt).toISOString() : null,
         checkout_notes: rec.checkoutNotes || null
     });
-    if (attError) throw attError;
+    if (attError) console.warn("Attendance insert warning:", attError);
     
     return true;
 }
 
 export async function updateSpeakerRecord(id, mergedRec, skipQueue = false) {
+    const isParis = String(mergedRec.eventSlug || "").toLowerCase().includes("paris");
+    const tables = getEventTables(mergedRec.eventSlug);
+
     if (!navigator.onLine && !skipQueue) {
         queueOfflineAction("UPDATE", id, mergedRec);
         return true; // Optimistic success
     }
 
     const speakerRow = speakerToRow(mergedRec);
-    const { error: spkError } = await supabase.from("speakers").update(speakerRow).eq("id", id);
+    delete speakerRow.event_slug;
+
+    let { error: spkError } = await supabase.from(tables.speakers).update(speakerRow).eq("id", id);
+    if (spkError && (spkError.code === "42703" || String(spkError.message || "").toLowerCase().includes("event_slug"))) {
+        delete speakerRow.event_slug;
+        const retry = await supabase.from(tables.speakers).update(speakerRow).eq("id", id);
+        spkError = retry.error;
+    }
     if (spkError) throw spkError;
     
     // Upsert sessions
-    // If the record provides an explicit array of sessions, we replace all existing ones.
     if (mergedRec.sessions) {
         // Delete existing ones
-        await supabase.from("sessions").delete().eq("speaker_id", id);
+        await supabase.from(tables.sessions).delete().eq("speaker_id", id);
         const sessionsToInsert = mergedRec.sessions.filter(s => s.day || s.timeSlot || s.time_slot || s.conferenceRoom || s.conference_room).map(s => ({
             speaker_id: id,
             session_title: mergedRec.sessionTitle || null,
@@ -275,74 +370,60 @@ export async function updateSpeakerRecord(id, mergedRec, skipQueue = false) {
             conference_room: s.conferenceRoom || s.conference_room || s.room || null
         }));
         if (sessionsToInsert.length > 0) {
-            const { error: sessInsError } = await supabase.from("sessions").insert(sessionsToInsert);
-            if (sessInsError) throw sessInsError;
+            await supabase.from(tables.sessions).insert(sessionsToInsert);
         }
     } else {
         // Fallback for old single-session edit form
-        const { data: sessData } = await supabase.from("sessions").select("id").eq("speaker_id", id).maybeSingle();
+        const { data: sessData } = await supabase.from(tables.sessions).select("id").eq("speaker_id", id).maybeSingle();
         if (sessData) {
-            const { error: sessUpdError } = await supabase.from("sessions").update({
+            await supabase.from(tables.sessions).update({
                 session_title: mergedRec.sessionTitle || null,
                 day: mergedRec.day || null,
                 time_slot: mergedRec.timeSlot || null,
                 conference_room: mergedRec.conferenceRoom || null
             }).eq("id", sessData.id);
-            if (sessUpdError) throw sessUpdError;
         } else if (mergedRec.sessionTitle || mergedRec.day || mergedRec.timeSlot || mergedRec.conferenceRoom) {
-            const { error: sessInsError } = await supabase.from("sessions").insert({
+            await supabase.from(tables.sessions).insert({
                 speaker_id: id,
                 session_title: mergedRec.sessionTitle || null,
                 day: mergedRec.day || null,
                 time_slot: mergedRec.timeSlot || null,
                 conference_room: mergedRec.conferenceRoom || null
             });
-            if (sessInsError) throw sessInsError;
         }
     }
 
     // Upsert accommodation
     const { data: accData } = await supabase.from("accommodations").select("id").eq("speaker_id", id).maybeSingle();
+    const accPayload = {
+        speaker_id: id,
+        accommodation_status: mergedRec.accommodationStatus || null,
+        checkin_date: mergedRec.checkinDate || null,
+        checkout_date: mergedRec.checkoutDate || null,
+        nights: mergedRec.nights || null,
+        hotel_room: mergedRec.hotelRoom || null,
+        event: isParis ? "paris" : "dubai"
+    };
     if (accData) {
-        const { error: accUpdError } = await supabase.from("accommodations").update({
-            accommodation_status: mergedRec.accommodationStatus || null,
-            checkin_date: mergedRec.checkinDate || null,
-            checkout_date: mergedRec.checkoutDate || null,
-            nights: mergedRec.nights || null,
-            hotel_room: mergedRec.hotelRoom || null
-        }).eq("id", accData.id);
-        if (accUpdError) throw accUpdError;
+        await supabase.from("accommodations").update(accPayload).eq("id", accData.id);
     } else if (mergedRec.accommodationStatus || mergedRec.checkinDate || mergedRec.checkoutDate || mergedRec.nights || mergedRec.hotelRoom) {
-        const { error: accInsError } = await supabase.from("accommodations").insert({
-            speaker_id: id,
-            accommodation_status: mergedRec.accommodationStatus || null,
-            checkin_date: mergedRec.checkinDate || null,
-            checkout_date: mergedRec.checkoutDate || null,
-            nights: mergedRec.nights || null,
-            hotel_room: mergedRec.hotelRoom || null
-        });
-        if (accInsError) throw accInsError;
+        await supabase.from("accommodations").insert(accPayload);
     }
 
     // Upsert attendance
-    const { data: attData } = await supabase.from("attendance").select("id").eq("speaker_id", id).maybeSingle();
+    const { data: attData } = await supabase.from(tables.attendance).select("id").eq("speaker_id", id).maybeSingle();
+    const attPayload = {
+        speaker_id: id,
+        checked_in: !!mergedRec.checkedIn,
+        checked_in_at: mergedRec.checkedInAt ? new Date(mergedRec.checkedInAt).toISOString() : null,
+        checked_out: !!mergedRec.checkedOut,
+        checked_out_at: mergedRec.checkedOutAt ? new Date(mergedRec.checkedOutAt).toISOString() : null,
+        checkout_notes: mergedRec.checkoutNotes || null
+    };
     if (attData) {
-        await supabase.from("attendance").update({
-            checked_in: !!mergedRec.checkedIn,
-            checked_in_at: mergedRec.checkedInAt ? new Date(mergedRec.checkedInAt).toISOString() : null,
-            checked_out: !!mergedRec.checkedOut,
-            checked_out_at: mergedRec.checkedOutAt ? new Date(mergedRec.checkedOutAt).toISOString() : null,
-            checkout_notes: mergedRec.checkoutNotes || null
-        }).eq("id", attData.id);
+        await supabase.from(tables.attendance).update(attPayload).eq("id", attData.id);
     } else {
-        await supabase.from("attendance").insert({
-            speaker_id: id,
-            checked_in: !!mergedRec.checkedIn,
-            checked_in_at: mergedRec.checkedInAt ? new Date(mergedRec.checkedInAt).toISOString() : null,
-            checked_out: !!mergedRec.checkedOut,
-            checked_out_at: mergedRec.checkedOutAt ? new Date(mergedRec.checkedOutAt).toISOString() : null,
-            checkout_notes: mergedRec.checkoutNotes || null
-        });
+        await supabase.from(tables.attendance).insert(attPayload);
     }
 
     return true;
@@ -351,16 +432,18 @@ export async function updateSpeakerRecord(id, mergedRec, skipQueue = false) {
 // Generates the QR badge locally (no external API call — works offline, and
 // isn't dependent on a third-party service being reachable) then uploads it
 // to Supabase Storage so it's a real persisted file.
-export async function generateAndStoreQrBadge(id) {
+export async function generateAndStoreQrBadge(id, eventSlug = null) {
+    const folder = resolveEventFolder(eventSlug);
+    const path = `${folder}/${id}.png`;
     const dataUrl = await QRCode.toDataURL(id, { width: 280, margin: 1 });
     try {
         const res = await fetch(dataUrl);
         const blob = await res.blob();
         const { error: uploadError } = await supabase.storage
             .from("qr-badges")
-            .upload(`${id}.png`, blob, { contentType: "image/png", upsert: true });
+            .upload(path, blob, { contentType: "image/png", upsert: true });
         if (uploadError) throw uploadError;
-        const { data } = supabase.storage.from("qr-badges").getPublicUrl(`${id}.png`);
+        const { data } = supabase.storage.from("qr-badges").getPublicUrl(path);
         return { dataUrl, publicUrl: data?.publicUrl || null };
     } catch (e) {
         console.error("QR badge upload failed:", e);
@@ -368,13 +451,14 @@ export async function generateAndStoreQrBadge(id) {
     }
 }
 
-export async function uploadSpeakerPhoto(id, file) {
+export async function uploadSpeakerPhoto(id, file, eventSlug = null) {
     try {
-        const ext = file.name.split(".").pop() || "jpg";
-        const path = `${id}.${ext}`;
+        const folder = resolveEventFolder(eventSlug);
+        const ext = file.name ? file.name.split(".").pop() : "jpg";
+        const path = `${folder}/${id}.${ext}`;
         const { error: uploadError } = await supabase.storage
             .from("speaker-photos")
-            .upload(path, file, { contentType: file.type, upsert: true });
+            .upload(path, file, { contentType: file.type || "image/jpeg", upsert: true });
         if (uploadError) throw uploadError;
         const { data } = supabase.storage.from("speaker-photos").getPublicUrl(path);
         return data?.publicUrl ? `${data.publicUrl}?t=${Date.now()}` : null;
@@ -384,25 +468,28 @@ export async function uploadSpeakerPhoto(id, file) {
     }
 }
 
-export async function uploadSpeakerAbstract(speakerId, sessionId, file) {
+export async function uploadSpeakerAbstract(speakerId, sessionId, file, eventSlug = null) {
     try {
-        // Support both (speakerId, sessionId, file) and (speakerId, file)
+        // Support both (speakerId, sessionId, file, eventSlug) and (speakerId, file, eventSlug)
         if (sessionId && !file && (sessionId instanceof File || sessionId instanceof Blob || sessionId?.name)) {
+            eventSlug = file || eventSlug;
             file = sessionId;
             sessionId = null;
         }
         if (!file) return null;
+const folder = resolveEventFolder(eventSlug);
         const ext = file.name ? file.name.split(".").pop().toLowerCase() : "pdf";
-        const path = sessionId ? `${speakerId}_${sessionId}.${ext}` : `${speakerId}.${ext}`;
+        const fileName = sessionId ? `${speakerId}_${sessionId}.${ext}` : `${speakerId}.${ext}`;
+        const path = `${folder}/${fileName}`;
 
         // Clean up prior file with different extension if replacing
         try {
             const prefix = sessionId ? `${speakerId}_${sessionId}` : `${speakerId}`;
-            const { data: existingFiles } = await supabase.storage.from("speaker-abstracts").list("", { search: prefix });
+            const { data: existingFiles } = await supabase.storage.from("speaker-abstracts").list(folder, { search: prefix });
             if (existingFiles && existingFiles.length > 0) {
                 const toRemove = existingFiles
-                    .filter(f => f.name.startsWith(prefix + ".") && f.name !== path)
-                    .map(f => f.name);
+                    .filter(f => f.name.startsWith(prefix + ".") && `${folder}/${f.name}` !== path)
+                    .map(f => `${folder}/${f.name}`);
                 if (toRemove.length > 0) {
                     await supabase.storage.from("speaker-abstracts").remove(toRemove);
                 }
@@ -410,7 +497,6 @@ export async function uploadSpeakerAbstract(speakerId, sessionId, file) {
         } catch (cleanupErr) {
             console.warn("Could not clean up prior abstract file:", cleanupErr);
         }
-
         const { error: uploadError } = await supabase.storage
             .from("speaker-abstracts")
             .upload(path, file, { upsert: true });
@@ -426,9 +512,10 @@ export async function uploadSpeakerAbstract(speakerId, sessionId, file) {
     }
 }
 
-export async function uploadSpeakerPeerCitePdf(id, file) {
+export async function uploadSpeakerPeerCitePdf(id, file, eventSlug = null) {
     try {
-        const path = `peercite_${id}.pdf`;
+        const folder = resolveEventFolder(eventSlug);
+        const path = `${folder}/peercite_${id}.pdf`;
         const { error: uploadError } = await supabase.storage
             .from("peercite_proceedings")
             .upload(path, file, { contentType: "application/pdf", upsert: true });
@@ -465,13 +552,14 @@ export async function uploadSpeakerPeerCitePdf(id, file) {
         return null;
     }
 }
-export async function deleteSpeakerPeerCitePdf(id) {
+export async function deleteSpeakerPeerCitePdf(id, eventSlug = null) {
     if (!id) return false;
     try {
         if (supabase) {
+            const folder = resolveEventFolder(eventSlug);
             const { error } = await supabase.storage
                 .from("peercite_proceedings")
-                .remove([`peercite_${id}.pdf`]);
+                .remove([`${folder}/peercite_${id}.pdf`, `peercite_${id}.pdf`]);
             if (error) throw error;
         }
         
@@ -486,44 +574,59 @@ export async function deleteSpeakerPeerCitePdf(id) {
     }
 }
 
-export async function getSpeakerPeerCitePdf(id) {
+export async function getSpeakerPeerCitePdf(id, eventSlug = null) {
     if (!id) return null;
 
     try {
         if (supabase) {
-            const { data, error } = await supabase.storage
-                .from("peercite_proceedings")
-                .list("", { search: `peercite_${id}.pdf` });
-            if (!error && data && data.length > 0) {
-                const searchLower = `peercite_${String(id).toLowerCase()}.pdf`;
-                const found = data.find(f => f.name.toLowerCase() === searchLower || f.name === `peercite_${id}.pdf`);
-                if (found) {
-                    const { data: urlData } = supabase.storage
-                        .from("peercite_proceedings")
-                        .getPublicUrl(found.name);
-                    const fileVersion = found.updated_at ? new Date(found.updated_at).getTime() : Date.now();
-                    const meta = {
-                        url: urlData?.publicUrl ? `${urlData.publicUrl}?t=${fileVersion}` : null,
-                        fileName: found.name || `PeerCite_${id}_Proceedings.pdf`,
-                        fileSize: found.metadata?.size ? (found.metadata.size / (1024 * 1024)).toFixed(2) + " MB" : "Official PDF",
-                        uploadedAt: found.created_at ? new Date(found.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "November 25, 2026",
-                        publisher: "PeerCite Academic Press",
-                        isbn: "978-981-18-9412-3",
-                        doi: `10.58921/peercite.wlwh.2026.${String(id).toLowerCase()}`
-                    };
-                    try {
-                        localStorage.setItem(`peercite_proceedings_${id}`, JSON.stringify(meta));
-                    } catch (e) {}
-                    return meta;
+            const folder = resolveEventFolder(eventSlug);
+            const searchLower = `peercite_${String(id).toLowerCase()}.pdf`;
+            const searchName = `peercite_${id}.pdf`;
+
+            // Search in event folder first, fallback to root
+            const foldersToSearch = [folder, ""];
+            let found = null;
+            let foundPath = null;
+
+            for (const fld of foldersToSearch) {
+                const { data, error } = await supabase.storage
+                    .from("peercite_proceedings")
+                    .list(fld, { search: searchName });
+                if (!error && data && data.length > 0) {
+                    const match = data.find(f => f.name.toLowerCase() === searchLower || f.name === searchName);
+                    if (match) {
+                        found = match;
+                        foundPath = fld ? `${fld}/${match.name}` : match.name;
+                        break;
+                    }
                 }
             }
-            // If checked in Supabase and no proceeding file exists, clear any stale local cache
-            if (!error) {
+
+            if (found && foundPath) {
+                const { data: urlData } = supabase.storage
+                    .from("peercite_proceedings")
+                    .getPublicUrl(foundPath);
+                const fileVersion = found.updated_at ? new Date(found.updated_at).getTime() : Date.now();
+                const meta = {
+                    url: urlData?.publicUrl ? `${urlData.publicUrl}?t=${fileVersion}` : null,
+                    fileName: found.name || `PeerCite_${id}_Proceedings.pdf`,
+                    fileSize: found.metadata?.size ? (found.metadata.size / (1024 * 1024)).toFixed(2) + " MB" : "Official PDF",
+                    uploadedAt: found.created_at ? new Date(found.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "November 25, 2026",
+                    publisher: "PeerCite Academic Press",
+                    isbn: "978-981-18-9412-3",
+                    doi: `10.58921/peercite.wlwh.2026.${String(id).toLowerCase()}`
+                };
                 try {
-                    localStorage.removeItem(`peercite_proceedings_${id}`);
+                    localStorage.setItem(`peercite_proceedings_${id}`, JSON.stringify(meta));
                 } catch (e) {}
-                return null;
+                return meta;
             }
+
+            // If checked in Supabase and no proceeding file exists, clear any stale local cache
+            try {
+                localStorage.removeItem(`peercite_proceedings_${id}`);
+            } catch (e) {}
+            return null;
         }
     } catch (e) {
         console.error("Error checking PeerCite PDF in storage:", e);
@@ -563,44 +666,70 @@ export function getAbstractsMap(abstractUrlString) {
     return {};
 }
 
-export async function getSpeakerAbstractData(speakerId) {
+export async function getSpeakerAbstractData(speakerId, eventSlug = null) {
     if (!speakerId) return null;
     try {
         if (supabase) {
-            // 1. Check speakers table row
-            const { data: speakerRow } = await supabase
-                .from("speakers")
-                .select("id, abstract_url, abstract_status")
-                .eq("id", speakerId)
-                .maybeSingle();
+            // 1. Check speakers / paris_speakers table row
+            const tables = eventSlug ? getEventTables(eventSlug) : null;
+            let speakerRow = null;
+            if (tables) {
+                const { data } = await supabase
+                    .from(tables.speakers)
+                    .select('id, abstract_url, abstract_status')
+                    .eq('id', speakerId)
+                    .maybeSingle();
+                speakerRow = data;
+            } else {
+                const { data: dRow } = await supabase
+                    .from('speakers')
+                    .select('id, abstract_url, abstract_status')
+                    .eq('id', speakerId)
+                    .maybeSingle();
+                if (dRow) {
+                    speakerRow = dRow;
+                } else {
+                    const { data: pRow } = await supabase
+                        .from('paris_speakers')
+                        .select('id, abstract_url, abstract_status')
+                        .eq('id', speakerId)
+                        .maybeSingle();
+                    speakerRow = pRow;
+                }
+            }
 
             const map = getAbstractsMap(speakerRow?.abstract_url);
 
-            // 2. Also check speaker-abstracts storage bucket for files belonging to this speaker
+            // 2. Also check speaker-abstracts storage bucket across event folder, opposite folder, and root
             try {
-                const { data: storageFiles } = await supabase.storage
-                    .from("speaker-abstracts")
-                    .list("", { search: speakerId });
-                if (storageFiles && storageFiles.length > 0) {
-                    const speakerFiles = storageFiles.filter(f => 
-                        f.name.startsWith(`${speakerId}.`) || 
-                        f.name.startsWith(`${speakerId}_`) ||
-                        f.name.toLowerCase().includes(String(speakerId).toLowerCase())
-                    );
-                    for (const f of speakerFiles) {
-                        const { data: urlData } = supabase.storage
-                            .from("speaker-abstracts")
-                            .getPublicUrl(f.name);
-                        if (urlData?.publicUrl) {
-                            const fileVersion = f.updated_at ? new Date(f.updated_at).getTime() : Date.now();
-                            const fullUrl = `${urlData.publicUrl}?t=${fileVersion}`;
-                            const nameWithoutExt = f.name.replace(/\.[^/.]+$/, "");
-                            const parts = nameWithoutExt.split("_");
-                            if (parts.length > 1 && parts[0] === speakerId) {
-                                const sessKey = parts.slice(1).join("_");
-                                if (!map[sessKey]) map[sessKey] = fullUrl;
-                            } else {
-                                if (!map.legacy) map.legacy = fullUrl;
+                const folder = resolveEventFolder(eventSlug);
+                const foldersToCheck = [folder, folder === "dubai" ? "paris" : "dubai", ""];
+                for (const fld of foldersToCheck) {
+                    const { data: storageFiles } = await supabase.storage
+                        .from("speaker-abstracts")
+                        .list(fld, { search: speakerId });
+                    if (storageFiles && storageFiles.length > 0) {
+                        const speakerFiles = storageFiles.filter(f => 
+                            f.name.startsWith(`${speakerId}.`) || 
+                            f.name.startsWith(`${speakerId}_`) ||
+                            f.name.toLowerCase().includes(String(speakerId).toLowerCase())
+                        );
+                        for (const f of speakerFiles) {
+                            const fullPath = fld ? `${fld}/${f.name}` : f.name;
+                            const { data: urlData } = supabase.storage
+                                .from("speaker-abstracts")
+                                .getPublicUrl(fullPath);
+                            if (urlData?.publicUrl) {
+                                const fileVersion = f.updated_at ? new Date(f.updated_at).getTime() : Date.now();
+                                const fullUrl = `${urlData.publicUrl}?t=${fileVersion}`;
+                                const nameWithoutExt = f.name.replace(/\.[^/.]+$/, "");
+                                const parts = nameWithoutExt.split("_");
+                                if (parts.length > 1 && parts[0] === speakerId) {
+                                    const sessKey = parts.slice(1).join("_");
+                                    if (!map[sessKey]) map[sessKey] = fullUrl;
+                                } else {
+                                    if (!map.legacy) map.legacy = fullUrl;
+                                }
                             }
                         }
                     }
@@ -623,14 +752,35 @@ export async function getSpeakerAbstractData(speakerId) {
 
 export async function fetchAllAbstractFiles() {
     try {
-        const { data, error } = await supabase.storage.from("speaker-abstracts").list('', {
-            limit: 1000,
-            offset: 0,
-            sortBy: { column: 'created_at', order: 'desc' }
-        });
-        if (error) throw error;
-        // Filter out the hidden placeholder file often created by Supabase
-        return (data || []).filter(f => f.name !== '.emptyFolderPlaceholder');
+        const [dubaiRes, parisRes, rootRes] = await Promise.allSettled([
+            supabase.storage.from("speaker-abstracts").list('dubai', { limit: 1000, sortBy: { column: 'created_at', order: 'desc' } }),
+            supabase.storage.from("speaker-abstracts").list('paris', { limit: 1000, sortBy: { column: 'created_at', order: 'desc' } }),
+            supabase.storage.from("speaker-abstracts").list('', { limit: 1000, sortBy: { column: 'created_at', order: 'desc' } })
+        ]);
+
+        const allFiles = [];
+        if (dubaiRes.status === "fulfilled" && Array.isArray(dubaiRes.value?.data)) {
+            dubaiRes.value.data.forEach(f => {
+                if (f.name !== '.emptyFolderPlaceholder') {
+                    allFiles.push({ ...f, path: `dubai/${f.name}`, event: 'dubai' });
+                }
+            });
+        }
+        if (parisRes.status === "fulfilled" && Array.isArray(parisRes.value?.data)) {
+            parisRes.value.data.forEach(f => {
+                if (f.name !== '.emptyFolderPlaceholder') {
+                    allFiles.push({ ...f, path: `paris/${f.name}`, event: 'paris' });
+                }
+            });
+        }
+        if (rootRes.status === "fulfilled" && Array.isArray(rootRes.value?.data)) {
+            rootRes.value.data.forEach(f => {
+                if (f.name !== '.emptyFolderPlaceholder' && f.name !== 'dubai' && f.name !== 'paris') {
+                    allFiles.push({ ...f, path: f.name, event: 'root' });
+                }
+            });
+        }
+        return allFiles;
     } catch (e) {
         console.error("Failed to list abstract files:", e);
         return [];
@@ -639,7 +789,11 @@ export async function fetchAllAbstractFiles() {
 
 export async function deleteAbstractFile(fileName) {
     try {
-        const { data, error } = await supabase.storage.from("speaker-abstracts").remove([fileName]);
+const pathsToDelete = [fileName];
+        if (!fileName.includes('/')) {
+            pathsToDelete.push(`dubai/${fileName}`, `paris/${fileName}`);
+        }
+        const { data, error } = await supabase.storage.from("speaker-abstracts").remove(pathsToDelete);
         if (error) {
             console.error("Failed to delete abstract file:", error);
             return { success: false, error: error.message };
@@ -656,20 +810,24 @@ export async function deleteAbstractFile(fileName) {
     }
 }
 
-export async function getSubmittedPeerCiteSpeakerIds() {
+export async function getSubmittedPeerCiteSpeakerIds(eventSlug = null) {
     try {
         if (!supabase) return new Set();
-        const { data, error } = await supabase.storage
-            .from("peercite_proceedings")
-            .list("", { limit: 1000 });
-        if (error || !data) return new Set();
-        const ids = data
-            .map(f => {
-                const match = f.name.match(/^peercite_(.*?)\.pdf$/i);
-                return match ? match[1].toUpperCase() : null;
-            })
-            .filter(Boolean);
-        return new Set(ids);
+        const folder = eventSlug ? resolveEventFolder(eventSlug) : null;
+        const foldersToList = folder ? [folder, ""] : ["dubai", "paris", ""];
+        const ids = new Set();
+        for (const fld of foldersToList) {
+            const { data, error } = await supabase.storage
+                .from("peercite_proceedings")
+                .list(fld, { limit: 1000 });
+            if (!error && data && Array.isArray(data)) {
+                data.forEach(f => {
+                    const match = f.name.match(/^peercite_(.*?)\.pdf$/i);
+                    if (match) ids.add(match[1].toUpperCase());
+                });
+            }
+        }
+        return ids;
     } catch (e) {
         console.error("Failed to list submitted peercite IDs:", e);
         return new Set();

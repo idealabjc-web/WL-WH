@@ -14,13 +14,14 @@ import { TIME_SLOTS, EVENT_DAYS, generatePortalToken, uploadSpeakerAbstract, upl
 import { supabase } from "../supabaseClient";
 import * as XLSX from "xlsx-js-style";
 import { slugify } from "../site/publicApi";
+import { getEventTables } from "../eventsConfig";
 
 
 
 import PhoneField from "../components/common/PhoneField";
 import CountryField from "../components/common/CountryField";
 
-function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, onRefresh, allSpeakers, isSpeaker = false, currentSpeaker = null }) {
+function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, onRefresh, allSpeakers, isSpeaker = false, currentSpeaker = null, currentEvent = null }) {
     const [isEditing, setIsEditing] = useState(false);
     const [form, setForm] = useState(speaker);
     const [saving, setSaving] = useState(false);
@@ -38,11 +39,11 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
 
     useEffect(() => {
         let isMounted = true;
-        getSpeakerPeerCitePdf(speaker.id).then(data => {
+        getSpeakerPeerCitePdf(speaker.id, speaker.eventSlug || currentEvent?.slug).then(data => {
             if (isMounted) setPeerciteData(data);
         });
         return () => { isMounted = false; };
-    }, [speaker.id]);
+    }, [speaker.id, speaker.eventSlug, currentEvent?.slug]);
 
     const handlePeerciteUpload = async (file) => {
         if (!file) return;
@@ -55,7 +56,7 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
             return;
         }
         setPeerciteUploading(true);
-        const res = await uploadSpeakerPeerCitePdf(speaker.id, file);
+        const res = await uploadSpeakerPeerCitePdf(speaker.id, file, speaker.eventSlug || currentEvent?.slug);
         setPeerciteUploading(false);
         if (res) {
             setPeerciteData(res);
@@ -69,7 +70,7 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
     const handleRemovePeercite = async () => {
         if (window.confirm("Are you sure you want to remove the PeerCite proceedings PDF for this speaker?")) {
             setPeerciteUploading(true);
-            const success = await deleteSpeakerPeerCitePdf(speaker.id);
+            const success = await deleteSpeakerPeerCitePdf(speaker.id, speaker.eventSlug || currentEvent?.slug);
             setPeerciteUploading(false);
             if (success) {
                 setPeerciteData(null);
@@ -162,12 +163,14 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                 if (!isNaN(key) && form.sessions && form.sessions[key]) {
                     sessionId = form.sessions[key].id || `session_${key}`;
                 }
+                const activeSlug = speaker.eventSlug || currentEvent?.slug;
                 try {
-                    const url = await uploadSpeakerAbstract(speaker.id, sessionId, file);
+                    const url = await uploadSpeakerAbstract(speaker.id, sessionId, file, activeSlug);
                     if (url) {
                         currentAbstracts[sessionId] = url;
                     }
                 } catch (uploadErr) {
+                    console.error('Failed to upload abstract for session', sessionId, uploadErr);
                     alert(`Failed to upload abstract for session ${sessionId}: ${uploadErr.message || 'Storage permission error'}`);
                 }
             }
@@ -183,7 +186,8 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
         // Upload photo file if one was selected
         if (photoFile) {
             setPhotoUploading(true);
-            const photoUrl = await uploadSpeakerPhoto(speaker.id, photoFile);
+            const activeSlug = speaker.eventSlug || currentEvent?.slug;
+            const photoUrl = await uploadSpeakerPhoto(speaker.id, photoFile, activeSlug);
             setPhotoUploading(false);
             if (photoUrl) {
                 updatedForm = { ...updatedForm, photoUrl: photoUrl };
@@ -214,14 +218,16 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
         // Existing speaker with no token yet — generate one and save it now.
         if (!token) {
             token = generatePortalToken();
+            const tables = getEventTables(speaker.eventSlug || currentEvent?.slug);
             await supabase
-                .from("speakers")
+                .from(tables.speakers)
                 .update({ portal_token: token })
                 .eq("id", speaker.id);
         }
 
         const speakerSlug = slugify(speaker.name || speaker.id);
-        const link = `${window.location.origin}/dubai-series/${speakerSlug}?s=${speaker.id}&t=${token}`;
+        const seriesSlug = (speaker.eventSlug === "paris" || currentEvent?.slug === "paris") ? "paris-series" : "dubai-series";
+        const link = `${window.location.origin}/${seriesSlug}/${speakerSlug}?s=${speaker.id}&t=${token}`;
         navigator.clipboard.writeText(link).then(() => {
             alert("Speaker portal link copied to clipboard:\n" + link);
         });
@@ -1018,7 +1024,7 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
     );
 }
 
-export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete, onUndoCheckout, isSpeaker = false, currentSpeaker = null }) {
+export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete, onUndoCheckout, isSpeaker = false, currentSpeaker = null, currentEvent = null }) {
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState("all");
     const [dayFilter, setDayFilter] = useState("all");
@@ -1146,6 +1152,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                 allSpeakers={speakers}
                                 isSpeaker={isSpeaker}
                                 currentSpeaker={currentSpeaker}
+                                currentEvent={currentEvent}
                             />
                         </div>
                     )}
@@ -1171,7 +1178,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                     <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100">
                         {isSpeaker ? "Conference Speakers & Schedule" : "All speakers"}{" "}
                         <span className="font-normal text-slate-500 text-xs sm:text-sm block sm:inline mt-0.5 sm:mt-0">
-                            — {isSpeaker ? "Live directory for WLWH Dubai 2026" : "live with ops team"}
+                            — {isSpeaker ? `Live directory for ${currentEvent?.fullName || "WLWH Conference"}` : `live with ${currentEvent?.shortName || "Dubai"} ops team`}
                         </span>
                     </h2>
 
@@ -1334,6 +1341,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                                 allSpeakers={speakers}
                                                 isSpeaker={isSpeaker}
                                                 currentSpeaker={currentSpeaker}
+                                                currentEvent={currentEvent}
                                             />
                                         </div>
                                     )}
@@ -1445,6 +1453,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                                                 allSpeakers={speakers}
                                                                 isSpeaker={isSpeaker}
                                                                 currentSpeaker={currentSpeaker}
+                                                                currentEvent={currentEvent}
                                                             />
                                                         </div>
                                                     </td>

@@ -4,30 +4,73 @@ export const formatDayHeader = (d) => {
     if (d.includes("26")) return "NOV26-DAY2";
     return d.toUpperCase().replace(/\s+/g, "");
 };
-import React, { useState, useMemo } from "react";
+
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { clearAllSessionSlots } from "../api/speakersApi";
-import { Calendar, UserPlus, X, ArrowRightLeft, UserMinus, Clock, LayoutList, Table as TableIcon, Download, ClipboardList, ClipboardCopy, ChevronDown, ChevronRight, Search, RotateCcw, AlertTriangle } from "lucide-react";
+import { 
+    Calendar, UserPlus, X, ArrowRightLeft, UserMinus, Clock, LayoutList, 
+    Table as TableIcon, Download, ClipboardList, ClipboardCopy, ChevronDown, 
+    ChevronRight, Search, RotateCcw, AlertTriangle, GripVertical, Sparkles, 
+    Users, Move, Check, ArrowRight
+} from "lucide-react";
 import { TIME_SLOTS, EVENT_DAYS } from "../api/speakersApi";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
 import AgendaPoster from "../components/AgendaPoster";
 
-export default function AgendaPage({ speakers, onUpdate, onRefresh, toast }) {
-    const [selectedRoom, setSelectedRoom] = useState("Room 1");
-    const [viewMode, setViewMode] = useState("calendar"); // "list" | "calendar"
+export default function AgendaPage({ speakers = [], onUpdate, onRefresh, toast, currentEvent = null }) {
+    const rooms = useMemo(() => {
+        if (currentEvent?.rooms && currentEvent.rooms.length > 0) {
+            return currentEvent.rooms.slice(0, 2);
+        }
+        return ["Room 1", "Room 2"];
+    }, [currentEvent]);
+
+    const eventDays = useMemo(() => {
+        if (currentEvent?.days && currentEvent.days.length > 0) {
+            return currentEvent.days;
+        }
+        return EVENT_DAYS;
+    }, [currentEvent]);
+
+    const columns = useMemo(() => {
+        return rooms.flatMap(room => eventDays.map(day => ({ room, day })));
+    }, [rooms, eventDays]);
+
+    const [selectedRoom, setSelectedRoom] = useState(rooms[0] || "Room 1");
+    const [viewMode, setViewMode] = useState("calendar"); // "list" | "calendar" | "poster" | "stats"
     
     // Stats view state
     const [statsAvailableOpen, setStatsAvailableOpen] = useState(true);
     const [statsFilledOpen, setStatsFilledOpen] = useState(false);
 
     // Modal state
-    const [slotAction, setSlotAction] = useState(null); // { type: 'assign', timeSlot } OR { type: 'manage', timeSlot, speaker } OR { type: 'move', timeSlot, speaker }
+    const [slotAction, setSlotAction] = useState(null); // { type: 'assign'|'manage'|'move'|'swap', timeSlot, speaker, day, room }
     const [moveState, setMoveState] = useState({ room: "", day: "", timeSlot: "" });
+    const [swapTargetSpeaker, setSwapTargetSpeaker] = useState(null);
 
-    const rooms = ["Room 1", "Room 2"];
+    // Unassigned drawer / panel state
+    const [unassignedDrawerOpen, setUnassignedDrawerOpen] = useState(false);
+    const [drawerSearch, setDrawerSearch] = useState("");
+
+    // Drag and Drop state
+    // draggingItem: { speaker, sourceSlot: { room, day, timeSlot } | null, isUnassigned: boolean }
+    const [draggingItem, setDraggingItem] = useState(null);
+    const [dragOverKey, setDragOverKey] = useState(null);
+
+    // Custom Right-Click Context Menu
+    const [contextMenu, setContextMenu] = useState(null); // { x, y, speaker, slot: { room, day, timeSlot } }
+
     const [searchQuery, setSearchQuery] = useState("");
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [resettingSlots, setResettingSlots] = useState(false);
+
+    // Close context menu on outside click
+    useEffect(() => {
+        const handleClickOutside = () => setContextMenu(null);
+        window.addEventListener("click", handleClickOutside);
+        return () => window.removeEventListener("click", handleClickOutside);
+    }, []);
 
     const handleClearAllSlots = async () => {
         setResettingSlots(true);
@@ -48,33 +91,42 @@ export default function AgendaPage({ speakers, onUpdate, onRefresh, toast }) {
         }
     };
 
-
     // Find speaker assigned to a specific slot
     const getSpeakerForSlot = (timeSlot, day, room = selectedRoom) => {
-        const normRoom = (r) => (r || "").trim();
+        const normRoom = (r) => (r || "").trim().toLowerCase();
+        const normDay = (d) => (d || "").trim().toLowerCase();
+
         return speakers.find(s => {
-            // Check sessions array first
             if (s.sessions && s.sessions.length > 0) {
                 return s.sessions.some(sess => {
                     const sessDay = sess.day;
                     const sessTime = sess.timeSlot || sess.time_slot;
                     const sessRoom = sess.conferenceRoom || sess.conference_room || sess.room;
                     
-                    // Only match if the slot is fully populated
                     if (!sessDay || !sessTime || !sessRoom) return false;
                     
-                    return normRoom(sessRoom) === normRoom(room) && 
-                           (sessDay === day || (day.includes("25") && (sessDay === "November 25" || sessDay === "Day 1" || sessDay === "NOV25-DAY1")) || (day.includes("26") && (sessDay === "November 26" || sessDay === "Day 2" || sessDay === "NOV26-DAY2"))) && 
-                           sessTime === timeSlot;
+                    const roomMatch = normRoom(sessRoom) === normRoom(room);
+                    const timeMatch = sessTime === timeSlot;
+                    const dayMatch = sessDay === day || 
+                        (day.includes("25") && (sessDay.includes("25") || sessDay.toLowerCase().includes("day 1") || sessDay.includes("DAY1"))) || 
+                        (day.includes("26") && (sessDay.includes("26") || sessDay.toLowerCase().includes("day 2") || sessDay.includes("DAY2"))) ||
+                        normDay(sessDay) === normDay(day);
+
+                    return roomMatch && timeMatch && dayMatch;
                 });
             }
             
             // Fallback for legacy top-level properties
             if (!s.day || !s.timeSlot || !s.conferenceRoom) return false;
             
-            return normRoom(s.conferenceRoom) === normRoom(room) && 
-                (s.day === day || (day.includes("25") && (s.day === "November 25" || s.day === "Day 1" || s.day === "NOV25-DAY1")) || (day.includes("26") && (s.day === "November 26" || s.day === "Day 2" || s.day === "NOV26-DAY2"))) && 
-                s.timeSlot === timeSlot;
+            const roomMatch = normRoom(s.conferenceRoom) === normRoom(room);
+            const timeMatch = s.timeSlot === timeSlot;
+            const dayMatch = s.day === day || 
+                (day.includes("25") && (s.day.includes("25") || s.day.toLowerCase().includes("day 1") || s.day.includes("DAY1"))) || 
+                (day.includes("26") && (s.day.includes("26") || s.day.toLowerCase().includes("day 2") || s.day.includes("DAY2"))) ||
+                normDay(s.day) === normDay(day);
+
+            return roomMatch && timeMatch && dayMatch;
         });
     };
 
@@ -90,6 +142,7 @@ export default function AgendaPage({ speakers, onUpdate, onRefresh, toast }) {
     const closeModal = () => {
         setSlotAction(null);
         setSearchQuery("");
+        setSwapTargetSpeaker(null);
     };
 
     // Filter unassigned speakers (those without any complete timeSlot/day/room)
@@ -114,30 +167,42 @@ export default function AgendaPage({ speakers, onUpdate, onRefresh, toast }) {
         });
     }, [unassignedSpeakers, searchQuery]);
 
+    const filteredDrawerUnassigned = useMemo(() => {
+        if (!drawerSearch.trim()) return unassignedSpeakers;
+        const q = drawerSearch.toLowerCase().trim();
+        return unassignedSpeakers.filter(s => {
+            const name = (s.name || "").toLowerCase();
+            const tag = (s.speakerTag || "").toLowerCase();
+            const title = (s.sessionTitle || (s.sessions && s.sessions[0]?.session_title) || "").toLowerCase();
+            return name.includes(q) || tag.includes(q) || title.includes(q);
+        });
+    }, [unassignedSpeakers, drawerSearch]);
 
-    const assignSpeakerToSlot = async (speaker) => {
+    // ─────────────────────────────────────────────────────────────
+    // SLOT MANIPULATION LOGIC (Assign, Remove, Move, Swap)
+    // ─────────────────────────────────────────────────────────────
+
+    // Direct assignment to a slot (from modal or drag & drop)
+    const handleAssignSpeakerDirect = async (speaker, targetSlot) => {
         const updatedSessions = [...(speaker.sessions || [])];
-        
-        // Find an empty session, or the one matching the current top-level properties (if legacy)
         let targetIndex = updatedSessions.findIndex(s => !s.time_slot && !s.day && !s.conference_room && !s.timeSlot && !s.conferenceRoom);
         if (targetIndex === -1) {
-            targetIndex = 0; // fallback to 0 or append
             if (updatedSessions.length === 0) {
                 updatedSessions.push({});
                 targetIndex = 0;
             } else if (updatedSessions[0].time_slot || updatedSessions[0].timeSlot) {
-                // If 0 is already occupied and we are assigning, we probably should push a new one, 
-                // but since the UI mostly assumes 1 session for simple assignment, we'll append.
                 updatedSessions.push({});
                 targetIndex = updatedSessions.length - 1;
+            } else {
+                targetIndex = 0;
             }
         }
 
         updatedSessions[targetIndex] = {
             ...updatedSessions[targetIndex],
-            day: slotAction.day,
-            timeSlot: slotAction.timeSlot,
-            conferenceRoom: slotAction.room || selectedRoom
+            day: targetSlot.day,
+            timeSlot: targetSlot.timeSlot,
+            conferenceRoom: targetSlot.room || selectedRoom
         };
 
         const firstSession = updatedSessions[0] || {};
@@ -149,7 +214,173 @@ export default function AgendaPage({ speakers, onUpdate, onRefresh, toast }) {
             conferenceRoom: firstSession.conferenceRoom || firstSession.conference_room || null
         });
         if (success) {
-            toast(`${speaker.name} assigned to ${slotAction.timeSlot}`);
+            toast(`${speaker.name} assigned to ${targetSlot.room} · ${targetSlot.day} · ${targetSlot.timeSlot}`);
+            if (onRefresh) onRefresh();
+            closeModal();
+        }
+        return success;
+    };
+
+    const assignSpeakerToSlot = async (speaker) => {
+        return handleAssignSpeakerDirect(speaker, {
+            room: slotAction.room || selectedRoom,
+            day: slotAction.day,
+            timeSlot: slotAction.timeSlot
+        });
+    };
+
+    const findSessionIndex = (sessions = [], slot = {}) => {
+        return sessions.findIndex(s => {
+            const timeMatch = (s.time_slot === slot.timeSlot || s.timeSlot === slot.timeSlot);
+            const dayMatch = s.day === slot.day ||
+                (slot.day && slot.day.includes("25") && s.day && s.day.includes("25")) ||
+                (slot.day && slot.day.includes("26") && s.day && s.day.includes("26"));
+            const roomMatch = !slot.room || s.conference_room === slot.room || s.conferenceRoom === slot.room;
+            return timeMatch && dayMatch && roomMatch;
+        });
+    };
+
+    // Move an assigned speaker to an empty slot
+    const handleMoveSpeaker = async (speaker, sourceSlot, targetSlot) => {
+        const updatedSessions = [...(speaker.sessions || [])];
+        const targetIndex = findSessionIndex(updatedSessions, sourceSlot);
+
+        if (targetIndex !== -1) {
+            updatedSessions[targetIndex] = {
+                ...updatedSessions[targetIndex],
+                day: targetSlot.day,
+                timeSlot: targetSlot.timeSlot,
+                conferenceRoom: targetSlot.room
+            };
+        } else {
+            if (updatedSessions.length === 0) updatedSessions.push({});
+            updatedSessions[0] = {
+                ...updatedSessions[0],
+                day: targetSlot.day,
+                timeSlot: targetSlot.timeSlot,
+                conferenceRoom: targetSlot.room
+            };
+        }
+
+        const firstSession = updatedSessions[0] || {};
+        const success = await onUpdate(speaker.id, {
+            ...speaker,
+            sessions: updatedSessions,
+            day: firstSession.day || null,
+            timeSlot: firstSession.timeSlot || firstSession.time_slot || null,
+            conferenceRoom: firstSession.conferenceRoom || firstSession.conference_room || null
+        });
+
+        if (success) {
+            toast(`Moved ${speaker.name} to ${targetSlot.room} · ${targetSlot.day} · ${targetSlot.timeSlot}`);
+            if (onRefresh) onRefresh();
+            closeModal();
+        }
+        return success;
+    };
+
+    // SWAP TWO SPEAKERS' SLOTS
+    const handleSwapSpeakers = async (speakerA, slotA, speakerB, slotB) => {
+        // 1. Prepare updated sessions for Speaker A (takes Slot B)
+        const sessionsA = [...(speakerA.sessions || [])];
+        const idxA = findSessionIndex(sessionsA, slotA);
+        if (idxA !== -1) {
+            sessionsA[idxA] = { ...sessionsA[idxA], day: slotB.day, timeSlot: slotB.timeSlot, conferenceRoom: slotB.room };
+        } else {
+            if (sessionsA.length === 0) sessionsA.push({});
+            sessionsA[0] = { ...(sessionsA[0] || {}), day: slotB.day, timeSlot: slotB.timeSlot, conferenceRoom: slotB.room };
+        }
+        const firstA = sessionsA[0] || {};
+
+        // 2. Prepare updated sessions for Speaker B (takes Slot A)
+        const sessionsB = [...(speakerB.sessions || [])];
+        const idxB = findSessionIndex(sessionsB, slotB);
+        if (idxB !== -1) {
+            sessionsB[idxB] = { ...sessionsB[idxB], day: slotA.day, timeSlot: slotA.timeSlot, conferenceRoom: slotA.room };
+        } else {
+            if (sessionsB.length === 0) sessionsB.push({});
+            sessionsB[0] = { ...(sessionsB[0] || {}), day: slotA.day, timeSlot: slotA.timeSlot, conferenceRoom: slotA.room };
+        }
+        const firstB = sessionsB[0] || {};
+
+        // 3. Save both to Supabase
+        const [resA, resB] = await Promise.all([
+            onUpdate(speakerA.id, {
+                ...speakerA,
+                sessions: sessionsA,
+                day: firstA.day || null,
+                timeSlot: firstA.timeSlot || firstA.time_slot || null,
+                conferenceRoom: firstA.conferenceRoom || firstA.conference_room || null
+            }),
+            onUpdate(speakerB.id, {
+                ...speakerB,
+                sessions: sessionsB,
+                day: firstB.day || null,
+                timeSlot: firstB.timeSlot || firstB.time_slot || null,
+                conferenceRoom: firstB.conferenceRoom || firstB.conference_room || null
+            })
+        ]);
+
+        if (resA && resB) {
+            toast(`Swapped ${speakerA.name} ⇄ ${speakerB.name}`);
+            if (onRefresh) onRefresh();
+            closeModal();
+        } else {
+            toast("Warning: Could not swap one or both speakers. Please refresh.");
+        }
+    };
+
+    // Swap when dragging an unassigned speaker onto an occupied slot (occupant becomes unassigned)
+    const handleSwapWithUnassigned = async (newSpeaker, oldSpeaker, targetSlot) => {
+        // Clear slot from oldSpeaker
+        const oldSessions = [...(oldSpeaker.sessions || [])];
+        const oldIdx = oldSessions.findIndex(s => 
+            (s.time_slot === targetSlot.timeSlot || s.timeSlot === targetSlot.timeSlot) &&
+            (s.day === targetSlot.day) &&
+            (!targetSlot.room || s.conference_room === targetSlot.room || s.conferenceRoom === targetSlot.room)
+        );
+        if (oldIdx !== -1) {
+            oldSessions.splice(oldIdx, 1);
+        } else if (oldSessions.length > 0) {
+            oldSessions[0] = { ...oldSessions[0], day: "", timeSlot: "", conferenceRoom: "" };
+        }
+        const oldFirst = oldSessions[0] || {};
+
+        // Assign to newSpeaker
+        const newSessions = [...(newSpeaker.sessions || [])];
+        let newIdx = newSessions.findIndex(s => !s.time_slot && !s.day && !s.conference_room);
+        if (newIdx === -1) {
+            newSessions.push({});
+            newIdx = newSessions.length - 1;
+        }
+        newSessions[newIdx] = {
+            ...newSessions[newIdx],
+            day: targetSlot.day,
+            timeSlot: targetSlot.timeSlot,
+            conferenceRoom: targetSlot.room
+        };
+        const newFirst = newSessions[0] || {};
+
+        const [resNew, resOld] = await Promise.all([
+            onUpdate(newSpeaker.id, {
+                ...newSpeaker,
+                sessions: newSessions,
+                day: newFirst.day || null,
+                timeSlot: newFirst.timeSlot || newFirst.time_slot || null,
+                conferenceRoom: newFirst.conferenceRoom || newFirst.conference_room || null
+            }),
+            onUpdate(oldSpeaker.id, {
+                ...oldSpeaker,
+                sessions: oldSessions,
+                day: oldFirst.day || null,
+                timeSlot: oldFirst.timeSlot || oldFirst.time_slot || null,
+                conferenceRoom: oldFirst.conferenceRoom || oldFirst.conference_room || null
+            })
+        ]);
+
+        if (resNew && resOld) {
+            toast(`Replaced ${oldSpeaker.name} with ${newSpeaker.name}. (${oldSpeaker.name} is now unassigned)`);
+            if (onRefresh) onRefresh();
             closeModal();
         }
     };
@@ -158,17 +389,11 @@ export default function AgendaPage({ speakers, onUpdate, onRefresh, toast }) {
         const { speaker, timeSlot, day, room } = slotAction;
         let updatedSessions = [...(speaker.sessions || [])];
         
-        // Find the specific session we are removing
-        const targetIndex = updatedSessions.findIndex(s => 
-            (s.time_slot === timeSlot || s.timeSlot === timeSlot) && 
-            (s.day === day) && 
-            (s.conference_room === room || s.conferenceRoom === room)
-        );
+        const targetIndex = findSessionIndex(updatedSessions, { timeSlot, day, room });
 
         if (targetIndex !== -1) {
             updatedSessions.splice(targetIndex, 1);
         } else if (updatedSessions.length > 0) {
-            // Fallback: just clear the first one if we couldn't match (shouldn't happen)
             updatedSessions[0] = {
                 ...updatedSessions[0],
                 day: "",
@@ -187,6 +412,7 @@ export default function AgendaPage({ speakers, onUpdate, onRefresh, toast }) {
         });
         if (success) {
             toast(`${speaker.name} removed from slot`);
+            if (onRefresh) onRefresh();
             closeModal();
         }
     };
@@ -201,46 +427,11 @@ export default function AgendaPage({ speakers, onUpdate, onRefresh, toast }) {
             toast("Please select an available time slot first.");
             return;
         }
-        const { speaker, timeSlot: oldTime, day: oldDay, room: oldRoom } = slotAction;
-        const updatedSessions = [...(speaker.sessions || [])];
-        
-        // Find the exact session we are moving
-        const targetIndex = updatedSessions.findIndex(s => 
-            (s.time_slot === oldTime || s.timeSlot === oldTime) && 
-            (s.day === oldDay) && 
-            (s.conference_room === oldRoom || s.conferenceRoom === oldRoom || oldRoom === undefined)
+        await handleMoveSpeaker(
+            slotAction.speaker, 
+            { room: slotAction.room || selectedRoom, day: slotAction.day, timeSlot: slotAction.timeSlot },
+            moveState
         );
-
-        if (targetIndex !== -1) {
-            updatedSessions[targetIndex] = {
-                ...updatedSessions[targetIndex],
-                day: moveState.day,
-                timeSlot: moveState.timeSlot,
-                conferenceRoom: moveState.room
-            };
-        } else {
-            // Fallback
-            if (updatedSessions.length === 0) updatedSessions.push({});
-            updatedSessions[0] = {
-                ...updatedSessions[0],
-                day: moveState.day,
-                timeSlot: moveState.timeSlot,
-                conferenceRoom: moveState.room
-            };
-        }
-
-        const firstSession = updatedSessions[0] || {};
-        const success = await onUpdate(speaker.id, {
-            ...speaker,
-            sessions: updatedSessions,
-            day: firstSession.day || null,
-            timeSlot: firstSession.timeSlot || firstSession.time_slot || null,
-            conferenceRoom: firstSession.conferenceRoom || firstSession.conference_room || null
-        });
-        if (success) {
-            toast(`${speaker.name} moved to ${moveState.timeSlot} on ${moveState.day} in ${moveState.room}`);
-            closeModal();
-        }
     };
 
     // Calculate all slots for the selected move room/day
@@ -253,29 +444,144 @@ export default function AgendaPage({ speakers, onUpdate, onRefresh, toast }) {
         });
     }, [speakers, moveState.room, moveState.day, slotAction]);
 
+    // ─────────────────────────────────────────────────────────────
+    // HTML5 DRAG AND DROP HANDLERS
+    // ─────────────────────────────────────────────────────────────
+
+    const handleDragStart = (e, speaker, sourceSlot, isUnassigned = false) => {
+        setDraggingItem({ speaker, sourceSlot, isUnassigned });
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", speaker.id);
+    };
+
+    const handleDragEnd = () => {
+        setDraggingItem(null);
+        setDragOverKey(null);
+    };
+
+    const handleDragOver = (e, targetSlot) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        const key = `${targetSlot.room}-${targetSlot.day}-${targetSlot.timeSlot}`;
+        if (dragOverKey !== key) {
+            setDragOverKey(key);
+        }
+    };
+
+    const handleDragLeave = (e, targetSlot) => {
+        const key = `${targetSlot.room}-${targetSlot.day}-${targetSlot.timeSlot}`;
+        if (dragOverKey === key) {
+            setDragOverKey(null);
+        }
+    };
+
+    const handleDrop = async (e, targetSlot, currentSpeakerInSlot) => {
+        e.preventDefault();
+        setDragOverKey(null);
+        if (!draggingItem) return;
+
+        const { speaker: draggedSpeaker, sourceSlot, isUnassigned } = draggingItem;
+        setDraggingItem(null);
+
+        // Dropped on the identical slot: do nothing
+        if (sourceSlot && 
+            sourceSlot.room === targetSlot.room && 
+            sourceSlot.day === targetSlot.day && 
+            sourceSlot.timeSlot === targetSlot.timeSlot) {
+            return;
+        }
+
+        if (currentSpeakerInSlot) {
+            // Target slot has a speaker -> SWAP
+            if (draggedSpeaker.id === currentSpeakerInSlot.id) return;
+
+            if (isUnassigned) {
+                await handleSwapWithUnassigned(draggedSpeaker, currentSpeakerInSlot, targetSlot);
+            } else {
+                await handleSwapSpeakers(draggedSpeaker, sourceSlot, currentSpeakerInSlot, targetSlot);
+            }
+        } else {
+            // Target slot is EMPTY -> MOVE or ASSIGN
+            if (isUnassigned) {
+                await handleAssignSpeakerDirect(draggedSpeaker, targetSlot);
+            } else {
+                await handleMoveSpeaker(draggedSpeaker, sourceSlot, targetSlot);
+            }
+        }
+    };
+
+    // Right-click context menu trigger
+    const handleContextMenu = (e, speaker, slot) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setContextMenu({
+            x: e.clientX,
+            y: e.clientY,
+            speaker,
+            slot
+        });
+    };
+
     return (
         <div className="p-4 sm:p-6 w-full max-w-none mx-auto animate-in fade-in duration-300 pb-24">
+            {/* Header & Quick Action Banner */}
             <div className="mb-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
                             <Calendar size={28} className="text-emerald-500" />
-                            Event Agenda
+                            Event Digital Agenda
                         </h1>
-                        <p className="text-slate-500 text-sm mt-1">Manage and assign speakers to available 30-minute time slots.</p>
+                        <p className="text-slate-500 text-sm mt-1">
+                            Drag &amp; drop speakers into empty slots to assign, or drop onto another speaker to swap their slots.
+                        </p>
                     </div>
-                    <button
-                        type="button"
-                        onClick={() => setShowResetConfirm(true)}
-                        className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-all shadow-sm w-fit"
-                    >
-                        <RotateCcw size={14} /> Clear All Day/Time Slots
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                        <button
+                            type="button"
+                            onClick={() => setUnassignedDrawerOpen(prev => !prev)}
+                            className={`inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all shadow-sm border ${
+                                unassignedDrawerOpen 
+                                    ? "bg-emerald-600 text-white border-emerald-700 shadow-emerald-600/20" 
+                                    : "bg-white text-slate-700 border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/50"
+                            }`}
+                        >
+                            <Users size={15} className={unassignedDrawerOpen ? "text-white" : "text-emerald-600"} />
+                            <span>Unassigned Speakers</span>
+                            <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-extrabold ${
+                                unassignedDrawerOpen ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-800"
+                            }`}>
+                                {unassignedSpeakers.length}
+                            </span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setShowResetConfirm(true)}
+                            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-all shadow-sm w-fit"
+                        >
+                            <RotateCcw size={14} /> Clear All Day/Time Slots
+                        </button>
+                    </div>
+                </div>
+
+                {/* Helpful Drag & Drop Tip Banner */}
+                <div className="mt-4 px-4 py-2.5 bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-200/80 rounded-xl text-xs text-slate-700 flex flex-wrap items-center justify-between gap-2 shadow-xs">
+                    <div className="flex items-center gap-2">
+                        <Sparkles size={16} className="text-emerald-600 shrink-0 animate-pulse" />
+                        <span>
+                            <strong>Drag &amp; Drop Enabled:</strong> Drag any speaker card onto an empty slot to place them, or drag onto an occupied slot (or right-click) to <strong>swap</strong> positions instantly.
+                        </span>
+                    </div>
+                    {draggingItem && (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600 text-white text-[11px] font-bold rounded-lg shadow-xs animate-bounce">
+                            <Move size={12} /> Dragging: {draggingItem.speaker.name}
+                        </span>
+                    )}
                 </div>
             </div>
 
-            {/* Controls (Room Filter) */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-8">
+            {/* Controls (Room Filter & View Toggle) */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
                 {viewMode !== "calendar" && (
                     <div className="flex bg-slate-100 p-1 rounded-xl">
                         {rooms.map(room => (
@@ -331,6 +637,74 @@ export default function AgendaPage({ speakers, onUpdate, onRefresh, toast }) {
                 </div>
             </div>
 
+            {/* UNASSIGNED SPEAKERS TRAY (Slide-out drawer when opened) */}
+            {unassignedDrawerOpen && (
+                <div className="mb-6 p-4 bg-white border-2 border-emerald-300 rounded-2xl shadow-lg animate-in slide-in-from-top-4 duration-200">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                                {unassignedSpeakers.length}
+                            </div>
+                            <div>
+                                <h3 className="font-extrabold text-slate-900 text-sm">Unassigned Speakers Dock</h3>
+                                <p className="text-[11px] text-slate-500">Drag any card below directly into an empty slot on the agenda grid.</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="relative w-full sm:w-64">
+                                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input
+                                    type="text"
+                                    value={drawerSearch}
+                                    onChange={(e) => setDrawerSearch(e.target.value)}
+                                    placeholder="Search unassigned..."
+                                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-900"
+                                />
+                            </div>
+                            <button
+                                onClick={() => setUnassignedDrawerOpen(false)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="pt-3">
+                        {filteredDrawerUnassigned.length === 0 ? (
+                            <div className="text-center py-6 text-slate-400 text-xs italic">
+                                {drawerSearch ? "No matching unassigned speakers found." : "All registered speakers are assigned to slots!"}
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 max-h-[220px] overflow-y-auto pr-1">
+                                {filteredDrawerUnassigned.map(s => (
+                                    <div
+                                        key={s.id}
+                                        draggable={true}
+                                        onDragStart={(e) => handleDragStart(e, s, null, true)}
+                                        onDragEnd={handleDragEnd}
+                                        className="group flex items-center gap-2.5 p-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 cursor-grab active:cursor-grabbing transition-all shadow-2xs hover:shadow-sm"
+                                        title="Drag onto an empty slot to assign, or onto a speaker to replace"
+                                    >
+                                        <GripVertical size={14} className="text-slate-300 group-hover:text-emerald-500 shrink-0" />
+                                        <SpeakerAvatar src={s.photoUrl} size={30} />
+                                        <div className="flex-1 min-w-0">
+                                            <div className="font-bold text-slate-900 text-xs truncate group-hover:text-emerald-950">{s.name}</div>
+                                            <div className="text-[10px] text-emerald-700 font-semibold uppercase tracking-wide truncate">
+                                                {s.speakerTag || "Speaker"}
+                                            </div>
+                                        </div>
+                                        <span className="text-[10px] font-bold text-slate-400 group-hover:text-emerald-600 bg-white px-1.5 py-0.5 rounded border border-slate-200 shrink-0">
+                                            Drag
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
             {/* Agenda Grid */}
             {viewMode === "stats" ? (
                 <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 overflow-hidden">
@@ -341,7 +715,7 @@ export default function AgendaPage({ speakers, onUpdate, onRefresh, toast }) {
                                 onClick={() => {
                                     let text = `Available Slots - ${selectedRoom}\n=========================\n\n`;
                                     let total = 0;
-                                    EVENT_DAYS.forEach(day => {
+                                    eventDays.forEach(day => {
                                         text += `--- ${day} ---\n`;
                                         let dayAvailable = [];
                                         TIME_SLOTS.forEach(slot => {
@@ -362,7 +736,7 @@ export default function AgendaPage({ speakers, onUpdate, onRefresh, toast }) {
                                     navigator.clipboard.writeText(text);
                                     toast("Available slots copied to clipboard!");
                                 }}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-colors shadow-sm"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-colors shadow-sm text-xs"
                             >
                                 <ClipboardCopy size={16} /> Copy Available (Text)
                             </button>
@@ -370,7 +744,7 @@ export default function AgendaPage({ speakers, onUpdate, onRefresh, toast }) {
                                 onClick={() => {
                                     let text = `Filled Slots - ${selectedRoom}\n=========================\n\n`;
                                     let total = 0;
-                                    EVENT_DAYS.forEach(day => {
+                                    eventDays.forEach(day => {
                                         text += `--- ${day} ---\n`;
                                         let dayFilled = [];
                                         TIME_SLOTS.forEach(slot => {
@@ -392,96 +766,10 @@ export default function AgendaPage({ speakers, onUpdate, onRefresh, toast }) {
                                     navigator.clipboard.writeText(text);
                                     toast("Filled slots copied to clipboard!");
                                 }}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-colors shadow-sm"
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-colors shadow-sm text-xs"
                             >
                                 <ClipboardCopy size={16} /> Copy Filled (Text)
                             </button>
-                        </div>
-                    </div>
-                    
-                    <div className="flex flex-col gap-8">
-                        {/* Beautiful Available Slots Panel */}
-                        <div className="flex flex-col bg-emerald-50/50 rounded-2xl p-6 border border-emerald-100">
-                            <button 
-                                onClick={() => setStatsAvailableOpen(!statsAvailableOpen)}
-                                className="text-xl font-extrabold text-emerald-900 mb-2 flex items-center justify-between w-full border-b border-emerald-200/60 pb-3 hover:opacity-80 transition-opacity cursor-pointer"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <span className="w-4 h-4 rounded-full bg-emerald-500 shadow-sm shadow-emerald-200"></span>
-                                    Available Slots
-                                </div>
-                                {statsAvailableOpen ? <ChevronDown size={24} className="text-emerald-700" /> : <ChevronRight size={24} className="text-emerald-700" />}
-                            </button>
-                            
-                            {statsAvailableOpen && (
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
-                                    {EVENT_DAYS.map(day => {
-                                    const available = TIME_SLOTS.filter(slot => !slot.toLowerCase().includes("lunch") && !getSpeakerForSlot(slot, day, selectedRoom));
-                                    return (
-                                        <div key={day} className="bg-white rounded-xl p-4 shadow-sm border border-emerald-100">
-                                            <h4 className="font-bold text-emerald-800 mb-3 text-sm uppercase tracking-wider">{day}</h4>
-                                            {available.length > 0 ? (
-                                                <div className="flex flex-wrap gap-2">
-                                                    {available.map(slot => (
-                                                        <span key={slot} className="bg-emerald-100 text-emerald-700 text-xs font-bold px-3 py-1.5 rounded-lg border border-emerald-200">
-                                                            {slot}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <p className="text-slate-400 text-sm italic">Fully booked!</p>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Beautiful Filled Slots Panel */}
-                        <div className="flex flex-col bg-blue-50/50 rounded-2xl p-6 border border-blue-100">
-                            <button 
-                                onClick={() => setStatsFilledOpen(!statsFilledOpen)}
-                                className="text-xl font-extrabold text-blue-900 mb-2 flex items-center justify-between w-full border-b border-blue-200/60 pb-3 hover:opacity-80 transition-opacity cursor-pointer"
-                            >
-                                <div className="flex items-center gap-3">
-                                    <span className="w-4 h-4 rounded-full bg-blue-500 shadow-sm shadow-blue-200"></span>
-                                    Filled Slots
-                                </div>
-                                {statsFilledOpen ? <ChevronDown size={24} className="text-blue-700" /> : <ChevronRight size={24} className="text-blue-700" />}
-                            </button>
-                            
-                            {statsFilledOpen && (
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
-                                    {EVENT_DAYS.map(day => {
-                                    const filled = TIME_SLOTS.filter(slot => !slot.toLowerCase().includes("lunch") && getSpeakerForSlot(slot, day, selectedRoom));
-                                    return (
-                                        <div key={day} className="bg-white rounded-xl p-4 shadow-sm border border-blue-100">
-                                            <h4 className="font-bold text-blue-800 mb-3 text-sm uppercase tracking-wider">{day}</h4>
-                                            {filled.length > 0 ? (
-                                                <div className="flex flex-col gap-2">
-                                                    {filled.map(slot => {
-                                                        const speaker = getSpeakerForSlot(slot, day, selectedRoom);
-                                                        return (
-                                                            <div key={slot} className="flex items-center gap-3 bg-slate-50 p-2 rounded-lg border border-slate-100 hover:bg-white hover:shadow-sm transition-all">
-                                                                <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded-md shrink-0">
-                                                                    {slot}
-                                                                </span>
-                                                                <span className="text-sm font-semibold text-slate-700 truncate">
-                                                                    {speaker.name}
-                                                                </span>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            ) : (
-                                                <p className="text-slate-400 text-sm italic">No slots filled yet.</p>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
@@ -490,110 +778,146 @@ export default function AgendaPage({ speakers, onUpdate, onRefresh, toast }) {
             ) : viewMode === "list" ? (
                 <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                     <div className="divide-y divide-slate-100">
-                        {EVENT_DAYS.flatMap(day => TIME_SLOTS.map(slot => ({ day, slot }))).map(item => {
+                        {eventDays.flatMap(day => TIME_SLOTS.map(slot => ({ day, slot }))).map(item => {
                             const { day, slot } = item;
-                            const speaker = getSpeakerForSlot(slot, day);
+                            const speaker = getSpeakerForSlot(slot, day, selectedRoom);
                             const isLunch = slot.toLowerCase().includes("lunch");
-                            const key = `${day}-${slot}`;
+                            const key = `${selectedRoom}-${day}-${slot}`;
+                            const isDropTarget = dragOverKey === key;
 
-                        if (isLunch) {
-                            return (
-                                <div key={key} className="p-4 bg-slate-50 flex items-center justify-center gap-3">
-                                    <Clock size={16} className="text-slate-400" />
-                                    <span className="font-bold text-slate-600 tracking-wide text-sm">{slot}</span>
-                                    <span className="text-xs font-bold text-emerald-600 uppercase tracking-wide ml-2 bg-emerald-100 px-2 py-0.5 rounded-full">{day}</span>
-                                </div>
-                            );
-                        }
-
-                        return (
-                            <div key={key} className="flex flex-col sm:flex-row sm:items-center p-4 hover:bg-slate-50/50 transition-colors gap-4">
-                                <div className="sm:w-48 shrink-0 flex flex-col gap-1">
-                                    <div className="font-semibold text-slate-700 flex items-center gap-2">
+                            if (isLunch) {
+                                return (
+                                    <div key={key} className="p-4 bg-slate-50 flex items-center justify-center gap-3">
                                         <Clock size={16} className="text-slate-400" />
-                                        {slot}
+                                        <span className="font-bold text-slate-600 tracking-wide text-sm">{slot}</span>
+                                        <span className="text-xs font-bold text-emerald-600 uppercase tracking-wide ml-2 bg-emerald-100 px-2 py-0.5 rounded-full">{day}</span>
                                     </div>
-                                    <div className="text-xs font-bold text-emerald-600 uppercase tracking-wide">
-                                        {day}
+                                );
+                            }
+
+                            return (
+                                <div 
+                                    key={key} 
+                                    onDragOver={(e) => handleDragOver(e, { room: selectedRoom, day, timeSlot: slot })}
+                                    onDragLeave={(e) => handleDragLeave(e, { room: selectedRoom, day, timeSlot: slot })}
+                                    onDrop={(e) => handleDrop(e, { room: selectedRoom, day, timeSlot: slot }, speaker)}
+                                    className={`flex flex-col sm:flex-row sm:items-center p-4 transition-all gap-4 ${
+                                        isDropTarget 
+                                            ? speaker 
+                                                ? "bg-amber-100/70 border-2 border-dashed border-amber-500 scale-[1.01]" 
+                                                : "bg-emerald-100/70 border-2 border-dashed border-emerald-500 scale-[1.01]"
+                                            : "hover:bg-slate-50/50"
+                                    }`}
+                                >
+                                    <div className="sm:w-48 shrink-0 flex flex-col gap-1">
+                                        <div className="font-semibold text-slate-700 flex items-center gap-2">
+                                            <Clock size={16} className="text-slate-400" />
+                                            {slot}
+                                        </div>
+                                        <div className="text-xs font-bold text-emerald-600 uppercase tracking-wide">
+                                            {day}
+                                        </div>
                                     </div>
-                                </div>
-                                
-                                <div className="flex-1">
-                                    {speaker ? (
-                                        <div 
-                                            onClick={() => handleManageClick(slot, speaker, day)}
-                                            className="group flex items-center justify-between p-3 rounded-xl border border-emerald-200 bg-emerald-50 hover:border-emerald-300 hover:bg-emerald-100 cursor-pointer transition-all"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <SpeakerAvatar src={speaker.photoUrl} size={36} />
-                                                <div>
-                                                    <div className="font-bold text-slate-900">{speaker.name}</div>
-                                                    <div className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">
-                                                        {speaker.speakerTag || "Speaker"}
+                                    
+                                    <div className="flex-1">
+                                        {speaker ? (
+                                            <div 
+                                                draggable={true}
+                                                onDragStart={(e) => handleDragStart(e, speaker, { room: selectedRoom, day, timeSlot: slot }, false)}
+                                                onDragEnd={handleDragEnd}
+                                                onClick={() => handleManageClick(slot, speaker, day, selectedRoom)}
+                                                onContextMenu={(e) => handleContextMenu(e, speaker, { room: selectedRoom, day, timeSlot: slot })}
+                                                className={`group flex items-center justify-between p-3 rounded-xl border border-emerald-200 bg-emerald-50 hover:border-emerald-300 hover:bg-emerald-100 cursor-grab active:cursor-grabbing transition-all ${
+                                                    draggingItem?.speaker.id === speaker.id ? "opacity-40 ring-2 ring-emerald-500" : ""
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <GripVertical size={16} className="text-slate-300 group-hover:text-emerald-600 shrink-0" />
+                                                    <SpeakerAvatar src={speaker.photoUrl} size={36} />
+                                                    <div>
+                                                        <div className="font-bold text-slate-900">{speaker.name}</div>
+                                                        <div className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">
+                                                            {speaker.speakerTag || "Speaker"}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    {isDropTarget && (
+                                                        <span className="text-[11px] font-extrabold text-amber-800 bg-amber-200 px-2 py-0.5 rounded-md animate-pulse">
+                                                            ⇄ Drop to SWAP
+                                                        </span>
+                                                    )}
+                                                    <div className="text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <ArrowRightLeft size={18} />
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <ArrowRightLeft size={18} />
+                                        ) : (
+                                            <div 
+                                                onClick={() => handleAssignClick(slot, day, selectedRoom)}
+                                                className={`flex items-center justify-between p-3 rounded-xl border border-dashed transition-all cursor-pointer ${
+                                                    isDropTarget 
+                                                        ? "border-emerald-500 bg-emerald-100 text-emerald-800 font-bold scale-[1.01]" 
+                                                        : "border-slate-300 hover:border-amber-400 hover:bg-amber-50 text-slate-500 hover:text-amber-700"
+                                                }`}
+                                            >
+                                                <div className="font-medium flex items-center gap-2">
+                                                    <UserPlus size={18} />
+                                                    {isDropTarget ? "✓ Drop speaker here to assign" : "Available Slot"}
+                                                </div>
+                                                <span className="text-xs font-bold bg-slate-100 px-2 py-1 rounded-md text-slate-600">
+                                                    {isDropTarget ? "Drop" : "Assign"}
+                                                </span>
                                             </div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            ) : (
+                /* CALENDAR GRID VIEW */
+                <div className="space-y-8">
+                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-x-auto">
+                        <div style={{ minWidth: columns.length > 4 ? `${columns.length * 200}px` : "100%" }}>
+                            <div className="hidden md:flex flex-col border-b border-slate-100 bg-slate-50/50">
+                                <div className="grid divide-x divide-slate-200 border-b border-slate-200" style={{ gridTemplateColumns: `repeat(${rooms.length}, minmax(0, 1fr))` }}>
+                                    {rooms.map((room, rIdx) => (
+                                        <div key={room} className={`p-3 font-extrabold text-center text-sm uppercase tracking-wider ${rIdx === 0 ? "text-emerald-800 bg-emerald-50" : "text-blue-800 bg-blue-50"}`}>
+                                            {room}
                                         </div>
-                                    ) : (
-                                        <div 
-                                            onClick={() => handleAssignClick(slot, day)}
-                                            className="flex items-center justify-between p-3 rounded-xl border border-dashed border-slate-300 hover:border-amber-400 hover:bg-amber-50 cursor-pointer transition-all text-slate-500 hover:text-amber-700"
-                                        >
-                                            <div className="font-medium flex items-center gap-2">
-                                                <UserPlus size={18} />
-                                                Available Slot
-                                            </div>
-                                            <span className="text-xs font-bold bg-slate-100 px-2 py-1 rounded-md text-slate-600">Assign</span>
+                                    ))}
+                                </div>
+                                <div className="grid divide-x divide-slate-100" style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}>
+                                    {columns.map((col, idx) => (
+                                        <div key={idx} className={`p-2 font-bold text-center text-xs ${col.room === rooms[0] ? "text-emerald-600 bg-emerald-50/50" : "text-blue-600 bg-blue-50/50"}`}>
+                                            {formatDayHeader(col.day)}
                                         </div>
-                                    )}
+                                    ))}
                                 </div>
                             </div>
-                        );
-                    })}
-                </div>
-            </div>
-            ) : (
-                <div className="space-y-8">
-                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-                        <div className="hidden md:flex flex-col border-b border-slate-100 bg-slate-50/50">
-                            <div className="grid grid-cols-2 divide-x divide-slate-200 border-b border-slate-200">
-                                <div className="p-3 font-extrabold text-emerald-800 bg-emerald-50 text-center text-sm uppercase tracking-wider">Room 1</div>
-                                <div className="p-3 font-extrabold text-blue-800 bg-blue-50 text-center text-sm uppercase tracking-wider">Room 2</div>
-                            </div>
-                            <div className="grid grid-cols-4 divide-x divide-slate-100">
-                                <div className="p-2 font-bold text-emerald-600 text-center text-xs bg-emerald-50/50">{formatDayHeader(EVENT_DAYS[0])}</div>
-                                <div className="p-2 font-bold text-emerald-600 text-center text-xs bg-emerald-50/50">{formatDayHeader(EVENT_DAYS[1])}</div>
-                                <div className="p-2 font-bold text-blue-600 text-center text-xs bg-blue-50/50">{formatDayHeader(EVENT_DAYS[0])}</div>
-                                <div className="p-2 font-bold text-blue-600 text-center text-xs bg-blue-50/50">{formatDayHeader(EVENT_DAYS[1])}</div>
-                            </div>
-                        </div>
-                        <div className="divide-y divide-slate-100">
-                            {TIME_SLOTS.map(slot => {
-                                const isLunch = slot.toLowerCase().includes("lunch");
-                                if (isLunch) {
+
+                            <div className="divide-y divide-slate-100">
+                                {TIME_SLOTS.map(slot => {
+                                    const isLunch = slot.toLowerCase().includes("lunch");
+                                    if (isLunch) {
+                                        return (
+                                            <div key={slot} className="p-4 bg-slate-50 flex items-center justify-center gap-3">
+                                                <Clock size={16} className="text-slate-400" />
+                                                <span className="font-bold text-slate-600 tracking-wide text-sm">{slot}</span>
+                                            </div>
+                                        );
+                                    }
+
                                     return (
-                                        <div key={slot} className="p-4 bg-slate-50 flex items-center justify-center gap-3">
-                                            <Clock size={16} className="text-slate-400" />
-                                            <span className="font-bold text-slate-600 tracking-wide text-sm">{slot}</span>
-                                        </div>
-                                    );
-                                }
-
-                                const columns = [
-                                    { room: "Room 1", day: EVENT_DAYS[0] },
-                                    { room: "Room 1", day: EVENT_DAYS[1] },
-                                    { room: "Room 2", day: EVENT_DAYS[0] },
-                                    { room: "Room 2", day: EVENT_DAYS[1] },
-                                ];
-
-                                return (
-                                    <div key={slot} className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-100">
-                                        {columns.map((col, idx) => {
+                                        <div key={slot} className="grid divide-y md:divide-y-0 md:divide-x divide-slate-100" style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}>
+                                        {columns.map((col) => {
                                             const speaker = getSpeakerForSlot(slot, col.day, col.room);
-                                            const isRoom2 = col.room === "Room 2";
+                                            const isRoom2 = col.room === rooms[1];
+                                            const key = `${col.room}-${col.day}-${slot}`;
+                                            const isDropTarget = dragOverKey === key;
+
                                             const cardBgCls = isRoom2 
                                                 ? "border border-blue-300 bg-gradient-to-br from-blue-100 via-blue-50 to-indigo-100 shadow-sm hover:shadow-md hover:border-blue-400 hover:from-blue-200 hover:to-indigo-200" 
                                                 : "border border-emerald-300 bg-gradient-to-br from-emerald-100 via-emerald-50 to-teal-100 shadow-sm hover:shadow-md hover:border-emerald-400 hover:from-emerald-200 hover:to-teal-200";
@@ -601,49 +925,93 @@ export default function AgendaPage({ speakers, onUpdate, onRefresh, toast }) {
                                             const iconCls = isRoom2 ? "text-blue-600" : "text-emerald-600";
                                             const tagCls = isRoom2 ? "text-blue-700" : "text-emerald-700";
                                             const dividerCls = isRoom2 ? "border-blue-200" : "border-emerald-200";
+
                                             const emptyCardCls = isRoom2
                                                 ? "border border-dashed border-blue-200 bg-transparent hover:border-blue-400 hover:bg-blue-50/50 text-blue-400/80 hover:text-blue-700"
                                                 : "border border-dashed border-emerald-200 bg-transparent hover:border-emerald-400 hover:bg-emerald-50/50 text-emerald-400/80 hover:text-emerald-700";
 
                                             if (speaker) {
+                                                const isBeingDragged = draggingItem?.speaker.id === speaker.id;
                                                 return (
-                                                    <div key={`${col.room}-${col.day}`} className="p-2 relative">
+                                                    <div 
+                                                        key={key} 
+                                                        onDragOver={(e) => handleDragOver(e, { room: col.room, day: col.day, timeSlot: slot })}
+                                                        onDragLeave={(e) => handleDragLeave(e, { room: col.room, day: col.day, timeSlot: slot })}
+                                                        onDrop={(e) => handleDrop(e, { room: col.room, day: col.day, timeSlot: slot }, speaker)}
+                                                        className={`p-2 relative transition-all ${
+                                                            isDropTarget ? "bg-amber-100/60 ring-2 ring-amber-500 rounded-xl" : ""
+                                                        }`}
+                                                    >
                                                         <div className="md:hidden text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 ml-1">{col.room} - {formatDayHeader(col.day)}</div>
                                                         <div 
+                                                            draggable={true}
+                                                            onDragStart={(e) => handleDragStart(e, speaker, { room: col.room, day: col.day, timeSlot: slot }, false)}
+                                                            onDragEnd={handleDragEnd}
                                                             onClick={() => handleManageClick(slot, speaker, col.day, col.room)}
-                                                            className={`group flex flex-col h-full p-3 rounded-xl border cursor-pointer transition-all relative ${cardBgCls}`}
+                                                            onContextMenu={(e) => handleContextMenu(e, speaker, { room: col.room, day: col.day, timeSlot: slot })}
+                                                            className={`group flex flex-col h-full p-3 rounded-xl border cursor-grab active:cursor-grabbing transition-all relative ${cardBgCls} ${
+                                                                isBeingDragged ? "opacity-30 ring-2 ring-emerald-500" : ""
+                                                            } ${isDropTarget ? "scale-[1.03] shadow-lg border-amber-500" : ""}`}
+                                                            title="Drag onto another slot to swap or move. Right-click for quick actions."
                                                         >
-                                                            <div className={`flex items-center gap-1.5 mb-2 border-b pb-1.5 ${dividerCls}`}>
-                                                                <Clock size={12} className={iconCls} />
-                                                                <span className={`text-[10px] font-bold ${timeTextCls}`}>{slot}</span>
+                                                            <div className={`flex items-center justify-between mb-2 border-b pb-1.5 ${dividerCls}`}>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <Clock size={12} className={iconCls} />
+                                                                    <span className={`text-[10px] font-bold ${timeTextCls}`}>{slot}</span>
+                                                                </div>
+                                                                <GripVertical size={12} className="text-slate-400 opacity-60 group-hover:opacity-100 transition-opacity" />
                                                             </div>
-                                                            <div className="flex items-start gap-3">
+                                                            <div className="flex items-start gap-2.5">
                                                                 <SpeakerAvatar src={speaker.photoUrl} size={32} />
                                                                 <div className="flex-1 min-w-0">
-                                                                    <div className="font-bold text-slate-900 text-sm truncate">{speaker.name}</div>
+                                                                    <div className="font-bold text-slate-900 text-xs sm:text-sm truncate">{speaker.name}</div>
                                                                     <div className={`text-[10px] font-semibold uppercase tracking-wide truncate ${tagCls}`}>
                                                                         {speaker.speakerTag || "Speaker"}
                                                                     </div>
                                                                 </div>
-                                                                <ArrowRightLeft size={14} className={`${iconCls} opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-1`} />
                                                             </div>
+
+                                                            {/* Drop indicator banner */}
+                                                            {isDropTarget && (
+                                                                <div className="mt-2 text-center py-1 bg-amber-500 text-white rounded text-[10px] font-black tracking-wide uppercase shadow-xs animate-pulse">
+                                                                    ⇄ Drop to SWAP
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 );
                                             } else {
                                                 return (
-                                                    <div key={`${col.room}-${col.day}`} className="p-2 relative">
+                                                    <div 
+                                                        key={key} 
+                                                        onDragOver={(e) => handleDragOver(e, { room: col.room, day: col.day, timeSlot: slot })}
+                                                        onDragLeave={(e) => handleDragLeave(e, { room: col.room, day: col.day, timeSlot: slot })}
+                                                        onDrop={(e) => handleDrop(e, { room: col.room, day: col.day, timeSlot: slot }, null)}
+                                                        className={`p-2 relative transition-all ${
+                                                            isDropTarget ? "bg-emerald-100/60 ring-2 ring-emerald-500 rounded-xl" : ""
+                                                        }`}
+                                                    >
                                                         <div className="md:hidden text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 ml-1">{col.room} - {formatDayHeader(col.day)}</div>
                                                         <div 
                                                             onClick={() => handleAssignClick(slot, col.day, col.room)}
-                                                            className={`group flex flex-col items-center justify-center h-full min-h-[70px] p-2 rounded-xl cursor-pointer transition-all relative ${emptyCardCls}`}
+                                                            className={`group flex flex-col items-center justify-center h-full min-h-[76px] p-2 rounded-xl cursor-pointer transition-all relative ${
+                                                                isDropTarget 
+                                                                    ? "border-2 border-dashed border-emerald-500 bg-emerald-100 text-emerald-800 scale-[1.02] shadow-md font-bold" 
+                                                                    : emptyCardCls
+                                                            }`}
                                                         >
-                                                            <div className={`absolute top-2 left-2 flex items-center gap-1 ${isRoom2 ? 'text-blue-400/80 group-hover:text-blue-600' : 'text-emerald-400/80 group-hover:text-emerald-600'} transition-colors`}>
+                                                            <div className={`absolute top-2 left-2 flex items-center gap-1 ${
+                                                                isDropTarget 
+                                                                    ? "text-emerald-700 font-bold" 
+                                                                    : (isRoom2 ? 'text-blue-400/80 group-hover:text-blue-600' : 'text-emerald-400/80 group-hover:text-emerald-600')
+                                                            } transition-colors`}>
                                                                 <Clock size={10} />
                                                                 <span className="text-[10px] font-bold">{slot}</span>
                                                             </div>
-                                                            <UserPlus size={18} className="mb-1 mt-4" />
-                                                            <span className="text-[11px] font-bold uppercase tracking-wider">Assign</span>
+                                                            <UserPlus size={18} className="mb-1 mt-3" />
+                                                            <span className="text-[11px] font-bold uppercase tracking-wider">
+                                                                {isDropTarget ? "Drop to Assign" : "Assign"}
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 );
@@ -653,11 +1021,87 @@ export default function AgendaPage({ speakers, onUpdate, onRefresh, toast }) {
                                 );
                             })}
                         </div>
+                        </div>
                     </div>
                 </div>
             )}
 
-            {/* Modals rendered directly into document.body to ensure true fixed overlay without parent transform interference */}
+            {/* FLOATING RIGHT-CLICK CONTEXT MENU */}
+            {contextMenu && createPortal(
+                <div 
+                    className="fixed z-[10000] bg-white rounded-xl shadow-2xl border border-slate-200 py-1.5 w-60 text-xs animate-in fade-in zoom-in-95 duration-150"
+                    style={{ left: Math.min(contextMenu.x, window.innerWidth - 260), top: Math.min(contextMenu.y, window.innerHeight - 200) }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div className="px-3 py-2 border-b border-slate-100 bg-slate-50/70">
+                        <div className="font-bold text-slate-900 truncate">{contextMenu.speaker.name}</div>
+                        <div className="text-[10px] text-slate-500">
+                            {contextMenu.slot.room} &middot; {contextMenu.slot.day} &middot; {contextMenu.slot.timeSlot}
+                        </div>
+                    </div>
+                    <div className="py-1">
+                        <button
+                            onClick={() => {
+                                const { speaker, slot } = contextMenu;
+                                setContextMenu(null);
+                                setSlotAction({
+                                    type: "swap",
+                                    speaker,
+                                    timeSlot: slot.timeSlot,
+                                    day: slot.day,
+                                    room: slot.room
+                                });
+                            }}
+                            className="w-full text-left px-3 py-2 hover:bg-emerald-50 hover:text-emerald-800 text-slate-700 font-semibold flex items-center gap-2 transition-colors"
+                        >
+                            <ArrowRightLeft size={15} className="text-emerald-600" />
+                            <span>Swap with another speaker...</span>
+                        </button>
+                        <button
+                            onClick={() => {
+                                const { speaker, slot } = contextMenu;
+                                setContextMenu(null);
+                                setMoveState({ room: slot.room, day: slot.day, timeSlot: "" });
+                                setSlotAction({
+                                    type: "move",
+                                    speaker,
+                                    timeSlot: slot.timeSlot,
+                                    day: slot.day,
+                                    room: slot.room
+                                });
+                            }}
+                            className="w-full text-left px-3 py-2 hover:bg-blue-50 hover:text-blue-800 text-slate-700 font-semibold flex items-center gap-2 transition-colors"
+                        >
+                            <Move size={15} className="text-blue-600" />
+                            <span>Move to another slot...</span>
+                        </button>
+                        <button
+                            onClick={() => {
+                                const { speaker, slot } = contextMenu;
+                                setContextMenu(null);
+                                setSlotAction({
+                                    type: "manage",
+                                    speaker,
+                                    timeSlot: slot.timeSlot,
+                                    day: slot.day,
+                                    room: slot.room
+                                });
+                                removeSpeakerFromSlot();
+                            }}
+                            className="w-full text-left px-3 py-2 hover:bg-rose-50 text-rose-600 font-semibold flex items-center gap-2 transition-colors"
+                        >
+                            <UserMinus size={15} className="text-rose-600" />
+                            <span>Remove from slot</span>
+                        </button>
+                    </div>
+                    <div className="px-3 py-1.5 border-t border-slate-100 bg-slate-50/50 text-[10px] text-slate-400 italic">
+                        Tip: You can also drag &amp; drop this card onto any slot to move or swap!
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Modals rendered directly into document.body */}
             {typeof document !== "undefined" && slotAction && createPortal(
                 <div 
                     className="fixed inset-0 z-[9999] bg-slate-950/70 backdrop-blur-sm p-4 flex items-center justify-center" 
@@ -768,20 +1212,27 @@ export default function AgendaPage({ speakers, onUpdate, onRefresh, toast }) {
                                         {slotAction.speaker.speakerTag || "Speaker"} &middot; {slotAction.room} &middot; {slotAction.day} &middot; {slotAction.timeSlot}
                                     </p>
                                     
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                         <button 
                                             onClick={removeSpeakerFromSlot}
-                                            className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:border-rose-300 transition-all font-semibold text-sm"
+                                            className="flex flex-col items-center justify-center gap-2 p-3.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:border-rose-300 transition-all font-semibold text-xs"
                                         >
-                                            <UserMinus size={24} />
+                                            <UserMinus size={20} />
                                             Remove from slot
                                         </button>
                                         <button 
                                             onClick={handleMoveClick}
-                                            className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:border-amber-300 transition-all font-semibold text-sm"
+                                            className="flex flex-col items-center justify-center gap-2 p-3.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:border-blue-300 transition-all font-semibold text-xs"
                                         >
-                                            <ArrowRightLeft size={24} />
-                                            Move to another slot
+                                            <Move size={20} />
+                                            Move to empty slot
+                                        </button>
+                                        <button 
+                                            onClick={() => setSlotAction({ ...slotAction, type: "swap" })}
+                                            className="flex flex-col items-center justify-center gap-2 p-3.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:border-amber-300 transition-all font-semibold text-xs"
+                                        >
+                                            <ArrowRightLeft size={20} />
+                                            Swap with speaker
                                         </button>
                                     </div>
                                 </div>
@@ -828,7 +1279,7 @@ export default function AgendaPage({ speakers, onUpdate, onRefresh, toast }) {
                                         <div>
                                             <label className="text-xs font-semibold text-slate-700 block mb-2">Day</label>
                                             <div className="flex bg-slate-100 p-1 rounded-xl">
-                                                {EVENT_DAYS.map(d => (
+                                                {eventDays.map(d => (
                                                     <button
                                                         key={d}
                                                         onClick={() => setMoveState(prev => ({ ...prev, day: d, timeSlot: "" }))}
@@ -875,6 +1326,87 @@ export default function AgendaPage({ speakers, onUpdate, onRefresh, toast }) {
                                         className="px-4 py-2 text-sm font-semibold text-white bg-emerald-500 hover:bg-emerald-600 rounded-lg shadow-sm transition-colors"
                                     >
                                         Confirm Move
+                                    </button>
+                                </div>
+                            </>
+                        )}
+
+                        {/* Swap Speaker Modal */}
+                        {slotAction.type === "swap" && (
+                            <>
+                                <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                                    <div>
+                                        <h3 className="font-bold text-lg text-slate-900">Swap Speaker Slots</h3>
+                                        <p className="text-xs text-slate-500 font-medium">
+                                            Select another scheduled speaker to interchange slots with <strong>{slotAction.speaker.name}</strong>.
+                                        </p>
+                                    </div>
+                                    <button onClick={closeModal} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700">
+                                        <X size={20} />
+                                    </button>
+                                </div>
+                                <div className="p-3 border-b border-slate-100 bg-slate-50/70">
+                                    <div className="relative">
+                                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            placeholder="Search assigned speaker to swap with..."
+                                            autoFocus
+                                            className="w-full pl-9 pr-8 py-2 text-xs font-medium bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 text-slate-900 placeholder-slate-400"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="overflow-y-auto p-4 space-y-2 flex-1 min-h-0 max-h-[350px]">
+                                    {speakers
+                                        .filter(s => s.id !== slotAction.speaker.id)
+                                        .filter(s => {
+                                            const activeSess = (s.sessions && s.sessions.find(x => x.day && (x.timeSlot || x.time_slot))) || (s.day && s.timeSlot ? s : null);
+                                            if (!activeSess) return false;
+                                            if (!searchQuery.trim()) return true;
+                                            const q = searchQuery.toLowerCase();
+                                            return (s.name || "").toLowerCase().includes(q) || (s.speakerTag || "").toLowerCase().includes(q);
+                                        })
+                                        .map(s => {
+                                            const sess = (s.sessions && s.sessions.find(x => x.day && (x.timeSlot || x.time_slot))) || s;
+                                            const sTime = sess.timeSlot || sess.time_slot;
+                                            const sDay = sess.day;
+                                            const sRoom = sess.conferenceRoom || sess.conference_room || sess.room;
+
+                                            return (
+                                                <div 
+                                                    key={s.id}
+                                                    onClick={() => {
+                                                        handleSwapSpeakers(
+                                                            slotAction.speaker, 
+                                                            { room: slotAction.room, day: slotAction.day, timeSlot: slotAction.timeSlot },
+                                                            s,
+                                                            { room: sRoom, day: sDay, timeSlot: sTime }
+                                                        );
+                                                    }}
+                                                    className="group flex items-center justify-between p-3 rounded-xl border border-slate-200 hover:border-amber-400 hover:bg-amber-50/50 cursor-pointer transition-all"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <SpeakerAvatar src={s.photoUrl} size={36} />
+                                                        <div>
+                                                            <div className="font-bold text-slate-900 group-hover:text-amber-900 text-sm">{s.name}</div>
+                                                            <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
+                                                                <span className="font-semibold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded text-[10px]">{sRoom}</span>
+                                                                <span>{sDay} &middot; {sTime}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <span className="px-2.5 py-1 text-xs font-bold text-amber-700 bg-amber-100 group-hover:bg-amber-600 group-hover:text-white rounded-lg transition-colors flex items-center gap-1">
+                                                        <ArrowRightLeft size={13} /> Swap
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                </div>
+                                <div className="p-4 border-t border-slate-100 flex justify-end">
+                                    <button onClick={() => setSlotAction({ ...slotAction, type: "manage" })} className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">
+                                        Back
                                     </button>
                                 </div>
                             </>

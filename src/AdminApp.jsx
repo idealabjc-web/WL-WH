@@ -14,6 +14,7 @@ import SeriesComingSoonPage from "./site/pages/SeriesComingSoonPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import EventPortal from "./EventPortal";
 import SpeakerPortalPage from "./pages/speaker/SpeakerPortalPage";
+import { getEventConfig } from "./eventsConfig";
 
 // Include public site CSS
 import "./site/site.css";
@@ -26,6 +27,14 @@ export default function AdminApp() {
             return stored ? JSON.parse(stored) : null;
         } catch {
             return null;
+        }
+    });
+
+    const [activeEventSlug, setActiveEventSlug] = useState(() => {
+        try {
+            return localStorage.getItem("portal_active_event") || "dubai";
+        } catch {
+            return "dubai";
         }
     });
 
@@ -50,7 +59,9 @@ export default function AdminApp() {
 
                         // Clean search params and navigate directly to their personalized slug
                         const speakerSlug = slugify(speakerObj.name);
-                        navigate(`/dubai-series/${speakerSlug}`, { replace: true });
+                        const isParis = speakerObj.eventSlug === "paris" || window.location.pathname.includes("paris");
+                        const seriesPath = isParis ? "paris-series" : "dubai-series";
+                        navigate(`/${seriesPath}/${speakerSlug}`, { replace: true });
                     }
                 } catch (err) {
                     console.error("Magic link authentication failed:", err);
@@ -71,6 +82,14 @@ export default function AdminApp() {
     const handleLogout = () => {
         localStorage.removeItem("portal_session");
         setSession(null);
+    };
+
+    const handleEventChange = (newSlug) => {
+        setActiveEventSlug(newSlug);
+        try {
+            localStorage.setItem("portal_active_event", newSlug);
+        } catch {}
+        navigate(`/admin/${newSlug}`);
     };
 
     // Loading overlay for magic links
@@ -94,15 +113,23 @@ export default function AdminApp() {
     // Normalize path
     const path = rawPath.toLowerCase();
 
+    // Determine effective event slug based on URL or saved state
+    let effectiveEventSlug = activeEventSlug;
+    if (path === "/admin/paris" || path.startsWith("/admin/paris/")) {
+        effectiveEventSlug = "paris";
+    } else if (path === "/admin/dubai" || path.startsWith("/admin/dubai/")) {
+        effectiveEventSlug = "dubai";
+    }
+
     // 1. Explicit Staff / Admin Dashboard Route
-    if (path === "/admin" || path === "/staff" || path === "/portal-admin") {
+    if (path === "/admin" || path === "/admin/dubai" || path === "/admin/paris" || path === "/staff" || path === "/portal-admin") {
         if (!session || session.type !== "admin") {
             return (
                 <div className="relative">
                     <AdminLoginPage
                         onLogin={(sess) => {
                             handleLogin(sess);
-                            navigate("/admin");
+                            navigate(path.startsWith("/admin/") ? path : `/admin/${effectiveEventSlug}`);
                         }}
                     />
                     <div style={{ position: "fixed", top: "20px", left: "20px", zIndex: 50 }}>
@@ -130,10 +157,12 @@ export default function AdminApp() {
             );
         }
 
+        const currentEvent = getEventConfig(effectiveEventSlug);
+
         // Admin is logged in: show the full EventPortal
         return (
             <div>
-                {/* Top admin bar to switch to public site */}
+                {/* Top admin bar to switch to public site & active series */}
                 <div
                     style={{
                         background: "#090d20",
@@ -144,28 +173,56 @@ export default function AdminApp() {
                         alignItems: "center",
                         justifyContent: "space-between",
                         color: "#B4BEE6",
+                        flexWrap: "wrap",
+                        gap: "8px",
                     }}
                 >
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         <span style={{ color: "#4ade80", fontWeight: 700 }}>●</span>
                         <span>
-                            Logged in as Staff / Admin: <b>{session.user?.email || session.user?.name}</b>
+                            Staff / Admin: <b>{session.user?.email || session.user?.name}</b>
+                        </span>
+                        <span style={{ background: "rgba(255,255,255,0.1)", padding: "2px 8px", borderRadius: "999px", fontSize: "11px", color: currentEvent.slug === "paris" ? "#93c5fd" : "#fcd34d", fontWeight: 700 }}>
+                            {currentEvent.flag} {currentEvent.name}
                         </span>
                     </div>
-                    <div style={{ display: "flex", gap: "12px" }}>
+                    <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                        <button
+                            type="button"
+                            onClick={() => handleEventChange(effectiveEventSlug === "paris" ? "dubai" : "paris")}
+                            style={{
+                                color: effectiveEventSlug === "paris" ? "#fcd34d" : "#93c5fd",
+                                background: "rgba(255,255,255,0.06)",
+                                border: "1px solid rgba(255,255,255,0.15)",
+                                padding: "3px 10px",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                fontSize: "11.5px",
+                                fontWeight: 700
+                            }}
+                        >
+                            Switch to {effectiveEventSlug === "paris" ? "🇦🇪 Dubai" : "🇫🇷 Paris"} Admin ⇄
+                        </button>
                         <button
                             type="button"
                             onClick={() => navigate("/")}
                             style={{ color: "var(--sc-gold)", background: "none", border: 0, cursor: "pointer", fontWeight: 600 }}
                         >
-                            View Public Site (speakerchapters.com) →
+                            Public Site →
                         </button>
                         <button
                             type="button"
                             onClick={() => navigate("/dubai-series")}
                             style={{ color: "#93c5fd", background: "none", border: 0, cursor: "pointer", fontWeight: 600 }}
                         >
-                            View Dubai Series →
+                            Dubai Series →
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => navigate("/paris-series")}
+                            style={{ color: "#60a5fa", background: "none", border: 0, cursor: "pointer", fontWeight: 600 }}
+                        >
+                            Paris Series →
                         </button>
                     </div>
                 </div>
@@ -174,6 +231,8 @@ export default function AdminApp() {
                     displayName={session.user?.name || session.user?.email}
                     userEmail={session.user?.email}
                     userRole={session.user?.role}
+                    eventSlug={effectiveEventSlug}
+                    onEventChange={handleEventChange}
                     onLogout={handleLogout}
                 />
             </div>
@@ -186,11 +245,29 @@ export default function AdminApp() {
         if (speakerSlugParam) {
             return (
                 <SpeakerIndividualPage
+                    eventSlug="dubai"
                     slug={speakerSlugParam}
                     session={session}
                     onLogin={handleLogin}
                     onLogout={handleLogout}
-                    onAdminClick={() => navigate("/admin")}
+                    onAdminClick={() => navigate("/admin/dubai")}
+                />
+            );
+        }
+    }
+
+    // 3. Paris Series Individual Speaker Portal: `/paris-series/:speakerName`
+    if (path.startsWith("/paris-series/")) {
+        const speakerSlugParam = path.replace("/paris-series/", "").replace(/\/+$/, "");
+        if (speakerSlugParam) {
+            return (
+                <SpeakerIndividualPage
+                    eventSlug="paris"
+                    slug={speakerSlugParam}
+                    session={session}
+                    onLogin={handleLogin}
+                    onLogout={handleLogout}
+                    onAdminClick={() => navigate("/admin/paris")}
                 />
             );
         }

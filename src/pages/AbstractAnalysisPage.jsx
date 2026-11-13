@@ -1,16 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { FileText, Trash2, ShieldCheck, AlertCircle, RefreshCw, FileQuestion } from 'lucide-react';
-import { fetchAllAbstractFiles, deleteAbstractFile, getAbstractsMap } from '../api/speakersApi';
+import { fetchAllAbstractFiles, deleteAbstractFile, getAbstractsMap, fetchSpeakers } from '../api/speakersApi';
 
 export default function AbstractAnalysisPage({ speakers, toast }) {
     const [files, setFiles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [deletingId, setDeletingId] = useState(null);
+    const [allDbSpeakers, setAllDbSpeakers] = useState([]);
 
     const loadFiles = async () => {
         setLoading(true);
-        const data = await fetchAllAbstractFiles();
-        setFiles(data);
+        const [data, allSpk] = await Promise.allSettled([
+            fetchAllAbstractFiles(),
+            fetchSpeakers("all")
+        ]);
+        if (data.status === "fulfilled") setFiles(data.value);
+        if (allSpk.status === "fulfilled") setAllDbSpeakers(allSpk.value);
         setLoading(false);
     };
 
@@ -18,10 +23,16 @@ export default function AbstractAnalysisPage({ speakers, toast }) {
         loadFiles();
     }, []);
 
-    // Extract all actively referenced URLs from the speakers database
+    // Combine current speakers prop with full database speakers to safely protect multi-event files
+    const effectiveSpeakers = useMemo(() => {
+        if (allDbSpeakers.length > 0) return allDbSpeakers;
+        return speakers || [];
+    }, [allDbSpeakers, speakers]);
+
+    // Extract all actively referenced URLs from the speakers database (across all events: Dubai & Paris)
     const activeUrls = useMemo(() => {
         const urls = new Set();
-        speakers.forEach(s => {
+        effectiveSpeakers.forEach(s => {
             const map = getAbstractsMap(s.abstractUrl);
             Object.values(map).forEach(url => {
                 if (url && typeof url === 'string') {
@@ -30,7 +41,7 @@ export default function AbstractAnalysisPage({ speakers, toast }) {
             });
         });
         return urls;
-    }, [speakers]);
+    }, [effectiveSpeakers]);
 
     // Analyze files
     const analyzedFiles = useMemo(() => {

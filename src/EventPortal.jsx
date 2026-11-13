@@ -24,6 +24,7 @@ import AdvancedSlotManagement from "./pages/AdvancedSlotManagement";
 import DataExportPage from "./pages/DataExportPage";
 import AbstractAnalysisPage from "./pages/AbstractAnalysisPage";
 import LiveUpdatesPage from "./pages/LiveUpdatesPage";
+import { getEventConfig, getEventTables, DEFAULT_EVENT_SLUG } from "./eventsConfig";
 
 const VALID_TABS = ["dashboard", "live-updates", "register", "checkin", "idcards", "feedback", "broadcasts", "agenda", "analysis", "advanced-slots", "abstract-analysis", "settings", "audit", "export"];
 
@@ -32,7 +33,14 @@ function getInitialTab() {
     return VALID_TABS.includes(hash) ? hash : "dashboard";
 }
 
-export default function EventPortal({ displayName = "", userEmail = "", userRole = "", onLogout }) {
+export default function EventPortal({
+    displayName = "",
+    userEmail = "",
+    userRole = "",
+    eventSlug = DEFAULT_EVENT_SLUG,
+    onEventChange,
+    onLogout
+}) {
     const [tab, setTab] = useState(getInitialTab);
     const [speakers, setSpeakers] = useState([]);
     const [feedback, setFeedback] = useState([]);
@@ -40,6 +48,9 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
     const [toastMsg, setToastMsg] = useState("");
     const [connectionError, setConnectionError] = useState(null);
     const toastTimer = useRef(null);
+
+    const currentEvent = getEventConfig(eventSlug);
+    const isParis = currentEvent.slug === "paris";
 
     // Sidebar states (persisted preference for desktop/tablet)
     const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -87,7 +98,10 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
     };
 
     const refresh = useCallback(async () => {
-        const [speakersResult, feedbackResult] = await Promise.allSettled([fetchSpeakers(), fetchFeedback()]);
+        const [speakersResult, feedbackResult] = await Promise.allSettled([
+            fetchSpeakers(currentEvent.slug),
+            fetchFeedback(currentEvent.slug)
+        ]);
 
         if (speakersResult.status === "fulfilled") {
             setSpeakers(speakersResult.value);
@@ -109,7 +123,7 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
                 : null;
         setConnectionError(firstError ? firstError.message || String(firstError) : null);
         setLoading(false);
-    }, []);
+    }, [currentEvent.slug]);
 
     // Initial load + realtime subscriptions across all tabs
     useEffect(() => {
@@ -118,22 +132,27 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
             return;
         }
         refresh();
+        const tables = getEventTables(currentEvent.slug);
         const channel = supabase
-            .channel("event-portal-changes")
-            .on("postgres_changes", { event: "*", schema: "public", table: "speakers" }, refresh)
+            .channel(`event-portal-changes-${currentEvent.slug}`)
+            .on("postgres_changes", { event: "*", schema: "public", table: tables.speakers }, refresh)
             .on("postgres_changes", { event: "*", schema: "public", table: "feedback" }, refresh)
-            .on("postgres_changes", { event: "*", schema: "public", table: "sessions" }, refresh)
-            .on("postgres_changes", { event: "*", schema: "public", table: "accommodations" }, refresh)
-            .on("postgres_changes", { event: "*", schema: "public", table: "attendance" }, refresh)
+            .on("postgres_changes", { event: "*", schema: "public", table: tables.sessions }, refresh)
+            .on("postgres_changes", { event: "*", schema: "public", table: tables.accommodations }, refresh)
+            .on("postgres_changes", { event: "*", schema: "public", table: tables.attendance }, refresh)
             .subscribe();
         return () => supabase.removeChannel(channel);
-    }, [refresh]);
+    }, [refresh, currentEvent.slug]);
 
     const addSpeaker = async (rec) => {
-        setSpeakers((prev) => (prev.find((x) => x.id === rec.id) ? prev : [...prev, rec]));
+        const speakerWithEvent = {
+            ...rec,
+            eventSlug: rec.eventSlug || currentEvent.slug,
+        };
+        setSpeakers((prev) => (prev.find((x) => x.id === speakerWithEvent.id) ? prev : [...prev, speakerWithEvent]));
         try {
-            await createSpeakerRecord(rec);
-            logAction(userEmail, 'ADD_SPEAKER', rec.id, { name: rec.name });
+            await createSpeakerRecord(speakerWithEvent);
+            logAction(userEmail, 'ADD_SPEAKER', speakerWithEvent.id, { name: speakerWithEvent.name, event: currentEvent.slug });
             return true;
         } catch (error) {
             console.error(error);
@@ -232,11 +251,17 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
     const deleteSpeaker = async (id) => {
         const speakerToDelete = speakers.find(s => s.id === id);
         setSpeakers((prev) => prev.filter((s) => s.id !== id));
-        const { error } = await supabase.from("speakers").delete().eq("id", id);
+        const tables = getEventTables(currentEvent.slug);
+        const { error } = await supabase.from(tables.speakers).delete().eq("id", id);
         if (error) {
             console.error(error);
             toast("Delete failed to sync to database.");
             return false;
+        }
+        try {
+            await supabase.from("accommodations").delete().eq("speaker_id", id);
+        } catch (e) {
+            console.warn("Accommodation cleanup warning:", e);
         }
         logAction(userEmail, 'DELETE_SPEAKER', id, { name: speakerToDelete?.name });
         toast("Speaker deleted successfully.");
@@ -245,7 +270,8 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
 
     const saveNotes = async (id, notes) => {
         setSpeakers((prev) => prev.map((s) => (s.id === id ? { ...s, concerns: notes } : s)));
-        const { error } = await supabase.from("speakers").update({ concerns: notes }).eq("id", id);
+        const tables = getEventTables(currentEvent.slug);
+        const { error } = await supabase.from(tables.speakers).update({ concerns: notes }).eq("id", id);
         if (error) {
             console.error(error);
             toast("Notes saved locally but failed to sync.");
@@ -302,6 +328,8 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
                 onToggleCollapse={toggleSidebar}
                 mobileOpen={mobileMenuOpen}
                 onCloseMobile={() => setMobileMenuOpen(false)}
+                currentEvent={currentEvent}
+                onEventChange={onEventChange}
             />
 
             {/* Main Fluid Content Area (expands naturally to fill screen) */}
@@ -323,25 +351,56 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
 
                         <div className="min-w-0">
                             <div className="flex items-center gap-1.5 sm:gap-2">
-                                <span className="text-[9px] sm:text-xs font-semibold text-amber-600 uppercase tracking-wider">
-                                    DUBAI · ON-SITE
+                                <span className={`text-[9px] sm:text-xs font-semibold ${isParis ? "text-blue-600 dark:text-blue-400" : "text-amber-600 dark:text-amber-400"} uppercase tracking-wider flex items-center gap-1`}>
+                                    <span>{currentEvent.flag}</span>
+                                    <span>{currentEvent.badgeTag}</span>
                                 </span>
                                 <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-semibold text-teal-700 bg-teal-50 px-1.5 sm:px-2 py-0.5 rounded-full">
                                     <span className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"></span>
                                     Live Ops
                                 </span>
                             </div>
-                            <h1 className="text-sm sm:text-lg md:text-xl font-bold text-slate-900 leading-tight truncate">
-                                {currentTabObj.label} · <span className="text-slate-500 font-medium">Operations</span>
+                            <h1 className="text-sm sm:text-lg md:text-xl font-bold text-slate-900 dark:text-white leading-tight truncate">
+                                {currentTabObj.label} · <span className="text-slate-500 font-medium">{currentEvent.shortName} Operations</span>
                             </h1>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                        {/* Fast Top Bar Event Switcher */}
+                        {onEventChange && (
+                            <div className="hidden sm:flex items-center bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1 gap-1">
+                                <button
+                                    type="button"
+                                    onClick={() => onEventChange("dubai")}
+                                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1 ${
+                                        !isParis
+                                            ? "bg-amber-500 text-white shadow-xs"
+                                            : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                                    }`}
+                                >
+                                    <span>🇦🇪</span>
+                                    <span>Dubai</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => onEventChange("paris")}
+                                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1 ${
+                                        isParis
+                                            ? "bg-blue-600 text-white shadow-xs"
+                                            : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                                    }`}
+                                >
+                                    <span>🇫🇷</span>
+                                    <span>Paris</span>
+                                </button>
+                            </div>
+                        )}
+
                         <div className="text-right hidden sm:block">
-                            <div className="text-xs text-slate-500 font-medium">WL-WH Conference Operations</div>
+                            <div className="text-xs text-slate-500 font-medium">WL-WH {currentEvent.shortName} Ops</div>
                             {displayName && (
-                                <div className="text-xs font-semibold text-slate-700 truncate max-w-[140px]">
+                                <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[140px]">
                                     {displayName}
                                 </div>
                             )}
@@ -349,7 +408,7 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
                         {onLogout && (
                             <button
                                 onClick={onLogout}
-                                className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-rose-600 hover:bg-rose-50 px-2.5 py-1.5 sm:py-2 rounded-lg transition-colors border border-slate-200/80 shadow-xs"
+                                className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-rose-600 hover:bg-rose-50 px-2.5 py-1.5 sm:py-2 rounded-lg transition-colors border border-slate-200/80 dark:border-slate-800 shadow-xs"
                                 title="Sign out"
                             >
                                 <LogOut size={15} />
@@ -374,17 +433,17 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
                         <div className="flex flex-col items-center justify-center py-32 gap-4">
                             <div className="relative w-14 h-14">
                                 <div className="w-14 h-14 rounded-full border-[3px] border-slate-200 dark:border-slate-700" />
-                                <div className="absolute inset-0 w-14 h-14 rounded-full border-[3px] border-amber-500 border-t-transparent animate-spin" />
-                                <div className="absolute inset-2 rounded-full bg-amber-500/10 animate-pulse" />
+                                <div className={`absolute inset-0 w-14 h-14 rounded-full border-[3px] ${isParis ? "border-blue-600" : "border-amber-500"} border-t-transparent animate-spin`} />
+                                <div className={`absolute inset-2 rounded-full ${isParis ? "bg-blue-600/10" : "bg-amber-500/10"} animate-pulse`} />
                             </div>
                             <div className="text-center">
-                                <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">Loading portal data</div>
+                                <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">Loading {currentEvent.name} data</div>
                                 <div className="text-xs text-slate-400 mt-0.5">Connecting to live operations...</div>
                             </div>
                         </div>
                     ) : (
-                        <div key={tab} className="animate-page">
-                            {tab === "register" && <RegisterPage speakers={speakers} onAdd={addSpeaker} toast={toast} />}
+                        <div key={`${currentEvent.slug}-${tab}`} className="animate-page">
+                            {tab === "register" && <RegisterPage speakers={speakers} onAdd={addSpeaker} toast={toast} currentEvent={currentEvent} />}
                             {tab === "checkin" && (
                                 <CheckinPage
                                     speakers={speakers}
@@ -393,6 +452,7 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
                                     onUndoCheckout={undoCheckout}
                                     onSaveNotes={saveNotes}
                                     toast={toast}
+                                    currentEvent={currentEvent}
                                 />
                             )}
                             {tab === "dashboard" && (
@@ -402,39 +462,43 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
                                     onUpdate={updateSpeaker}
                                     onUndoCheckout={undoCheckout}
                                     onDelete={deleteSpeaker}
+                                    currentEvent={currentEvent}
                                 />
                             )}
-                            {tab === "live-updates" && (
+{tab === "live-updates" && (
                                 <LiveUpdatesPage
                                     speakers={speakers}
                                     onUpdate={updateSpeaker}
                                     onRefresh={refresh}
                                     toast={toast}
+                                    currentEvent={currentEvent}
                                 />
                             )}
-                            {tab === "broadcasts" && <AnnouncementsPage userEmail={userEmail} toast={toast} />}
+                            {tab === "broadcasts" && <AnnouncementsPage userEmail={userEmail} toast={toast} currentEvent={currentEvent} />}
                             {tab === "idcards" && (
                                 <IdCardsPage
                                     speakers={speakers}
                                     cards={idCards}
                                     setCards={setIdCards}
                                     toast={toast}
+                                    currentEvent={currentEvent}
                                 />
                             )}
-                            {tab === "feedback" && <FeedbackPage feedback={feedback} onAdd={addFeedback} toast={toast} />}
-                            {tab === "agenda" && userRole === "admin" && <AgendaPage speakers={speakers} onUpdate={updateSpeaker} onRefresh={refresh} toast={toast} />}
+                            {tab === "feedback" && <FeedbackPage feedback={feedback} onAdd={addFeedback} toast={toast} currentEvent={currentEvent} />}
+                            {tab === "agenda" && userRole === "admin" && <AgendaPage speakers={speakers} onUpdate={updateSpeaker} onRefresh={refresh} toast={toast} currentEvent={currentEvent} />}
                             {tab === "advanced-slots" && userRole === "admin" && (
                                 <AdvancedSlotManagement
                                     speakers={speakers}
                                     onUpdate={updateSpeaker}
                                     onRefresh={refresh}
+                                    currentEvent={currentEvent}
                                 />
                             )}
-                            {tab === "analysis" && userRole === "admin" && <AnalysisPage speakers={speakers} toast={toast} />}
-                            {tab === "abstract-analysis" && userRole === "admin" && <AbstractAnalysisPage speakers={speakers} toast={toast} />}
-                            {tab === "export" && userRole === "admin" && <DataExportPage speakers={speakers} />}
-                            {tab === "audit" && userRole === "admin" && <AuditLogsPage />}
-                            {tab === "settings" && <SettingsPage userEmail={userEmail} />}
+                            {tab === "analysis" && userRole === "admin" && <AnalysisPage speakers={speakers} toast={toast} currentEvent={currentEvent} />}
+                            {tab === "abstract-analysis" && userRole === "admin" && <AbstractAnalysisPage speakers={speakers} toast={toast} currentEvent={currentEvent} />}
+                            {tab === "export" && userRole === "admin" && <DataExportPage speakers={speakers} currentEvent={currentEvent} />}
+                            {tab === "audit" && userRole === "admin" && <AuditLogsPage currentEvent={currentEvent} />}
+                            {tab === "settings" && <SettingsPage userEmail={userEmail} currentEvent={currentEvent} />}
                         </div>
                     )}
                 </main>
