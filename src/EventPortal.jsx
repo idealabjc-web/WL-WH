@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Users, ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, Menu, BadgeCheck, LogOut, Settings, Megaphone, Activity, Calendar, BarChart2, Download, FileText } from "lucide-react";
+import { Users, ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, Menu, BadgeCheck, LogOut, Settings, Megaphone, Activity, Calendar, BarChart2, Download, FileText, Radio } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./supabaseClient";
 import { fetchSpeakers, speakerToRow, createSpeakerRecord, updateSpeakerRecord } from "./api/speakersApi";
 import { fetchFeedback, feedbackToRow } from "./api/feedbackApi";
@@ -23,8 +23,9 @@ import AnalysisPage from "./pages/AnalysisPage";
 import AdvancedSlotManagement from "./pages/AdvancedSlotManagement";
 import DataExportPage from "./pages/DataExportPage";
 import AbstractAnalysisPage from "./pages/AbstractAnalysisPage";
+import LiveUpdatesPage from "./pages/LiveUpdatesPage";
 
-const VALID_TABS = ["dashboard", "register", "checkin", "idcards", "feedback", "broadcasts", "agenda", "analysis", "advanced-slots", "abstract-analysis", "settings", "audit", "export"];
+const VALID_TABS = ["dashboard", "live-updates", "register", "checkin", "idcards", "feedback", "broadcasts", "agenda", "analysis", "advanced-slots", "abstract-analysis", "settings", "audit", "export"];
 
 function getInitialTab() {
     const hash = window.location.hash.replace("#", "").toLowerCase();
@@ -269,6 +270,7 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
         { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
         { id: "register", label: "Register", icon: Users },
         { id: "checkin", label: "Check-In", icon: ScanLine },
+        { id: "live-updates", label: "Live Updates", icon: Radio },
         { id: "broadcasts", label: "Broadcasts", icon: Megaphone },
         { id: "idcards", label: "ID Cards", icon: BadgeCheck },
         { id: "feedback", label: "Feedback", icon: MessageSquare },
@@ -400,6 +402,14 @@ export default function EventPortal({ displayName = "", userEmail = "", userRole
                                     onUpdate={updateSpeaker}
                                     onUndoCheckout={undoCheckout}
                                     onDelete={deleteSpeaker}
+                                />
+                            )}
+                            {tab === "live-updates" && (
+                                <LiveUpdatesPage
+                                    speakers={speakers}
+                                    onUpdate={updateSpeaker}
+                                    onRefresh={refresh}
+                                    toast={toast}
                                 />
                             )}
                             {tab === "broadcasts" && <AnnouncementsPage userEmail={userEmail} toast={toast} />}

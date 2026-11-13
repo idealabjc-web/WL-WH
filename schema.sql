@@ -194,6 +194,9 @@ create policy "public upload abstracts" on storage.objects
 
 create policy "public overwrite abstracts" on storage.objects
   for update using (bucket_id = 'speaker-abstracts');
+
+create policy "public delete abstracts" on storage.objects
+  for delete using (bucket_id = 'speaker-abstracts');
 alter table speakers add column if not exists country text;
 alter table speakers add column if not exists whose_speaker text;
 alter table speakers add column if not exists team text;

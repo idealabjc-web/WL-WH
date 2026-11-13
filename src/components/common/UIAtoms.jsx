@@ -50,13 +50,26 @@ export function StatusBadge({ checkedIn, checkedOut }) {
     );
 }
 
-export function StatCard({ num, label, icon: Icon, colorClass = "text-amber-500", className = "" }) {
+export function StatCard({ num, label, icon: Icon, colorClass = "text-amber-500", className = "", onClick, clickable = false }) {
+    const isInteractive = Boolean(onClick || clickable);
     return (
-        <div className={`relative overflow-hidden bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all duration-300 group ${className} ${colorClass}`}>
+        <div 
+            onClick={onClick}
+            role={isInteractive ? "button" : undefined}
+            tabIndex={isInteractive ? 0 : undefined}
+            className={`relative overflow-hidden bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 rounded-2xl p-4 sm:p-5 shadow-sm hover:shadow-md transition-all duration-300 group ${isInteractive ? "cursor-pointer active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-rose-400" : ""} ${className} ${colorClass}`}
+        >
             <div className={`absolute top-0 right-0 w-24 h-24 bg-current opacity-10 dark:opacity-20 rounded-bl-full -mr-4 -mt-4 transition-transform duration-500 group-hover:scale-110 ease-out`}></div>
             <div className="relative flex justify-between items-start text-slate-900 dark:text-slate-100">
                 <div>
-                    <div className="text-2xl sm:text-3xl font-bold tracking-tight">{num}</div>
+                    <div className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
+                        {num}
+                        {isInteractive && (
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 opacity-90 group-hover:opacity-100 transition-opacity">
+                                View
+                            </span>
+                        )}
+                    </div>
                     <div className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">{label}</div>
                 </div>
                 {Icon && (

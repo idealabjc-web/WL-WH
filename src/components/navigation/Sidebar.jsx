@@ -93,8 +93,11 @@ export default function Sidebar({
                     )}
                 </div>
 
-                {/* Navigation Items */}
-                <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
+                {/* Navigation Items (hidden scrollbar for clean minimal look) */}
+                <nav 
+                    className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto scrollbar-none"
+                    style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                >
                     {tabs.map((t) => {
                         const active = activeTab === t.id;
                         const Icon = t.icon;

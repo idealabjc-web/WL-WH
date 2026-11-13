@@ -57,12 +57,12 @@ export default function AbstractAnalysisPage({ speakers, toast }) {
         if (!window.confirm(`Are you sure you want to delete ${fileName}? This action cannot be undone.`)) return;
         
         setDeletingId(fileName);
-        const success = await deleteAbstractFile(fileName);
-        if (success) {
+        const res = await deleteAbstractFile(fileName);
+        if (res && res.success) {
             toast(`Deleted ${fileName} successfully.`);
             setFiles(prev => prev.filter(f => f.name !== fileName));
         } else {
-            toast(`Failed to delete ${fileName}.`);
+            toast(res?.error || `Failed to delete ${fileName}. Storage RLS policy might be missing.`);
         }
         setDeletingId(null);
     };

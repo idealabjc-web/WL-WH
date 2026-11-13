@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { 
     Download, RefreshCw, Search, Filter, AlertTriangle, 
     LayoutList, Table as TableIcon, X, ChevronDown, ChevronUp,
     Calendar, Clock, MapPin, Sparkles, BadgeCheck,
     Users, CheckCircle2, Utensils, Map, LogOut, RotateCcw, Link,
-    BookOpen, Upload, FileText, Trash2
+    BookOpen, Upload, FileText, Trash2,
+    Hotel, MessageSquare
 } from "lucide-react";
 import { StatCard, StatusBadge, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
@@ -156,14 +158,17 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
             const currentAbstracts = getAbstractsMap(updatedForm.abstractUrl);
             
             for (const [key, file] of Object.entries(abstractFiles)) {
-                // Determine sessionId (if key is an index, use that index's session if available, else use key)
                 let sessionId = key;
                 if (!isNaN(key) && form.sessions && form.sessions[key]) {
                     sessionId = form.sessions[key].id || `session_${key}`;
                 }
-                const url = await uploadSpeakerAbstract(speaker.id, sessionId, file);
-                if (url) {
-                    currentAbstracts[sessionId] = url;
+                try {
+                    const url = await uploadSpeakerAbstract(speaker.id, sessionId, file);
+                    if (url) {
+                        currentAbstracts[sessionId] = url;
+                    }
+                } catch (uploadErr) {
+                    alert(`Failed to upload abstract for session ${sessionId}: ${uploadErr.message || 'Storage permission error'}`);
                 }
             }
             
@@ -1020,11 +1025,17 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
     const [mobileView, setMobileView] = useState("cards"); // 'cards' | 'table'
     const [selectedId, setSelectedId] = useState(null);
     const [showHeroProfile, setShowHeroProfile] = useState(false);
+    const [showDietaryModal, setShowDietaryModal] = useState(false);
+    const [showConcernsModal, setShowConcernsModal] = useState(false);
+    const [showHotelModal, setShowHotelModal] = useState(false);
 
     // Close open dropdown on Escape key
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if (e.key === "Escape" && (selectedId || showHeroProfile)) {
+            if (e.key === "Escape" && (selectedId || showHeroProfile || showDietaryModal || showConcernsModal || showHotelModal)) {
+                setShowConcernsModal(false);
+                setShowHotelModal(false);
+                setShowDietaryModal(false);
                 setSelectedId(null);
                 setShowHeroProfile(false);
             }
@@ -1042,6 +1053,11 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
     const checked = speakers.filter((s) => s.checkedIn && !s.checkedOut).length;
     const awaiting = speakers.filter((s) => !s.checkedIn).length;
     const dietary = speakers.filter((s) => s.allergy || (s.diet && s.diet !== "No preference")).length;
+    const concernsCount = speakers.filter((s) => s.concerns && s.concerns.trim() && s.concerns.trim().toLowerCase() !== "noconcerns" && s.concerns.trim().toLowerCase() !== "none" && s.concerns.trim().toLowerCase() !== "no").length;
+    const hotelCount = speakers.filter((s) => {
+        const acc = (s.accommodationStatus || s.accommodation_status || "").toLowerCase();
+        return (acc === "with accommodation" || acc === "yes") || Boolean(s.hotelRoom || s.hotel_room);
+    }).length;
     const tour = speakers.filter((s) => s.tour === "yes").length;
 
 
@@ -1136,13 +1152,15 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                 </div>
             )}
 
-            {/* Aggregate Stats Cards */}
-            <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3 sm:gap-4 mb-6">
+            {/* Aggregate Stats Cards (8 Cards) */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
                 <StatCard num={total} label="Registered" icon={Users} colorClass="text-blue-600" bgClass="bg-blue-100" />
                 <StatCard num={checked} label="Checked in" icon={CheckCircle2} colorClass="text-emerald-600" bgClass="bg-emerald-100" />
                 <StatCard num={checkedOut} label="Checked out" icon={LogOut} colorClass="text-purple-600" bgClass="bg-purple-100" />
                 <StatCard num={awaiting} label="Awaiting arrival" icon={Clock} colorClass="text-amber-600" bgClass="bg-amber-100" />
-                <StatCard num={dietary} label="Dietary needs" icon={Utensils} colorClass="text-rose-600" bgClass="bg-rose-100" />
+                <StatCard num={dietary} label="Dietary needs" icon={Utensils} colorClass="text-rose-600" bgClass="bg-rose-100" onClick={() => setShowDietaryModal(true)} clickable={true} />
+                <StatCard num={concernsCount} label="Special concerns" icon={AlertTriangle} colorClass="text-amber-600" bgClass="bg-amber-100" onClick={() => setShowConcernsModal(true)} clickable={true} />
+                <StatCard num={hotelCount} label="Hotel booked" icon={Hotel} colorClass="text-teal-600" bgClass="bg-teal-100" onClick={() => setShowHotelModal(true)} clickable={true} />
                 <StatCard num={tour} label="Tour interest" icon={Map} colorClass="text-indigo-600" bgClass="bg-indigo-100" />
             </div>
 
@@ -1441,6 +1459,378 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                 </div>
             </div>
 
+            
+            {/* Special Concerns Modal via createPortal */}
+            {typeof document !== "undefined" && showConcernsModal && createPortal(
+                <div 
+                    className="fixed inset-0 z-[9999] bg-slate-950/70 backdrop-blur-sm p-4 flex items-center justify-center animate-in fade-in duration-200"
+                    onClick={() => setShowConcernsModal(false)}
+                >
+                    <div 
+                        className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] border border-slate-200 dark:border-slate-800"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0 bg-amber-50/60 dark:bg-amber-950/20">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-700 shrink-0 shadow-xs">
+                                    <AlertTriangle size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">
+                                        Speaker Special Requests & Concerns
+                                    </h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                                        {speakers.filter((s) => s.concerns && s.concerns.trim() && s.concerns.trim().toLowerCase() !== "noconcerns" && s.concerns.trim().toLowerCase() !== "none" && s.concerns.trim().toLowerCase() !== "no").length} speakers with notes or special assistance requested
+                                    </p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setShowConcernsModal(false)}
+                                className="p-2 rounded-xl hover:bg-slate-200/60 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* List */}
+                        <div className="overflow-y-auto p-4 sm:p-5 space-y-3 flex-1 min-h-0 divide-y divide-slate-100 dark:divide-slate-800/60">
+                            {(() => {
+                                const concernSpeakers = speakers.filter((s) => s.concerns && s.concerns.trim() && s.concerns.trim().toLowerCase() !== "noconcerns" && s.concerns.trim().toLowerCase() !== "none" && s.concerns.trim().toLowerCase() !== "no");
+                                if (concernSpeakers.length === 0) {
+                                    return (
+                                        <div className="py-12 text-center text-slate-400 text-sm">
+                                            No special requests or concerns logged.
+                                        </div>
+                                    );
+                                }
+                                return concernSpeakers.map(s => {
+                                    const roomText = s.conferenceRoom || (s.sessions && s.sessions[0]?.conference_room) || (s.sessions && s.sessions[0]?.conferenceRoom) || "";
+                                    const dayText = s.day || (s.sessions && s.sessions[0]?.day) || "";
+
+                                    return (
+                                        <div 
+                                            key={s.id} 
+                                            className="pt-3.5 first:pt-0 flex flex-col sm:flex-row sm:items-start justify-between gap-3 group"
+                                        >
+                                            <div className="flex items-start gap-3 min-w-0 flex-1">
+                                                <SpeakerAvatar src={s.photoUrl} size={42} />
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">
+                                                            {s.name}
+                                                        </span>
+                                                        <span className="text-[10px] font-bold text-amber-800 bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 rounded uppercase tracking-wide">
+                                                            {s.speakerTag || "Speaker"}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-2">
+                                                        {s.country && <span>{s.country}</span>}
+                                                        {s.country && (dayText || roomText) && <span>&middot;</span>}
+                                                        {dayText && <span>{dayText}</span>}
+                                                        {roomText && <span>({roomText})</span>}
+                                                    </div>
+
+                                                    {/* Concern Note Box */}
+                                                    <div className="mt-2.5 p-3 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 text-xs text-amber-900 dark:text-amber-200 font-medium leading-relaxed">
+                                                        {s.concerns}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setShowConcernsModal(false);
+                                                    setSelectedId(s.id);
+                                                    setTimeout(() => {
+                                                        const el = document.getElementById(`speaker-row-${s.id}`);
+                                                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                    }, 150);
+                                                }}
+                                                className="self-end sm:self-start px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-amber-700 bg-slate-100 hover:bg-amber-50 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-colors shrink-0 mt-1"
+                                            >
+                                                View Profile
+                                            </button>
+                                        </div>
+                                    );
+                                });
+                            })()}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 flex justify-end shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => setShowConcernsModal(false)}
+                                className="px-5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all shadow-xs"
+                            >
+                                Done
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Hotel Booked Modal via createPortal */}
+            {typeof document !== "undefined" && showHotelModal && createPortal(
+                <div 
+                    className="fixed inset-0 z-[9999] bg-slate-950/70 backdrop-blur-sm p-4 flex items-center justify-center animate-in fade-in duration-200"
+                    onClick={() => setShowHotelModal(false)}
+                >
+                    <div 
+                        className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] border border-slate-200 dark:border-slate-800"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0 bg-teal-50/60 dark:bg-teal-950/20">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center text-teal-700 shrink-0 shadow-xs">
+                                    <Hotel size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">
+                                        Hotel & Accommodation Status
+                                    </h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                                        {speakers.filter((s) => {
+                                            const acc = (s.accommodationStatus || s.accommodation_status || "").toLowerCase();
+                                            return (acc === "with accommodation" || acc === "yes") || Boolean(s.hotelRoom || s.hotel_room);
+                                        }).length} speakers staying at the venue hotel (Holiday Inn Express)
+                                    </p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setShowHotelModal(false)}
+                                className="p-2 rounded-xl hover:bg-slate-200/60 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* List */}
+                        <div className="overflow-y-auto p-4 sm:p-5 space-y-3 flex-1 min-h-0 divide-y divide-slate-100 dark:divide-slate-800/60">
+                            {(() => {
+                                const hotelSpeakers = speakers.filter((s) => {
+                                    const acc = (s.accommodationStatus || s.accommodation_status || "").toLowerCase();
+                                    return (acc === "with accommodation" || acc === "yes") || Boolean(s.hotelRoom || s.hotel_room);
+                                });
+                                if (hotelSpeakers.length === 0) {
+                                    return (
+                                        <div className="py-12 text-center text-slate-400 text-sm">
+                                            No speakers currently assigned to hotel accommodation.
+                                        </div>
+                                    );
+                                }
+                                return hotelSpeakers.map(s => {
+                                    const roomNumber = s.hotelRoom || s.hotel_room || "Room TBA";
+                                    const nights = s.nights ? `${s.nights} Nights` : null;
+                                    const checkin = s.checkinDate || s.checkin_date;
+                                    const checkout = s.checkoutDate || s.checkout_date;
+
+                                    return (
+                                        <div 
+                                            key={s.id} 
+                                            className="pt-3.5 first:pt-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
+                                        >
+                                            <div className="flex items-start gap-3 min-w-0">
+                                                <SpeakerAvatar src={s.photoUrl} size={42} />
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">
+                                                            {s.name}
+                                                        </span>
+                                                        <span className="text-[10px] font-bold text-teal-800 bg-teal-100 dark:bg-teal-900/40 px-1.5 py-0.5 rounded uppercase tracking-wide">
+                                                            {s.speakerTag || "Speaker"}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                                        {s.country || "Speaker"}
+                                                    </div>
+
+                                                    {/* Stay Badges */}
+                                                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                                                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border border-teal-200/80 dark:border-teal-800/50">
+                                                            <Hotel size={13} className="text-teal-600" />
+                                                            Room: <strong>{roomNumber}</strong>
+                                                        </span>
+                                                        {nights && (
+                                                            <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                                                <Clock size={12} className="text-slate-500" />
+                                                                {nights}
+                                                            </span>
+                                                        )}
+                                                        {checkin && checkout && (
+                                                            <span className="text-[11px] font-medium text-slate-500 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-md">
+                                                                {checkin} &rarr; {checkout}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setShowHotelModal(false);
+                                                    setSelectedId(s.id);
+                                                    setTimeout(() => {
+                                                        const el = document.getElementById(`speaker-row-${s.id}`);
+                                                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                    }, 150);
+                                                }}
+                                                className="self-end sm:self-center px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-amber-700 bg-slate-100 hover:bg-amber-50 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-colors shrink-0"
+                                            >
+                                                View Profile
+                                            </button>
+                                        </div>
+                                    );
+                                });
+                            })()}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 flex justify-end shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => setShowHotelModal(false)}
+                                className="px-5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all shadow-xs"
+                            >
+                                Done
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Dietary Needs Modal via createPortal */}
+            {typeof document !== "undefined" && showDietaryModal && createPortal(
+                <div 
+                    className="fixed inset-0 z-[9999] bg-slate-950/70 backdrop-blur-sm p-4 flex items-center justify-center animate-in fade-in duration-200"
+                    onClick={() => setShowDietaryModal(false)}
+                >
+                    <div 
+                        className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] border border-slate-200 dark:border-slate-800"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {/* Modal Header */}
+                        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0 bg-rose-50/50 dark:bg-rose-950/20">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-900/50 flex items-center justify-center text-rose-600 shrink-0 shadow-xs">
+                                    <Utensils size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">
+                                        Dietary & Allergy Requirements
+                                    </h3>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                                        {speakers.filter(s => s.allergy || (s.diet && s.diet !== "No preference")).length} speakers with special meal preferences
+                                    </p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setShowDietaryModal(false)}
+                                className="p-2 rounded-xl hover:bg-slate-200/60 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Modal Body: Speakers list with dietary & allergy badges */}
+                        <div className="overflow-y-auto p-4 sm:p-5 space-y-3 flex-1 min-h-0 divide-y divide-slate-100 dark:divide-slate-800/60">
+                            {(() => {
+                                const dietarySpeakers = speakers.filter(s => s.allergy || (s.diet && s.diet !== "No preference"));
+                                if (dietarySpeakers.length === 0) {
+                                    return (
+                                        <div className="py-12 text-center text-slate-400 text-sm">
+                                            No speakers currently have dietary requirements listed.
+                                        </div>
+                                    );
+                                }
+                                return dietarySpeakers.map(s => {
+                                    const dietText = s.diet && s.diet !== "No preference" ? s.diet : null;
+                                    const allergyText = s.allergy && s.allergy.trim() ? s.allergy : null;
+                                    const roomText = s.conferenceRoom || (s.sessions && s.sessions[0]?.conference_room) || (s.sessions && s.sessions[0]?.conferenceRoom) || "";
+                                    const dayText = s.day || (s.sessions && s.sessions[0]?.day) || "";
+
+                                    return (
+                                        <div 
+                                            key={s.id} 
+                                            className="pt-3 first:pt-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
+                                        >
+                                            <div className="flex items-start gap-3 min-w-0">
+                                                <SpeakerAvatar src={s.photoUrl} size={42} />
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-slate-900 dark:text-slate-100 text-sm truncate">
+                                                            {s.name}
+                                                        </span>
+                                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                                                            {s.speakerTag || "Speaker"}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-2">
+                                                        {s.country && <span>{s.country}</span>}
+                                                        {s.country && (dayText || roomText) && <span>&middot;</span>}
+                                                        {dayText && <span>{dayText}</span>}
+                                                        {roomText && <span>({roomText})</span>}
+                                                    </div>
+
+                                                    {/* Dietary & Allergy Badges */}
+                                                    <div className="flex flex-wrap items-center gap-2 mt-2">
+                                                        {dietText && (
+                                                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border border-teal-200/80 dark:border-teal-800/50 shadow-2xs">
+                                                                <Utensils size={13} className="text-teal-600" />
+                                                                Diet: <strong>{dietText}</strong>
+                                                            </span>
+                                                        )}
+                                                        {allergyText && (
+                                                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800/50 shadow-2xs">
+                                                                <AlertTriangle size={13} className="text-rose-600" />
+                                                                Allergy / Concern: <strong>{allergyText}</strong>
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Quick view button */}
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setShowDietaryModal(false);
+                                                    setSelectedId(s.id);
+                                                    setTimeout(() => {
+                                                        const el = document.getElementById(`speaker-row-${s.id}`);
+                                                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                    }, 150);
+                                                }}
+                                                className="self-end sm:self-center px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-amber-700 bg-slate-100 hover:bg-amber-50 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg transition-colors shrink-0"
+                                            >
+                                                View Profile
+                                            </button>
+                                        </div>
+                                    );
+                                });
+                            })()}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/50 flex justify-end shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => setShowDietaryModal(false)}
+                                className="px-5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-all shadow-xs"
+                            >
+                                Done
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
 
         </div>
     );

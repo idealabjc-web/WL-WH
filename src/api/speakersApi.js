@@ -392,17 +392,37 @@ export async function uploadSpeakerAbstract(speakerId, sessionId, file) {
             sessionId = null;
         }
         if (!file) return null;
-        const ext = file.name ? file.name.split(".").pop() : "pdf";
+        const ext = file.name ? file.name.split(".").pop().toLowerCase() : "pdf";
         const path = sessionId ? `${speakerId}_${sessionId}.${ext}` : `${speakerId}.${ext}`;
+
+        // Clean up prior file with different extension if replacing
+        try {
+            const prefix = sessionId ? `${speakerId}_${sessionId}` : `${speakerId}`;
+            const { data: existingFiles } = await supabase.storage.from("speaker-abstracts").list("", { search: prefix });
+            if (existingFiles && existingFiles.length > 0) {
+                const toRemove = existingFiles
+                    .filter(f => f.name.startsWith(prefix + ".") && f.name !== path)
+                    .map(f => f.name);
+                if (toRemove.length > 0) {
+                    await supabase.storage.from("speaker-abstracts").remove(toRemove);
+                }
+            }
+        } catch (cleanupErr) {
+            console.warn("Could not clean up prior abstract file:", cleanupErr);
+        }
+
         const { error: uploadError } = await supabase.storage
             .from("speaker-abstracts")
             .upload(path, file, { upsert: true });
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+            console.error("Speaker abstract storage upload error:", uploadError);
+            throw uploadError;
+        }
         const { data } = supabase.storage.from("speaker-abstracts").getPublicUrl(path);
         return data?.publicUrl ? `${data.publicUrl}?t=${Date.now()}` : null;
     } catch (e) {
         console.error("Speaker abstract upload failed:", e);
-        return null;
+        throw e;
     }
 }
 
@@ -619,12 +639,20 @@ export async function fetchAllAbstractFiles() {
 
 export async function deleteAbstractFile(fileName) {
     try {
-        const { error } = await supabase.storage.from("speaker-abstracts").remove([fileName]);
-        if (error) throw error;
-        return true;
+        const { data, error } = await supabase.storage.from("speaker-abstracts").remove([fileName]);
+        if (error) {
+            console.error("Failed to delete abstract file:", error);
+            return { success: false, error: error.message };
+        }
+        if (!data || data.length === 0) {
+            const rlsMsg = "Delete blocked: missing DELETE RLS policy on Supabase storage bucket 'speaker-abstracts'.";
+            console.error(rlsMsg, data);
+            return { success: false, error: rlsMsg };
+        }
+        return { success: true, data };
     } catch (e) {
         console.error("Failed to delete abstract file:", e);
-        return false;
+        return { success: false, error: e.message || "Failed to delete file" };
     }
 }
 
