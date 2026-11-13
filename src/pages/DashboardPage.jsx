@@ -183,6 +183,35 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
             };
         }
 
+        // Clean abstractUrl to ensure only current active slots are retained
+        const activeSessionsList = (updatedForm.sessions && updatedForm.sessions.length > 0)
+            ? updatedForm.sessions
+            : [{ id: 'legacy' }];
+        const existingMap = getAbstractsMap(updatedForm.abstractUrl);
+        const cleanedAbstracts = {};
+
+        if (activeSessionsList.length <= 1) {
+            const sessId = activeSessionsList[0].id || 'session_0';
+            const url = existingMap[sessId] || existingMap['session_0'] || existingMap.legacy || Object.values(existingMap)[0];
+            if (url) {
+                cleanedAbstracts[sessId] = url;
+            }
+        } else {
+            activeSessionsList.forEach((sess, idx) => {
+                const sessId = sess.id || `session_${idx}`;
+                const url = existingMap[sessId] || existingMap[`session_${idx}`] || (idx === 0 ? existingMap.legacy : null);
+                if (url) {
+                    cleanedAbstracts[sessId] = url;
+                }
+            });
+        }
+
+        updatedForm = {
+            ...updatedForm,
+            abstractUrl: Object.keys(cleanedAbstracts).length > 0 ? JSON.stringify(cleanedAbstracts) : null,
+            abstractStatus: Object.keys(cleanedAbstracts).length > 0 ? (updatedForm.abstractStatus || "submitted") : "pending"
+        };
+
         // Upload photo file if one was selected
         if (photoFile) {
             setPhotoUploading(true);
@@ -618,6 +647,25 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                                                         >
                                                             Change File
                                                         </button>
+                                                         <button
+                                                             type="button"
+                                                             className="text-xs text-rose-600 hover:text-rose-800 font-semibold border border-rose-200 hover:bg-rose-50 px-2.5 py-2 rounded-lg bg-white transition-colors shrink-0"
+                                                             onClick={() => {
+                                                                 if (window.confirm("Remove this abstract file from this slot?")) {
+                                                                     const next = { ...currentAbstracts };
+                                                                     delete next[sessionId];
+                                                                     delete next.legacy;
+                                                                     delete next[`session_${idx}`];
+                                                                     setForm(prev => ({
+                                                                         ...prev,
+                                                                         abstractUrl: Object.keys(next).length > 0 ? JSON.stringify(next) : null,
+                                                                         abstractStatus: Object.keys(next).length > 0 ? prev.abstractStatus : "pending"
+                                                                     }));
+                                                                 }
+                                                             }}
+                                                         >
+                                                             Remove
+                                                         </button>
                                                     </div>
                                                 ) : (
                                                     <button
@@ -850,20 +898,61 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                     {row("Allergies", isSpeaker && !isSelf ? "Confidential" : (speaker.allergy || "None reported"))}
                     {row("Speaker Tour", isSpeaker && !isSelf ? "Confidential" : speaker.tour)}
                     <div className="text-xs font-semibold text-amber-600 tracking-wide mt-3 mb-1.5">ABSTRACT</div>
-                    {row("Abstract Status", speaker.abstractStatus ? speaker.abstractStatus.charAt(0).toUpperCase() + speaker.abstractStatus.slice(1) : "—")}
                     {(() => {
                         const currentAbstracts = getAbstractsMap(speaker.abstractUrl);
-                        const urls = Object.entries(currentAbstracts);
-                        if (urls.length === 0) return null;
-                        
-                        return urls.map(([key, url], i) => (
-                            <div key={key} className="flex justify-between gap-4 py-2 border-b border-slate-100 dark:border-slate-800 last:border-0 text-sm">
-                                <div className="text-slate-500 shrink-0">
-                                    {key === 'legacy' ? 'Abstract File' : `Abstract File ${i + 1}`}
-                                </div>
-                                <a href={url} target="_blank" rel="noreferrer" className="font-semibold text-blue-600 underline text-right truncate">View ↗</a>
-                            </div>
-                        ));
+                        const activeSessions = (speaker.sessions && speaker.sessions.length > 0)
+                            ? speaker.sessions
+                            : (speaker.day || speaker.timeSlot || speaker.conferenceRoom
+                                ? [{ id: 'session_0', day: speaker.day, timeSlot: speaker.timeSlot, conferenceRoom: speaker.conferenceRoom }]
+                                : []);
+
+                        // Resolve abstracts strictly associated with this speaker's active slots
+                        let displayAbstracts = [];
+                        if (activeSessions.length <= 1) {
+                            // Single slot (or default profile) -> Show at most ONE abstract
+                            const sess = activeSessions[0];
+                            const url = (sess && currentAbstracts[sess.id]) ||
+                                        currentAbstracts['session_0'] ||
+                                        currentAbstracts.legacy ||
+                                        Object.values(currentAbstracts).find(u => typeof u === 'string' && u.trim().length > 0);
+                            if (url) {
+                                displayAbstracts.push({ label: 'Abstract File', url });
+                            }
+                        } else {
+                            // Multiple slots -> Map each slot to its respective abstract
+                            activeSessions.forEach((sess, idx) => {
+                                const url = currentAbstracts[sess.id] ||
+                                            currentAbstracts[`session_${idx}`] ||
+                                            (idx === 0 ? currentAbstracts.legacy : null);
+                                if (url) {
+                                    displayAbstracts.push({
+                                        label: `Abstract File ${idx + 1}`,
+                                        subtitle: `${sess.day || 'TBA'} • ${sess.timeSlot || 'TBA'}`,
+                                        url
+                                    });
+                                }
+                            });
+                        }
+
+                        const hasSubmitted = displayAbstracts.length > 0;
+                        const statusLabel = hasSubmitted ? "Submitted" : "Pending";
+
+                        return (
+                            <>
+                                {row("Abstract Status", statusLabel)}
+                                {displayAbstracts.map((item, i) => (
+                                    <div key={i} className="flex justify-between items-center gap-4 py-2 border-b border-slate-100 dark:border-slate-800 last:border-0 text-sm">
+                                        <div className="text-slate-500 shrink-0 flex flex-col">
+                                            <span>{item.label}</span>
+                                            {item.subtitle && <span className="text-[11px] text-slate-400">{item.subtitle}</span>}
+                                        </div>
+                                        <a href={item.url} target="_blank" rel="noreferrer" className="font-semibold text-blue-600 hover:text-blue-700 underline text-right truncate">
+                                            View ↗
+                                        </a>
+                                    </div>
+                                ))}
+                            </>
+                        );
                     })()}
                 </div>
             </div>
