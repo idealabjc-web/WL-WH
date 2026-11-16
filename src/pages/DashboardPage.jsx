@@ -421,7 +421,7 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                                 <label className="text-xs font-semibold text-slate-700">Viewing Day</label>
                                 <select className={inputCls} value={viewDay} onChange={(e) => setViewDay(e.target.value)}>
                                     <option value="">Select a day...</option>
-                                    {EVENT_DAYS.map(d => (
+                                    {(currentEvent?.days?.length ? currentEvent.days : EVENT_DAYS).map(d => (
                                         <option key={d} value={d}>{d}</option>
                                     ))}
                                 </select>
@@ -1313,7 +1313,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                     onChange={(e) => setDayFilter(e.target.value)}
                                 >
                                     <option value="all">All Days</option>
-                                    {EVENT_DAYS.map(d => (
+                                    {(currentEvent?.days?.length ? currentEvent.days : EVENT_DAYS).map(d => (
                                         <option key={d} value={d}>{d}</option>
                                     ))}
                                 </select>
