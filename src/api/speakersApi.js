@@ -471,20 +471,37 @@ export async function uploadSpeakerPhoto(id, file, eventSlug = null) {
 export async function uploadSpeakerAbstract(speakerId, sessionId, file, eventSlug = null) {
     try {
         // Support both (speakerId, sessionId, file, eventSlug) and (speakerId, file, eventSlug)
-        if (sessionId && !file && (sessionId instanceof File || sessionId instanceof Blob || sessionId?.name)) {
-            eventSlug = file || eventSlug;
+        if (
+            sessionId instanceof File ||
+            sessionId instanceof Blob ||
+            (sessionId && typeof sessionId === "object" && "name" in sessionId && ("size" in sessionId || "type" in sessionId))
+        ) {
+            eventSlug = (typeof file === "string" ? file : null) || eventSlug;
             file = sessionId;
             sessionId = null;
         }
-        if (!file) return null;
-const folder = resolveEventFolder(eventSlug);
+
+        // Sanitize sessionId so an Object or [object File] can never be part of fileName
+        let cleanSessionId = null;
+        if (typeof sessionId === "string" || typeof sessionId === "number") {
+            const str = String(sessionId).trim();
+            if (str && !str.includes("[object")) {
+                cleanSessionId = str;
+            }
+        }
+
+        if (!file || !(file instanceof Blob || file instanceof File || (typeof file === "object" && file.name))) {
+            return null;
+        }
+
+        const folder = resolveEventFolder(eventSlug);
         const ext = file.name ? file.name.split(".").pop().toLowerCase() : "pdf";
-        const fileName = sessionId ? `${speakerId}_${sessionId}.${ext}` : `${speakerId}.${ext}`;
+        const fileName = cleanSessionId ? `${speakerId}_${cleanSessionId}.${ext}` : `${speakerId}.${ext}`;
         const path = `${folder}/${fileName}`;
 
         // Clean up prior file with different extension if replacing
         try {
-            const prefix = sessionId ? `${speakerId}_${sessionId}` : `${speakerId}`;
+            const prefix = cleanSessionId ? `${speakerId}_${cleanSessionId}` : `${speakerId}`;
             const { data: existingFiles } = await supabase.storage.from("speaker-abstracts").list(folder, { search: prefix });
             if (existingFiles && existingFiles.length > 0) {
                 const toRemove = existingFiles
@@ -502,13 +519,13 @@ const folder = resolveEventFolder(eventSlug);
             .upload(path, file, { upsert: true });
         if (uploadError) {
             console.error("Speaker abstract storage upload error:", uploadError);
-            throw uploadError;
+            return null;
         }
         const { data } = supabase.storage.from("speaker-abstracts").getPublicUrl(path);
         return data?.publicUrl ? `${data.publicUrl}?t=${Date.now()}` : null;
     } catch (e) {
         console.error("Speaker abstract upload failed:", e);
-        throw e;
+        return null;
     }
 }
 

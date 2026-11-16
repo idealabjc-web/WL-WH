@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Users, ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, Menu, BadgeCheck, LogOut, Settings, Megaphone, Activity, Calendar, BarChart2, Download, FileText, Radio } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./supabaseClient";
 import { fetchSpeakers, speakerToRow, createSpeakerRecord, updateSpeakerRecord } from "./api/speakersApi";
-import { fetchFeedback, feedbackToRow } from "./api/feedbackApi";
+import { fetchFeedback, feedbackToRow, insertFeedbackRecord } from "./api/feedbackApi";
 import { logAction } from "./api/auditApi";
 
 import Toast from "./components/common/Toast";
@@ -283,7 +283,7 @@ export default function EventPortal({
 
     const addFeedback = async (entry) => {
         setFeedback((prev) => [...prev, entry]);
-        const { error } = await supabase.from("feedback").insert(feedbackToRow(entry));
+        const { error } = await insertFeedbackRecord(entry);
         if (error) {
             console.error(error);
             toast("Feedback saved locally but failed to sync.");

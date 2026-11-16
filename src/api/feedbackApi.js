@@ -24,25 +24,28 @@ export function rowToFeedback(r) {
 }
 
 export async function fetchFeedback(eventSlug = null) {
-    let query = supabase.from("feedback").select("*").order("ts", { ascending: true });
-    if (eventSlug && eventSlug !== "all") {
-        if (eventSlug === "dubai") {
-            query = query.or("event_slug.eq.dubai,event_slug.is.null");
-        } else {
-            query = query.eq("event_slug", eventSlug);
-        }
-    }
-    let { data, error } = await query;
-    if (error && (error.code === "42703" || String(error.message || "").toLowerCase().includes("event_slug"))) {
-        const fallback = await supabase.from("feedback").select("*").order("ts", { ascending: true });
-        if (!fallback.error) {
-            data = fallback.data || [];
-            if (eventSlug === "paris") {
-                data = data.filter(r => r.event_slug === "paris");
-            }
-            error = null;
-        }
-    }
+    // Select all feedback rows directly to prevent PostgREST 400 Bad Request if event_slug column is absent
+    const { data, error } = await supabase.from("feedback").select("*").order("ts", { ascending: true });
     if (error) throw error;
-    return (data || []).map(rowToFeedback);
+    let list = (data || []).map(rowToFeedback);
+    if (eventSlug && eventSlug !== "all") {
+        list = list.filter(item => {
+            if (eventSlug === "dubai") {
+                return !item.eventSlug || item.eventSlug === "dubai";
+            }
+            return item.eventSlug === eventSlug;
+        });
+    }
+    return list;
+}
+
+export async function insertFeedbackRecord(entry) {
+    const row = feedbackToRow(entry);
+    let { error } = await supabase.from("feedback").insert(row);
+    if (error && (error.code === "42703" || String(error.message || "").toLowerCase().includes("event_slug"))) {
+        delete row.event_slug;
+        const retry = await supabase.from("feedback").insert(row);
+        error = retry.error;
+    }
+    return { error };
 }

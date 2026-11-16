@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { 
     Users, CheckCircle2, Clock, Search, Filter, 
     RefreshCw, MapPin, Radio, Calendar, Sparkles,
@@ -8,19 +8,84 @@ import {
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
 import { formatTimeAmPm } from "./CheckinPage";
 
-export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefresh }) {
+/**
+ * Parses any time slot string into minutes from midnight (0 - 1440)
+ * Handles both 24-hour and 12-hour AM/PM formats, e.g.:
+ *  - "08:00 - 08:30" => 480
+ *  - "08:00 AM - 08:30 AM" => 480
+ *  - "10:30 AM - 11:00 AM" => 630
+ *  - "12:00 PM - 12:30 PM" => 720
+ *  - "12:30 PM - 01:00 PM" => 750
+ *  - "02:30 PM - 03:00 PM" => 870
+ *  - "05:30 PM - 06:00 PM" => 1050
+ */
+export function parseStartTimeToMinutes(timeStr) {
+    if (!timeStr || typeof timeStr !== "string") return 999999;
+    const clean = timeStr.trim();
+    const match = clean.match(/(\d{1,2}):(\d{2})(?:\s*(AM|PM))?/i);
+    if (!match) return 999999;
+
+    let hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10) || 0;
+    const meridiem = match[3] ? match[3].toUpperCase() : null;
+
+    if (meridiem === "PM" && hours < 12) {
+        hours += 12;
+    } else if (meridiem === "AM" && hours === 12) {
+        hours = 0;
+    } else if (!meridiem && hours >= 1 && hours <= 6) {
+        hours += 12;
+    }
+
+    return hours * 60 + minutes;
+}
+
+export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefresh, currentEvent = null }) {
     // Top Sub-navbar Tab: "home" | "attendance" | "stage-monitor" | "av-desk"
     const [subTab, setSubTab] = useState("attendance");
 
+    const DAYS = useMemo(() => {
+        if (currentEvent?.days && currentEvent.days.length > 0) {
+            return currentEvent.days.map((d, idx) => ({
+                id: d,
+                label: `Day ${idx + 1}`,
+                fullDate: d.toUpperCase()
+            }));
+        }
+        return [
+            { id: "November 25", label: "Day 1", fullDate: "NOV 25, 2026" },
+            { id: "November 26", label: "Day 2", fullDate: "NOV 26, 2026" }
+        ];
+    }, [currentEvent]);
+
+    const rooms = useMemo(() => {
+        if (currentEvent?.rooms && currentEvent.rooms.length > 0) {
+            return currentEvent.rooms;
+        }
+        return ["Room 1", "Room 2"];
+    }, [currentEvent]);
+
     // Attendance (Theatre Grid) States
-    const [selectedDay, setSelectedDay] = useState("November 25");
-    const [selectedRoom, setSelectedRoom] = useState("all"); // "all" | "Room 1" | "Room 2"
+    const [selectedDay, setSelectedDay] = useState(() => (DAYS[0]?.id || "November 25"));
+
+    // Sync selectedDay if event changes
+    useEffect(() => {
+        if (DAYS.length > 0 && !DAYS.some(d => d.id === selectedDay)) {
+            setSelectedDay(DAYS[0].id);
+        }
+    }, [DAYS, selectedDay]);
+
+    const activeDayObj = useMemo(() => {
+        return DAYS.find(d => d.id === selectedDay) || DAYS[0] || { label: "Day 1", fullDate: selectedDay };
+    }, [DAYS, selectedDay]);
+
+    const [selectedRoom, setSelectedRoom] = useState("all"); // "all" | Room
     const [statusFilter, setStatusFilter] = useState("all"); // "all" | "checkedin" | "pending"
     const [searchQuery, setSearchQuery] = useState("");
     const [activeSpeaker, setActiveSpeaker] = useState(null);
 
     // Stage Monitor Room Selector
-    const [stageRoom, setStageRoom] = useState("Room 1");
+    const [stageRoom, setStageRoom] = useState(() => rooms[0] || "Room 1");
 
     const SUB_NAV_ITEMS = [
         { id: "home", label: "Home", icon: Home },
@@ -29,22 +94,20 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
         { id: "av-desk", label: "AV & Tech Desk", icon: Activity, badge: "Ops" },
     ];
 
-    const DAYS = [
-        { id: "November 25", label: "Day 1", fullDate: "NOV 25, 2026" },
-        { id: "November 26", label: "Day 2", fullDate: "NOV 26, 2026" }
-    ];
-
     // Helper to check if a speaker is assigned to the selected day
     const getSpeakerSessionsForDay = (s, targetDay) => {
         const matchesDayStr = (d) => {
             if (!d) return false;
+            const normD = String(d).toLowerCase().trim();
+            const normTarget = String(targetDay).toLowerCase().trim();
+            if (normD === normTarget) return true;
             if (targetDay === "November 25") {
-                return d === "November 25" || d === "Day 1" || d === "NOV25-DAY1" || d.includes("25");
+                return normD === "day 1" || normD === "nov25-day1" || normD.includes("25");
             }
             if (targetDay === "November 26") {
-                return d === "November 26" || d === "Day 2" || d === "NOV26-DAY2" || d.includes("26");
+                return normD === "day 2" || normD === "nov26-day2" || normD.includes("26");
             }
-            return d === targetDay;
+            return normD.includes(normTarget) || normTarget.includes(normD);
         };
 
         if (s.sessions && s.sessions.length > 0) {
@@ -92,31 +155,39 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
         }).filter(Boolean);
     }, [speakers, selectedDay]);
 
-    // Apply secondary filters
+    // Apply secondary filters and sort chronologically in order according to time
     const filteredSpeakers = useMemo(() => {
-        return daySpeakers.filter(s => {
-            if (selectedRoom !== "all") {
-                const normSelected = selectedRoom.toLowerCase().trim();
-                const normRoom = (s.room || "").toLowerCase().trim();
-                if (normRoom !== normSelected) return false;
-            }
-
-            if (statusFilter === "checkedin" && !s.isCurrentlyOnsite) return false;
-            if (statusFilter === "pending" && s.isCurrentlyOnsite) return false;
-
-            if (searchQuery.trim()) {
-                const q = searchQuery.toLowerCase().trim();
-                const name = (s.name || "").toLowerCase();
-                const title = (s.sessionTitle || "").toLowerCase();
-                const room = (s.room || "").toLowerCase();
-                const tag = (s.speakerTag || "").toLowerCase();
-                if (!name.includes(q) && !title.includes(q) && !room.includes(q) && !tag.includes(q)) {
-                    return false;
+        return daySpeakers
+            .filter(s => {
+                if (selectedRoom !== "all") {
+                    const normSelected = selectedRoom.toLowerCase().trim();
+                    const normRoom = (s.room || "").toLowerCase().trim();
+                    if (normRoom !== normSelected) return false;
                 }
-            }
 
-            return true;
-        });
+                if (statusFilter === "checkedin" && !s.isCurrentlyOnsite) return false;
+                if (statusFilter === "pending" && s.isCurrentlyOnsite) return false;
+
+                if (searchQuery.trim()) {
+                    const q = searchQuery.toLowerCase().trim();
+                    const name = (s.name || "").toLowerCase();
+                    const title = (s.sessionTitle || "").toLowerCase();
+                    const room = (s.room || "").toLowerCase();
+                    const tag = (s.speakerTag || "").toLowerCase();
+                    if (!name.includes(q) && !title.includes(q) && !room.includes(q) && !tag.includes(q)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            })
+            .sort((a, b) => {
+                const diff = parseStartTimeToMinutes(a.timeSlot) - parseStartTimeToMinutes(b.timeSlot);
+                if (diff !== 0) return diff;
+                const roomComp = (a.room || "").localeCompare(b.room || "");
+                if (roomComp !== 0) return roomComp;
+                return (a.name || "").localeCompare(b.name || "");
+            });
     }, [daySpeakers, selectedRoom, statusFilter, searchQuery]);
 
     // Live counts
@@ -125,11 +196,15 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
     const checkedOutCount = daySpeakers.filter(s => s.isCheckedOut).length;
     const totalDayCount = daySpeakers.length;
 
-    // Stage monitor ordered sessions for the chosen room
+    // Stage monitor ordered sessions for the chosen room, sorted by time
     const stageMonitorSpeakers = useMemo(() => {
         return daySpeakers
             .filter(s => (s.room || "").toLowerCase().trim() === stageRoom.toLowerCase().trim())
-            .sort((a, b) => (a.timeSlot || "").localeCompare(b.timeSlot || ""));
+            .sort((a, b) => {
+                const diff = parseStartTimeToMinutes(a.timeSlot) - parseStartTimeToMinutes(b.timeSlot);
+                if (diff !== 0) return diff;
+                return (a.name || "").localeCompare(b.name || "");
+            });
     }, [daySpeakers, stageRoom]);
 
     return (
@@ -221,45 +296,58 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
             {/* ─── TAB 2: ATTENDANCE (THEATRE GRID) ────────────────── */}
             {subTab === "attendance" && (
                 <div className="space-y-6">
-                    {/* Header with Day Selector */}
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-sm">
-                        <div>
-                            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 mb-2">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                Live Telemetry &middot; {selectedDay === "November 25" ? "Day 1" : "Day 2"}
+                    {/* Header with Day Selector - Clean Stacked Layout */}
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-5 sm:p-6 rounded-2xl shadow-sm space-y-4">
+                        {/* Title and Telemetry Badge */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 mb-2">
+                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span>Live Telemetry &middot; {activeDayObj.label}</span>
+                                    {activeDayObj.fullDate && (
+                                        <span className="text-[10px] opacity-75 font-mono">({activeDayObj.fullDate})</span>
+                                    )}
+                                </div>
+                                <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                                    Theatre Seating Check-In Floor
+                                </h2>
+                                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                                    Visual stage & theatre seating: <span className="text-emerald-600 dark:text-emerald-400 font-bold">Green = Checked-In</span> &middot; <span className="text-rose-600 dark:text-rose-400 font-bold">Red = Not checked in yet</span>
+                                </p>
                             </div>
-                            <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                                Theatre Seating Check-In Floor
-                            </h2>
-                            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-                                Visual stage & theatre seating: Green = Checked-In &middot; Red = Not checked in yet
-                            </p>
                         </div>
 
-                        {/* Day 1 / Day 2 Selector */}
-                        <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700/60 shrink-0 self-start md:self-auto">
-                            {DAYS.map((d) => {
-                                const isSelected = selectedDay === d.id;
-                                return (
-                                    <button
-                                        key={d.id}
-                                        onClick={() => setSelectedDay(d.id)}
-                                        className={`px-4 sm:px-6 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 ${
-                                            isSelected
-                                                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-md border border-slate-200/80 dark:border-slate-700 scale-100"
-                                                : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
-                                        }`}
-                                    >
-                                        <Calendar size={15} className={isSelected ? "text-emerald-500" : "text-slate-400"} />
-                                        <span>{d.label}</span>
-                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                                            isSelected ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300" : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
-                                        }`}>
-                                            {d.fullDate.split(",")[0]}
-                                        </span>
-                                    </button>
-                                );
-                            })}
+                        {/* Multi-Day Navigation Strip */}
+                        <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80">
+                            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+                                <span className="text-xs font-bold uppercase tracking-wider text-slate-400 mr-1 shrink-0 hidden sm:inline">
+                                    Select Day:
+                                </span>
+                                {DAYS.map((d) => {
+                                    const isSelected = selectedDay === d.id;
+                                    return (
+                                        <button
+                                            key={d.id}
+                                            onClick={() => setSelectedDay(d.id)}
+                                            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 shrink-0 ${
+                                                isSelected
+                                                    ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/25 scale-[1.02]"
+                                                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700"
+                                            }`}
+                                        >
+                                            <Calendar size={14} className={isSelected ? "text-white" : "text-slate-400"} />
+                                            <span>{d.label}</span>
+                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                                isSelected 
+                                                    ? "bg-white/25 text-white" 
+                                                    : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                                            }`}>
+                                                {d.fullDate.split(",")[0]}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
 
@@ -267,7 +355,7 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-xs">
                             <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Scheduled {selectedDay === "November 25" ? "Day 1" : "Day 2"}</span>
+                                <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Scheduled {activeDayObj.label}</span>
                                 <Users size={18} className="text-slate-400" />
                             </div>
                             <div className="text-3xl font-black text-slate-900 dark:text-white mt-1">{totalDayCount}</div>
@@ -335,7 +423,7 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                         </div>
 
                         <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-bold">
-                            {["all", "Room 1", "Room 2"].map((rm) => (
+                            {["all", ...rooms].map((rm) => (
                                 <button
                                     key={rm}
                                     onClick={() => setSelectedRoom(rm)}
@@ -363,7 +451,7 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                     {filteredSpeakers.length === 0 ? (
                         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-16 text-center shadow-sm">
                             <p className="text-slate-500 text-sm font-semibold">
-                                No speakers found for {selectedDay === "November 25" ? "Day 1" : "Day 2"} with the selected filters.
+                                No speakers found for {activeDayObj.label} with the selected filters.
                             </p>
                         </div>
                     ) : (
@@ -460,7 +548,7 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
 
                         {/* Room Switcher */}
                         <div className="flex bg-slate-100 dark:bg-slate-800 p-1.5 rounded-2xl border border-slate-200 text-xs font-bold">
-                            {["Room 1", "Room 2"].map(rm => (
+                            {rooms.map(rm => (
                                 <button
                                     key={rm}
                                     onClick={() => setStageRoom(rm)}

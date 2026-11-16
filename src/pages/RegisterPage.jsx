@@ -122,7 +122,7 @@ export default function RegisterPage({ speakers = [], onAdd, toast, currentEvent
         if (form.abstractProvided === "yes") {
             if (abstractFile) {
                 uploadTasks.push(
-                    uploadSpeakerAbstract(id, abstractFile, rec.eventSlug).then(abstractUrl => {
+                    uploadSpeakerAbstract(id, null, abstractFile, rec.eventSlug).then(abstractUrl => {
                         rec.abstractUrl = abstractUrl;
                         rec.abstractStatus = "submitted";
                     })
@@ -157,20 +157,31 @@ export default function RegisterPage({ speakers = [], onAdd, toast, currentEvent
             })
         );
 
-        await Promise.all(uploadTasks);
-        setLastAdded(rec);
-        setQrDataUrl(localQrDataUrl);
-        setBadgeStored(localBadgeStored);
-        setSyncFailed(false);
+        try {
+            await Promise.allSettled(uploadTasks);
+            setLastAdded(rec);
+            setQrDataUrl(localQrDataUrl);
+            setBadgeStored(localBadgeStored);
+            setSyncFailed(false);
 
-        const ok = await onAdd(rec);
-        setSyncFailed(!ok);
-        setSaving(false);
-        setForm(emptyForm);
-        setPhotoFile(null);
-        setPhotoPreview(null);
-        setAbstractFile(null);
-        toast(ok ? "Speaker added — QR badge saved." : "QR badge ready — sync pending.");
+            const ok = await onAdd(rec);
+            setSyncFailed(!ok);
+            if (ok) {
+                setForm(emptyForm);
+                setPhotoFile(null);
+                setPhotoPreview(null);
+                setAbstractFile(null);
+                setPeerciteFile(null);
+                toast("Speaker added — QR badge saved.");
+            } else {
+                toast("QR badge ready — sync pending. Form kept in case retry is needed.");
+            }
+        } catch (err) {
+            console.error("Error creating speaker:", err);
+            toast("Failed to add speaker. Details were preserved — please try again.");
+        } finally {
+            setSaving(false);
+        }
     };
 
     const retrySync = async () => {

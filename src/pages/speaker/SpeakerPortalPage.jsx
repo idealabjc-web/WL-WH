@@ -15,7 +15,7 @@ import FeedbackPage from "../FeedbackPage";
 import Toast from "../../components/common/Toast";
 import { supabase, isSupabaseConfigured } from "../../supabaseClient";
 import { fetchSpeakers, speakerToRow, updateSpeakerRecord } from "../../api/speakersApi";
-import { fetchFeedback, feedbackToRow } from "../../api/feedbackApi";
+import { fetchFeedback, feedbackToRow, insertFeedbackRecord } from "../../api/feedbackApi";
 import { fetchAnnouncements } from "../../api/announcementsApi";
 import SpeakerCheckoutPage from "./SpeakerCheckoutPage";
 import SpeakerAnnouncementsPage from "./SpeakerAnnouncementsPage";
@@ -251,7 +251,7 @@ export default function SpeakerPortalPage({ speaker, onLogout, currentEvent }) {
         setFeedback((prev) => [...prev, entry]);
         if (isSupabaseConfigured && supabase) {
             try {
-                const { error } = await supabase.from("feedback").insert(feedbackToRow(entry));
+                const { error } = await insertFeedbackRecord(entry);
                 if (error) {
                     console.error("Error inserting feedback:", error);
                     toast("Feedback saved locally.");
