@@ -3,7 +3,6 @@ import { Link, navigate } from "../router";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 import FrenchFlagAnimation from "../components/FrenchFlagAnimation";
-import FlipCountdown from "../components/FlipCountdown";
 import ParisFlightLandingIntro from "../components/ParisFlightLandingIntro";
 import ScrollFlyIn from "../components/ScrollFlyIn";
 import { PARIS_EVENT, PARIS_KEYNOTE_FACULTY, BRAND } from "../seriesData";
@@ -257,11 +256,25 @@ export default function ParisSeriesPage({ onAdminClick }) {
                                 </div>
                             </div>
 
-                            {/* Live 3D Flip Card Countdown to Event */}
-                            <FlipCountdown 
-                                targetDate="2027-03-08T09:00:00+01:00"
-                                theme="blue"
-                            />
+                            {/* Live Countdown to Event */}
+                            <div className="sc-countdown">
+                                <div className="sc-cd-box">
+                                    <b className="sc-blue-text">{timeLeft.days}</b>
+                                    <span>Days</span>
+                                </div>
+                                <div className="sc-cd-box">
+                                    <b>{String(timeLeft.hours).padStart(2, "0")}</b>
+                                    <span>Hours</span>
+                                </div>
+                                <div className="sc-cd-box">
+                                    <b>{String(timeLeft.mins).padStart(2, "0")}</b>
+                                    <span>Minutes</span>
+                                </div>
+                                <div className="sc-cd-box">
+                                    <b>{String(timeLeft.secs).padStart(2, "0")}</b>
+                                    <span>Seconds</span>
+                                </div>
+                            </div>
 
                             {/* Action Buttons */}
                             <div style={{ marginTop: "32px", display: "flex", flexWrap: "wrap", gap: "12px" }}>
