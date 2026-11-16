@@ -18,7 +18,7 @@ import { TIME_SLOTS, EVENT_DAYS } from "../api/speakersApi";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
 import AgendaPoster from "../components/AgendaPoster";
 
-export default function AgendaPage({ speakers = [], onUpdate, onRefresh, toast, currentEvent = null }) {
+export default function AgendaPage({ speakers = [], onUpdate, onRefresh, toast, currentEvent = null, readOnly = false }) {
     const rooms = useMemo(() => {
         if (currentEvent?.rooms && currentEvent.rooms.length > 0) {
             return currentEvent.rooms.slice(0, 2);
@@ -533,112 +533,120 @@ export default function AgendaPage({ speakers = [], onUpdate, onRefresh, toast, 
                             Event Digital Agenda
                         </h1>
                         <p className="text-slate-500 text-sm mt-1">
-                            Drag &amp; drop speakers into empty slots to assign, or drop onto another speaker to swap their slots.
+                            {readOnly
+                                ? "Official conference presentation schedule across all rooms and days (Read-Only)."
+                                : "Drag & drop speakers into empty slots to assign, or drop onto another speaker to swap their slots."}
                         </p>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2.5">
-                        <button
-                            type="button"
-                            onClick={() => setUnassignedDrawerOpen(prev => !prev)}
-                            className={`inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all shadow-sm border ${
-                                unassignedDrawerOpen 
-                                    ? "bg-emerald-600 text-white border-emerald-700 shadow-emerald-600/20" 
-                                    : "bg-white text-slate-700 border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/50"
-                            }`}
-                        >
-                            <Users size={15} className={unassignedDrawerOpen ? "text-white" : "text-emerald-600"} />
-                            <span>Unassigned Speakers</span>
-                            <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-extrabold ${
-                                unassignedDrawerOpen ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-800"
-                            }`}>
-                                {unassignedSpeakers.length}
-                            </span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setShowResetConfirm(true)}
-                            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-all shadow-sm w-fit"
-                        >
-                            <RotateCcw size={14} /> Clear All Day/Time Slots
-                        </button>
-                    </div>
+                    {!readOnly && (
+                        <div className="flex flex-wrap items-center gap-2.5">
+                            <button
+                                type="button"
+                                onClick={() => setUnassignedDrawerOpen(prev => !prev)}
+                                className={`inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold rounded-xl transition-all shadow-sm border ${
+                                    unassignedDrawerOpen 
+                                        ? "bg-emerald-600 text-white border-emerald-700 shadow-emerald-600/20" 
+                                        : "bg-white text-slate-700 border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/50"
+                                }`}
+                            >
+                                <Users size={15} className={unassignedDrawerOpen ? "text-white" : "text-emerald-600"} />
+                                <span>Unassigned Speakers</span>
+                                <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-extrabold ${
+                                    unassignedDrawerOpen ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-800"
+                                }`}>
+                                    {unassignedSpeakers.length}
+                                </span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setShowResetConfirm(true)}
+                                className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-all shadow-sm w-fit"
+                            >
+                                <RotateCcw size={14} /> Clear All Day/Time Slots
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Helpful Drag & Drop Tip Banner */}
-                <div className="mt-4 px-4 py-2.5 bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-200/80 rounded-xl text-xs text-slate-700 flex flex-wrap items-center justify-between gap-2 shadow-xs">
-                    <div className="flex items-center gap-2">
-                        <Sparkles size={16} className="text-emerald-600 shrink-0 animate-pulse" />
-                        <span>
-                            <strong>Drag &amp; Drop Enabled:</strong> Drag any speaker card onto an empty slot to place them, or drag onto an occupied slot (or right-click) to <strong>swap</strong> positions instantly.
-                        </span>
+                {!readOnly && (
+                    <div className="mt-4 px-4 py-2.5 bg-gradient-to-r from-emerald-50 via-teal-50 to-blue-50 border border-emerald-200/80 rounded-xl text-xs text-slate-700 flex flex-wrap items-center justify-between gap-2 shadow-xs">
+                        <div className="flex items-center gap-2">
+                            <Sparkles size={16} className="text-emerald-600 shrink-0 animate-pulse" />
+                            <span>
+                                <strong>Drag &amp; Drop Enabled:</strong> Drag any speaker card onto an empty slot to place them, or drag onto an occupied slot (or right-click) to <strong>swap</strong> positions instantly.
+                            </span>
+                        </div>
+                        {draggingItem && (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600 text-white text-[11px] font-bold rounded-lg shadow-xs animate-bounce">
+                                <Move size={12} /> Dragging: {draggingItem.speaker.name}
+                            </span>
+                        )}
                     </div>
-                    {draggingItem && (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600 text-white text-[11px] font-bold rounded-lg shadow-xs animate-bounce">
-                            <Move size={12} /> Dragging: {draggingItem.speaker.name}
-                        </span>
-                    )}
-                </div>
+                )}
             </div>
 
             {/* Controls (Room Filter & View Toggle) */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                {viewMode !== "calendar" && (
-                    <div className="flex bg-slate-100 p-1 rounded-xl">
-                        {rooms.map(room => (
-                            <button
-                                key={room}
-                                onClick={() => setSelectedRoom(room)}
-                                className={`flex-1 px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
-                                    selectedRoom === room 
-                                        ? "bg-white text-slate-900 shadow-sm" 
-                                        : "text-slate-500 hover:text-slate-700"
-                                }`}
-                            >
-                                {room}
-                            </button>
-                        ))}
+            {!readOnly && (
+                <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                    {viewMode !== "calendar" && (
+                        <div className="flex bg-slate-100 p-1 rounded-xl">
+                            {rooms.map(room => (
+                                <button
+                                    key={room}
+                                    onClick={() => setSelectedRoom(room)}
+                                    className={`flex-1 px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
+                                        selectedRoom === room 
+                                            ? "bg-white text-slate-900 shadow-sm" 
+                                            : "text-slate-500 hover:text-slate-700"
+                                    }`}
+                                >
+                                    {room}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                    
+                    {/* View Toggle */}
+                    <div className="flex bg-slate-100 p-1 rounded-xl ml-auto">
+                        <button
+                            onClick={() => setViewMode("list")}
+                            className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
+                                viewMode === "list" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                            }`}
+                        >
+                            <LayoutList size={16} /> List
+                        </button>
+                        <button
+                            onClick={() => setViewMode("calendar")}
+                            className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
+                                viewMode === "calendar" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                            }`}
+                        >
+                            <TableIcon size={16} /> Calendar
+                        </button>
+                        <button
+                            onClick={() => setViewMode("poster")}
+                            className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
+                                viewMode === "poster" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                            }`}
+                        >
+                            <Download size={16} /> Poster Export
+                        </button>
+                        <button
+                            onClick={() => setViewMode("stats")}
+                            className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
+                                viewMode === "stats" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                            }`}
+                        >
+                            <ClipboardList size={16} /> Copy Stats
+                        </button>
                     </div>
-                )}
-                
-                {/* View Toggle */}
-                <div className="flex bg-slate-100 p-1 rounded-xl ml-auto">
-                    <button
-                        onClick={() => setViewMode("list")}
-                        className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
-                            viewMode === "list" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                        }`}
-                    >
-                        <LayoutList size={16} /> List
-                    </button>
-                    <button
-                        onClick={() => setViewMode("calendar")}
-                        className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
-                            viewMode === "calendar" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                        }`}
-                    >
-                        <TableIcon size={16} /> Calendar
-                    </button>
-                    <button
-                        onClick={() => setViewMode("poster")}
-                        className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
-                            viewMode === "poster" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                        }`}
-                    >
-                        <Download size={16} /> Poster Export
-                    </button>
-                    <button
-                        onClick={() => setViewMode("stats")}
-                        className={`flex-1 px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${
-                            viewMode === "stats" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                        }`}
-                    >
-                        <ClipboardList size={16} /> Copy Stats
-                    </button>
                 </div>
-            </div>
+            )}
 
             {/* UNASSIGNED SPEAKERS TRAY (Slide-out drawer when opened) */}
-            {unassignedDrawerOpen && (
+            {!readOnly && unassignedDrawerOpen && (
                 <div className="mb-6 p-4 bg-white border-2 border-emerald-300 rounded-2xl shadow-lg animate-in slide-in-from-top-4 duration-200">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                         <div className="flex items-center gap-2">
@@ -931,35 +939,37 @@ export default function AgendaPage({ speakers = [], onUpdate, onRefresh, toast, 
                                                 : "border border-dashed border-emerald-200 bg-transparent hover:border-emerald-400 hover:bg-emerald-50/50 text-emerald-400/80 hover:text-emerald-700";
 
                                             if (speaker) {
-                                                const isBeingDragged = draggingItem?.speaker.id === speaker.id;
+                                                const isBeingDragged = !readOnly && draggingItem?.speaker.id === speaker.id;
                                                 return (
                                                     <div 
                                                         key={key} 
-                                                        onDragOver={(e) => handleDragOver(e, { room: col.room, day: col.day, timeSlot: slot })}
-                                                        onDragLeave={(e) => handleDragLeave(e, { room: col.room, day: col.day, timeSlot: slot })}
-                                                        onDrop={(e) => handleDrop(e, { room: col.room, day: col.day, timeSlot: slot }, speaker)}
+                                                        onDragOver={!readOnly ? (e) => handleDragOver(e, { room: col.room, day: col.day, timeSlot: slot }) : undefined}
+                                                        onDragLeave={!readOnly ? (e) => handleDragLeave(e, { room: col.room, day: col.day, timeSlot: slot }) : undefined}
+                                                        onDrop={!readOnly ? (e) => handleDrop(e, { room: col.room, day: col.day, timeSlot: slot }, speaker) : undefined}
                                                         className={`p-2 relative transition-all ${
-                                                            isDropTarget ? "bg-amber-100/60 ring-2 ring-amber-500 rounded-xl" : ""
+                                                            !readOnly && isDropTarget ? "bg-amber-100/60 ring-2 ring-amber-500 rounded-xl" : ""
                                                         }`}
                                                     >
                                                         <div className="md:hidden text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 ml-1">{col.room} - {formatDayHeader(col.day)}</div>
                                                         <div 
-                                                            draggable={true}
-                                                            onDragStart={(e) => handleDragStart(e, speaker, { room: col.room, day: col.day, timeSlot: slot }, false)}
-                                                            onDragEnd={handleDragEnd}
-                                                            onClick={() => handleManageClick(slot, speaker, col.day, col.room)}
-                                                            onContextMenu={(e) => handleContextMenu(e, speaker, { room: col.room, day: col.day, timeSlot: slot })}
-                                                            className={`group flex flex-col h-full p-3 rounded-xl border cursor-grab active:cursor-grabbing transition-all relative ${cardBgCls} ${
+                                                            draggable={!readOnly}
+                                                            onDragStart={!readOnly ? (e) => handleDragStart(e, speaker, { room: col.room, day: col.day, timeSlot: slot }, false) : undefined}
+                                                            onDragEnd={!readOnly ? handleDragEnd : undefined}
+                                                            onClick={!readOnly ? () => handleManageClick(slot, speaker, col.day, col.room) : undefined}
+                                                            onContextMenu={!readOnly ? (e) => handleContextMenu(e, speaker, { room: col.room, day: col.day, timeSlot: slot }) : undefined}
+                                                            className={`group flex flex-col h-full p-3 rounded-xl border ${readOnly ? "cursor-default" : "cursor-grab active:cursor-grabbing"} transition-all relative ${cardBgCls} ${
                                                                 isBeingDragged ? "opacity-30 ring-2 ring-emerald-500" : ""
-                                                            } ${isDropTarget ? "scale-[1.03] shadow-lg border-amber-500" : ""}`}
-                                                            title="Drag onto another slot to swap or move. Right-click for quick actions."
+                                                            } ${!readOnly && isDropTarget ? "scale-[1.03] shadow-lg border-amber-500" : ""}`}
+                                                            title={readOnly ? speaker.name : "Drag onto another slot to swap or move. Right-click for quick actions."}
                                                         >
                                                             <div className={`flex items-center justify-between mb-2 border-b pb-1.5 ${dividerCls}`}>
                                                                 <div className="flex items-center gap-1.5">
                                                                     <Clock size={12} className={iconCls} />
                                                                     <span className={`text-[10px] font-bold ${timeTextCls}`}>{slot}</span>
                                                                 </div>
-                                                                <GripVertical size={12} className="text-slate-400 opacity-60 group-hover:opacity-100 transition-opacity" />
+                                                                {!readOnly && (
+                                                                    <GripVertical size={12} className="text-slate-400 opacity-60 group-hover:opacity-100 transition-opacity" />
+                                                                )}
                                                             </div>
                                                             <div className="flex items-start gap-2.5">
                                                                 <SpeakerAvatar src={speaker.photoUrl} size={32} />
@@ -972,7 +982,7 @@ export default function AgendaPage({ speakers = [], onUpdate, onRefresh, toast, 
                                                             </div>
 
                                                             {/* Drop indicator banner */}
-                                                            {isDropTarget && (
+                                                            {!readOnly && isDropTarget && (
                                                                 <div className="mt-2 text-center py-1 bg-amber-500 text-white rounded text-[10px] font-black tracking-wide uppercase shadow-xs animate-pulse">
                                                                     ⇄ Drop to SWAP
                                                                 </div>
@@ -984,34 +994,42 @@ export default function AgendaPage({ speakers = [], onUpdate, onRefresh, toast, 
                                                 return (
                                                     <div 
                                                         key={key} 
-                                                        onDragOver={(e) => handleDragOver(e, { room: col.room, day: col.day, timeSlot: slot })}
-                                                        onDragLeave={(e) => handleDragLeave(e, { room: col.room, day: col.day, timeSlot: slot })}
-                                                        onDrop={(e) => handleDrop(e, { room: col.room, day: col.day, timeSlot: slot }, null)}
+                                                        onDragOver={!readOnly ? (e) => handleDragOver(e, { room: col.room, day: col.day, timeSlot: slot }) : undefined}
+                                                        onDragLeave={!readOnly ? (e) => handleDragLeave(e, { room: col.room, day: col.day, timeSlot: slot }) : undefined}
+                                                        onDrop={!readOnly ? (e) => handleDrop(e, { room: col.room, day: col.day, timeSlot: slot }, null) : undefined}
                                                         className={`p-2 relative transition-all ${
-                                                            isDropTarget ? "bg-emerald-100/60 ring-2 ring-emerald-500 rounded-xl" : ""
+                                                            !readOnly && isDropTarget ? "bg-emerald-100/60 ring-2 ring-emerald-500 rounded-xl" : ""
                                                         }`}
                                                     >
                                                         <div className="md:hidden text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 ml-1">{col.room} - {formatDayHeader(col.day)}</div>
                                                         <div 
-                                                            onClick={() => handleAssignClick(slot, col.day, col.room)}
-                                                            className={`group flex flex-col items-center justify-center h-full min-h-[76px] p-2 rounded-xl cursor-pointer transition-all relative ${
-                                                                isDropTarget 
+                                                            onClick={!readOnly ? () => handleAssignClick(slot, col.day, col.room) : undefined}
+                                                            className={`group flex flex-col items-center justify-center h-full min-h-[76px] p-2 rounded-xl ${readOnly ? "cursor-default border border-dashed border-slate-200/80 bg-slate-50/40 text-slate-400" : "cursor-pointer"} transition-all relative ${
+                                                                !readOnly && isDropTarget 
                                                                     ? "border-2 border-dashed border-emerald-500 bg-emerald-100 text-emerald-800 scale-[1.02] shadow-md font-bold" 
-                                                                    : emptyCardCls
+                                                                    : (!readOnly ? emptyCardCls : "")
                                                             }`}
                                                         >
                                                             <div className={`absolute top-2 left-2 flex items-center gap-1 ${
-                                                                isDropTarget 
+                                                                !readOnly && isDropTarget 
                                                                     ? "text-emerald-700 font-bold" 
-                                                                    : (isRoom2 ? 'text-blue-400/80 group-hover:text-blue-600' : 'text-emerald-400/80 group-hover:text-emerald-600')
+                                                                    : (isRoom2 ? 'text-blue-400/80' : 'text-emerald-400/80')
                                                             } transition-colors`}>
                                                                 <Clock size={10} />
                                                                 <span className="text-[10px] font-bold">{slot}</span>
                                                             </div>
-                                                            <UserPlus size={18} className="mb-1 mt-3" />
-                                                            <span className="text-[11px] font-bold uppercase tracking-wider">
-                                                                {isDropTarget ? "Drop to Assign" : "Assign"}
-                                                            </span>
+                                                            {!readOnly ? (
+                                                                <>
+                                                                    <UserPlus size={18} className="mb-1 mt-3" />
+                                                                    <span className="text-[11px] font-bold uppercase tracking-wider">
+                                                                        {isDropTarget ? "Drop to Assign" : "Assign"}
+                                                                    </span>
+                                                                </>
+                                                            ) : (
+                                                                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-300 mt-3">
+                                                                    —
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 );
@@ -1027,7 +1045,7 @@ export default function AgendaPage({ speakers = [], onUpdate, onRefresh, toast, 
             )}
 
             {/* FLOATING RIGHT-CLICK CONTEXT MENU */}
-            {contextMenu && createPortal(
+            {!readOnly && contextMenu && createPortal(
                 <div 
                     className="fixed z-[10000] bg-white rounded-xl shadow-2xl border border-slate-200 py-1.5 w-60 text-xs animate-in fade-in zoom-in-95 duration-150"
                     style={{ left: Math.min(contextMenu.x, window.innerWidth - 260), top: Math.min(contextMenu.y, window.innerHeight - 200) }}
@@ -1102,7 +1120,7 @@ export default function AgendaPage({ speakers = [], onUpdate, onRefresh, toast, 
             )}
 
             {/* Modals rendered directly into document.body */}
-            {typeof document !== "undefined" && slotAction && createPortal(
+            {!readOnly && typeof document !== "undefined" && slotAction && createPortal(
                 <div 
                     className="fixed inset-0 z-[9999] bg-slate-950/70 backdrop-blur-sm p-4 flex items-center justify-center" 
                     onClick={closeModal}

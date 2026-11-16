@@ -15,7 +15,7 @@ export const BRAND = {
 // status: "live" → has a full page; "soon" → shows a "coming soon" page.
 export const SERIES = [
     {
-        slug: "dubai-series",
+        slug: "dubai-series-2026",
         city: "Dubai",
         country: "United Arab Emirates",
         flag: "🇦🇪",
@@ -66,7 +66,12 @@ export const SERIES = [
     },
 ];
 
-export const getSeries = (slug) => SERIES.find((s) => s.slug === slug);
+export const getSeries = (slug) =>
+    SERIES.find(
+        (s) =>
+            s.slug === slug ||
+            ((slug === "dubai-series" || slug === "dubai-series-2025") && s.slug === "dubai-series-2026")
+    );
 
 // Supporting partners (logos live in /public/COMPANY_LOGOS where available).
 export const PARTNERS = [

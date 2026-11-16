@@ -7,7 +7,7 @@ import { Link } from "../router";
  * Dubai (Current Live Event: Nov 2026) and Paris (Upcoming Event: March 2027).
  */
 export default function AeroplaneAnimation({ activeSeries }) {
-    const isDubai = activeSeries === "dubai-series";
+    const isDubai = activeSeries === "dubai-series-2026" || activeSeries === "dubai-series";
     const isParis = activeSeries === "paris-series";
 
     return (
@@ -16,7 +16,7 @@ export default function AeroplaneAnimation({ activeSeries }) {
             <div className="sc-flight-route">
                 {/* DXB Hub (Dubai - Present Event) */}
                 <Link
-                    to="/dubai-series"
+                    to="/dubai-series-2026"
                     className={`sc-flight-hub ${isDubai || !isParis ? "is-active" : ""}`}
                     title="Dubai Series · Nov 25–26, 2026 (Current Event)"
                 >

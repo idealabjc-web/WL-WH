@@ -99,7 +99,7 @@ export default function SeriesComingSoonPage({ slug, onAdminClick }) {
                     )}
 
                     <div style={{ marginTop: "40px" }}>
-                        <Link to="/dubai-series" className="sc-btn sc-btn-ghost">
+                        <Link to="/dubai-series-2026" className="sc-btn sc-btn-ghost">
                             <span>Meanwhile, Explore the Dubai Series 🇦🇪</span>
                             <ArrowRight size={14} className="sc-arrow" />
                         </Link>

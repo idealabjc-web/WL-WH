@@ -6,7 +6,7 @@
 export const EVENTS = {
     dubai: {
         slug: "dubai",
-        seriesSlug: "dubai-series",
+        seriesSlug: "dubai-series-2026",
         name: "Dubai Series 2026",
         shortName: "Dubai",
         fullName: "WL-WH Dubai Series 2026",
@@ -27,7 +27,7 @@ export const EVENTS = {
         badgeTag: "DUBAI · ON-SITE",
         rooms: ["Room 1", "Room 2", "Executive Boardroom"],
         defaultPassword: "dubai2026",
-        publicPath: "/dubai-series",
+        publicPath: "/dubai-series-2026",
         adminPath: "/admin/dubai",
         tracks: [
             "Clinical Leadership",
@@ -97,7 +97,7 @@ export function getEventTables(slug = "dubai") {
 
 export function getEventConfig(slug) {
     if (!slug) return EVENTS[DEFAULT_EVENT_SLUG];
-    const normalized = String(slug).toLowerCase().replace(/-series$/, "");
+    const normalized = String(slug).toLowerCase().replace(/-series(-\d{4})?$/, "");
     return EVENTS[normalized] || EVENTS[DEFAULT_EVENT_SLUG];
 }
 

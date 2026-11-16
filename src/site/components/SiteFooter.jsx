@@ -53,13 +53,16 @@ export default function SiteFooter({ onAdminClick }) {
                         <h5>Quick Links</h5>
                         <ul>
                             <li>
-                                <Link to="/dubai-series#speakers">Speakers Directory</Link>
+                                <Link to="/dubai-series-2026#speakers">Speakers Directory</Link>
                             </li>
                             <li>
-                                <Link to="/dubai-series#hotel">Official Venue & Stay</Link>
+                                <Link to="/dubai-series-2026/agenda">Agenda</Link>
                             </li>
                             <li>
-                                <Link to="/dubai-series#event-details">Event Provisions & Kit</Link>
+                                <Link to="/dubai-series-2026#hotel">Official Venue & Stay</Link>
+                            </li>
+                            <li>
+                                <Link to="/dubai-series-2026#event-details">Event Provisions & Kit</Link>
                             </li>
                             <li>
                                 <a href="#partners">Supporting Partners</a>

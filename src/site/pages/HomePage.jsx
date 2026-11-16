@@ -39,8 +39,8 @@ export default function HomePage({ onAdminClick }) {
         return () => observer.disconnect();
     }, []);
 
-    const dubai = SERIES.find((s) => s.slug === "dubai-series");
-    const otherSeries = SERIES.filter((s) => s.slug !== "dubai-series");
+    const dubai = SERIES.find((s) => s.slug === "dubai-series-2026" || s.slug === "dubai-series");
+    const otherSeries = SERIES.filter((s) => s.slug !== "dubai-series-2026" && s.slug !== "dubai-series");
 
     return (
         <div ref={pageRef} className="sc-site sc-page">
@@ -99,7 +99,7 @@ export default function HomePage({ onAdminClick }) {
 
                         {/* CTAs */}
                         <div className="sc-hero-actions">
-                            <Link to="/dubai-series" className="sc-btn sc-btn-gold">
+                            <Link to="/dubai-series-2026" className="sc-btn sc-btn-gold">
                                 <span>Enter Dubai Series</span>
                                 <span style={{ fontSize: "18px" }}>🇦🇪</span>
                                 <ArrowRight size={16} className="sc-arrow" />
@@ -176,7 +176,7 @@ export default function HomePage({ onAdminClick }) {
                     <div className="sc-series-row sc-reveal">
                         {/* FEATURED: Dubai Series */}
                         {dubai && (
-                            <Link to="/dubai-series" className="sc-series-card" style={{ borderColor: "rgba(226, 184, 92, 0.45)" }}>
+                            <Link to="/dubai-series-2026" className="sc-series-card" style={{ borderColor: "rgba(226, 184, 92, 0.45)" }}>
                                 <img src={dubai.cover} alt="Dubai Series" />
                                 <div className="sc-series-top">
                                     <span className="sc-series-flag">{dubai.flag}</span>
@@ -429,11 +429,11 @@ export default function HomePage({ onAdminClick }) {
                         </p>
 
                         <div style={{ display: "flex", gap: "14px", justifyContent: "center", flexWrap: "wrap" }}>
-                            <Link to="/dubai-series" className="sc-btn sc-btn-gold">
+                            <Link to="/dubai-series-2026" className="sc-btn sc-btn-gold">
                                 <span>Go to Dubai Series</span>
                                 <ArrowRight size={16} className="sc-arrow" />
                             </Link>
-                            <Link to="/dubai-series#speakers" className="sc-btn sc-btn-ghost">
+                            <Link to="/dubai-series-2026#speakers" className="sc-btn sc-btn-ghost">
                                 <span>Browse Confirmed Speakers</span>
                             </Link>
                         </div>

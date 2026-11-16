@@ -4,7 +4,7 @@ import { BRAND, SERIES } from "../seriesData";
 import { ChevronDown, Sparkles, Menu, X, ArrowRight } from "lucide-react";
 import AeroplaneAnimation from "./AeroplaneAnimation";
 
-export default function SiteHeader({ activeSeries = null, onAdminClick }) {
+export default function SiteHeader({ activeSeries = null, activePage = null, onAdminClick }) {
     const [scrolled, setScrolled] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const [mobileOpen, setMobileOpen] = useState(false);
@@ -40,30 +40,30 @@ export default function SiteHeader({ activeSeries = null, onAdminClick }) {
             return;
         }
 
-        if (currentPath === "/dubai-series") {
+        if (currentPath === "/dubai-series-2026" || currentPath === "/dubai-series") {
             const el = document.getElementById("speakers");
             if (el) {
                 el.scrollIntoView({ behavior: "smooth", block: "start" });
-                window.history.pushState({}, "", "/dubai-series#speakers");
+                window.history.pushState({}, "", "/dubai-series-2026#speakers");
                 return;
             }
         }
-        navigate("/dubai-series#speakers");
+        navigate("/dubai-series-2026#speakers");
     };
 
     const handleSectionNav = (hash) => (e) => {
         e.preventDefault();
         setMobileOpen(false);
         const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
-        if (currentPath === "/dubai-series") {
+        if (currentPath === "/dubai-series-2026" || currentPath === "/dubai-series") {
             const el = document.getElementById(hash);
             if (el) {
                 el.scrollIntoView({ behavior: "smooth", block: "start" });
-                window.history.pushState({}, "", `/dubai-series#${hash}`);
+                window.history.pushState({}, "", `/dubai-series-2026#${hash}`);
                 return;
             }
         }
-        navigate(`/dubai-series#${hash}`);
+        navigate(`/dubai-series-2026#${hash}`);
     };
 
     const handlePartnersNav = (e) => {
@@ -156,13 +156,21 @@ export default function SiteHeader({ activeSeries = null, onAdminClick }) {
 
                             {activeSeries && (
                                 <Link
-                                    to={activeSeries === "paris-series" ? "/paris-series#speakers" : "/dubai-series#speakers"}
+                                    to={activeSeries === "paris-series" ? "/paris-series#speakers" : "/dubai-series-2026#speakers"}
                                     className="sc-nav-link"
                                     onClick={handleNavigateToSpeakers}
                                 >
                                     Speakers Directory
                                 </Link>
                             )}
+
+                            <Link
+                                to={activeSeries === "paris-series" ? "/paris-series/agenda" : "/dubai-series-2026/agenda"}
+                                className={`sc-nav-link ${activePage === "agenda" ? "is-active" : ""}`}
+                                onClick={() => setMobileOpen(false)}
+                            >
+                                Agenda
+                            </Link>
                         </nav>
 
                         {/* Right Action: Aeroplane Animation */}
@@ -189,7 +197,7 @@ export default function SiteHeader({ activeSeries = null, onAdminClick }) {
                     <Link to="/" className="sc-nav-link" onClick={() => setMobileOpen(false)}>
                         Home
                     </Link>
-                    <Link to="/dubai-series" className="sc-nav-link" onClick={() => setMobileOpen(false)}>
+                    <Link to="/dubai-series-2026" className="sc-nav-link" onClick={() => setMobileOpen(false)}>
                         🇦🇪 Dubai Series (Live Event)
                     </Link>
                     <Link to="/paris-series" className="sc-nav-link" onClick={() => setMobileOpen(false)}>
@@ -197,7 +205,7 @@ export default function SiteHeader({ activeSeries = null, onAdminClick }) {
                     </Link>
 
                     <h4>Other Destinations</h4>
-                    {SERIES.filter((s) => s.slug !== "dubai-series" && s.slug !== "paris-series").map((s) => (
+                    {SERIES.filter((s) => s.slug !== "dubai-series-2026" && s.slug !== "dubai-series" && s.slug !== "paris-series").map((s) => (
                         <Link
                             key={s.slug}
                             to={`/${s.slug}`}
@@ -214,22 +222,29 @@ export default function SiteHeader({ activeSeries = null, onAdminClick }) {
                     <Link to="/paris-series#tracks" className="sc-nav-link" onClick={() => setMobileOpen(false)}>
                         Paris Summit Tracks & Focus
                     </Link>
-                    <Link to="/dubai-series#event-details" className="sc-nav-link" onClick={handleSectionNav("event-details")}>
+                    <Link to="/dubai-series-2026#event-details" className="sc-nav-link" onClick={handleSectionNav("event-details")}>
                         Event Details & What's Provided
                     </Link>
-                    <Link to="/dubai-series#hotel" className="sc-nav-link" onClick={handleSectionNav("hotel")}>
+                    <Link to="/dubai-series-2026#hotel" className="sc-nav-link" onClick={handleSectionNav("hotel")}>
                         Speaker Hotel & Stay
                     </Link>
                     {activeSeries && (
                         <Link
-                            to={activeSeries === "paris-series" ? "/paris-series#speakers" : "/dubai-series#speakers"}
+                            to={activeSeries === "paris-series" ? "/paris-series#speakers" : "/dubai-series-2026#speakers"}
                             className="sc-nav-link"
                             onClick={handleNavigateToSpeakers}
                         >
                             Speakers Directory
                         </Link>
                     )}
-                    <Link to="/dubai-series#gallery" className="sc-nav-link" onClick={handleSectionNav("gallery")}>
+                    <Link
+                        to={activeSeries === "paris-series" ? "/paris-series/agenda" : "/dubai-series-2026/agenda"}
+                        className="sc-nav-link"
+                        onClick={() => setMobileOpen(false)}
+                    >
+                        Agenda
+                    </Link>
+                    <Link to="/dubai-series-2026#gallery" className="sc-nav-link" onClick={handleSectionNav("gallery")}>
                         Experience Gallery
                     </Link>
                     <a href="#partners" className="sc-nav-link" onClick={handlePartnersNav}>
@@ -237,7 +252,7 @@ export default function SiteHeader({ activeSeries = null, onAdminClick }) {
                     </a>
 
                     <div style={{ marginTop: "24px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                        <Link to="/dubai-series" className="sc-btn sc-btn-gold" onClick={() => setMobileOpen(false)}>
+                        <Link to="/dubai-series-2026" className="sc-btn sc-btn-gold" onClick={() => setMobileOpen(false)}>
                             Explore Dubai Series 🇦🇪 (Current Event)
                         </Link>
                         <Link to="/paris-series" className="sc-btn sc-btn-ghost" onClick={() => setMobileOpen(false)}>
