@@ -1,0 +1,287 @@
+/* ─────────────────────────────────────────────────────────────
+   3D Split-Flap Flip Card Countdown Timer
+   ───────────────────────────────────────────────────────────── */
+
+.sc-flip-countdown-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 30px;
+  user-select: none;
+}
+
+/* Individual Unit (Card + Label) */
+.sc-flip-unit-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 3D Perspective Card Stage */
+.sc-flip-card {
+  position: relative;
+  width: 78px;
+  height: 84px;
+  border-radius: 14px;
+  perspective: 600px;
+  transform-style: preserve-3d;
+  box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.75);
+}
+
+/* Half Containers (Top & Bottom) */
+.sc-flip-half {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Static Upper Half */
+.sc-flip-half-top {
+  top: 0;
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+  transform-origin: bottom center;
+}
+
+/* Static Lower Half */
+.sc-flip-half-bottom {
+  bottom: 0;
+  border-bottom-left-radius: 14px;
+  border-bottom-right-radius: 14px;
+  transform-origin: top center;
+}
+
+/* Centered Text Inner Wrapper across 200% height */
+.sc-flip-text-inner {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 84px; /* matches .sc-flip-card height */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sc-flip-half-top .sc-flip-text-inner {
+  top: 0;
+}
+
+.sc-flip-half-bottom .sc-flip-text-inner {
+  bottom: 0;
+}
+
+/* Number Typography */
+.sc-flip-text-inner span {
+  font-family: var(--sc-display), "Playfair Display", Georgia, serif;
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+/* ─── Animated Flaps (Top & Bottom) ─────────────────────────── */
+.sc-flip-flap-top {
+  z-index: 3;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  animation: sc-flip-top-anim 0.28s cubic-bezier(0.37, 0, 0.63, 1) forwards;
+}
+
+.sc-flip-flap-bottom {
+  z-index: 4;
+  transform: rotateX(90deg);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  animation: sc-flip-bottom-anim 0.28s 0.26s cubic-bezier(0.37, 0, 0.63, 1) forwards;
+}
+
+/* Keyframe Animations */
+@keyframes sc-flip-top-anim {
+  0% {
+    transform: rotateX(0deg);
+  }
+  100% {
+    transform: rotateX(-90deg);
+  }
+}
+
+@keyframes sc-flip-bottom-anim {
+  0% {
+    transform: rotateX(90deg);
+  }
+  100% {
+    transform: rotateX(0deg);
+  }
+}
+
+/* Realistic Shadow Gradients during Flip */
+.sc-flip-flap-top::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 20%, rgba(0, 0, 0, 0.75) 100%);
+  opacity: 0;
+  animation: sc-flap-shadow-fadein 0.28s ease-in forwards;
+  pointer-events: none;
+}
+
+.sc-flip-flap-bottom::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.75) 0%, transparent 80%);
+  opacity: 1;
+  animation: sc-flap-shadow-fadeout 0.28s 0.26s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes sc-flap-shadow-fadein {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes sc-flap-shadow-fadeout {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Center Horizontal Divider Line */
+.sc-flip-divider {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.85);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12);
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Side Axle Notches */
+.sc-flip-notch {
+  position: absolute;
+  top: calc(50% - 3px);
+  width: 5px;
+  height: 6px;
+  background: #06091a;
+  z-index: 12;
+  pointer-events: none;
+}
+
+.sc-flip-notch-left {
+  left: 0;
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.sc-flip-notch-right {
+  right: 0;
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Sub-labels (Days, Hours, Minutes, Seconds) */
+.sc-flip-label {
+  display: block;
+  margin-top: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--sc-muted, #a3a9c7);
+  text-align: center;
+}
+
+/* ─── GOLD THEME (Dubai Edition) ────────────────────────────── */
+.sc-flip-theme-gold .sc-flip-half {
+  background: linear-gradient(180deg, #181520 0%, #0d0a14 100%);
+  border: 1px solid rgba(226, 184, 92, 0.25);
+}
+
+.sc-flip-theme-gold .sc-flip-half-top {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.6);
+  background: linear-gradient(180deg, #1c1728 0%, #130f1c 100%);
+}
+
+.sc-flip-theme-gold .sc-flip-half-bottom {
+  border-top: none;
+  background: linear-gradient(180deg, #100c19 0%, #08060d 100%);
+}
+
+.sc-flip-theme-gold .sc-flip-text-inner span {
+  color: #f7e5b2;
+  text-shadow: 0 0 16px rgba(226, 184, 92, 0.35);
+}
+
+.sc-flip-theme-gold .sc-flip-card {
+  box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.8), 0 0 20px rgba(226, 184, 92, 0.08);
+}
+
+/* ─── ROYAL BLUE THEME (Paris Edition) ───────────────────────── */
+.sc-flip-theme-blue .sc-flip-half {
+  background: linear-gradient(180deg, #0e1633 0%, #080c1f 100%);
+  border: 1px solid rgba(91, 124, 250, 0.28);
+}
+
+.sc-flip-theme-blue .sc-flip-half-top {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.6);
+  background: linear-gradient(180deg, #131d45 0%, #0d1430 100%);
+}
+
+.sc-flip-theme-blue .sc-flip-half-bottom {
+  border-top: none;
+  background: linear-gradient(180deg, #0b1129 0%, #060918 100%);
+}
+
+.sc-flip-theme-blue .sc-flip-text-inner span {
+  color: #c5d5ff;
+  text-shadow: 0 0 18px rgba(91, 124, 250, 0.45);
+}
+
+.sc-flip-theme-blue .sc-flip-card {
+  box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.8), 0 0 24px rgba(91, 124, 250, 0.14);
+}
+
+/* ─── Mobile Responsiveness ─────────────────────────────────── */
+@media (max-width: 640px) {
+  .sc-flip-countdown-container {
+    gap: 8px;
+    margin-top: 24px;
+  }
+
+  .sc-flip-card {
+    width: 64px;
+    height: 72px;
+    border-radius: 12px;
+  }
+
+  .sc-flip-half-top {
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+  }
+
+  .sc-flip-half-bottom {
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+  }
+
+  .sc-flip-text-inner {
+    height: 72px;
+  }
+
+  .sc-flip-text-inner span {
+    font-size: 28px;
+  }
+
+  .sc-flip-label {
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    margin-top: 6px;
+  }
+}

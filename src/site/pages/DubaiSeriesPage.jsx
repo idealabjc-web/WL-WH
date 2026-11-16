@@ -3,6 +3,7 @@ import { Link, navigate } from "../router";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 import DubaiFlagAnimation from "../components/DubaiFlagAnimation";
+import FlipCountdown from "../components/FlipCountdown";
 import { DUBAI_EVENT, BRAND } from "../seriesData";
 import { fetchPublicSpeakers, speakerSlug } from "../publicApi";
 import { getCountryFlagUrl, getCountryName } from "../../utils/countryFlags";
@@ -187,25 +188,11 @@ export default function DubaiSeriesPage({ onAdminClick }) {
                                 </div>
                             </div>
 
-                            {/* Live Countdown to Event */}
-                            <div className="sc-countdown">
-                                <div className="sc-cd-box">
-                                    <b className="sc-gold-text">{timeLeft.days}</b>
-                                    <span>Days</span>
-                                </div>
-                                <div className="sc-cd-box">
-                                    <b>{String(timeLeft.hours).padStart(2, "0")}</b>
-                                    <span>Hours</span>
-                                </div>
-                                <div className="sc-cd-box">
-                                    <b>{String(timeLeft.mins).padStart(2, "0")}</b>
-                                    <span>Minutes</span>
-                                </div>
-                                <div className="sc-cd-box">
-                                    <b>{String(timeLeft.secs).padStart(2, "0")}</b>
-                                    <span>Seconds</span>
-                                </div>
-                            </div>
+                            {/* Live 3D Flip Card Countdown to Event */}
+                            <FlipCountdown 
+                                targetDate="2026-11-25T08:30:00+04:00"
+                                theme="gold"
+                            />
 
                             {/* Action Buttons */}
                             <div style={{ marginTop: "32px", display: "flex", flexWrap: "wrap", gap: "12px" }}>
