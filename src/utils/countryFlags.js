@@ -71,7 +71,9 @@ const COUNTRY_ALIASES = {
     "portugal": "pt",
     "greece": "gr",
     "israel": "il",
-    "palestine": "ps"
+    "palestine": "ps",
+    "bahamas": "bs",
+    "the bahamas": "bs"
 };
 
 /**

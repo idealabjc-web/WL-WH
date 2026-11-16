@@ -6,7 +6,7 @@
 export const EVENTS = {
     dubai: {
         slug: "dubai",
-        seriesSlug: "dubai-series-2026",
+        seriesSlug: "dubai-series",
         name: "Dubai Series 2026",
         shortName: "Dubai",
         fullName: "WL-WH Dubai Series 2026",
@@ -27,7 +27,7 @@ export const EVENTS = {
         badgeTag: "DUBAI · ON-SITE",
         rooms: ["Room 1", "Room 2", "Executive Boardroom"],
         defaultPassword: "dubai2026",
-        publicPath: "/dubai-series-2026",
+        publicPath: "/dubai-series",
         adminPath: "/admin/dubai",
         tracks: [
             "Clinical Leadership",

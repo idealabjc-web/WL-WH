@@ -143,7 +143,7 @@ export default function DubaiSeriesPage({ onAdminClick }) {
 
     return (
         <div ref={pageRef} className="sc-site sc-page">
-            <SiteHeader activeSeries="dubai-series-2026" onAdminClick={onAdminClick} />
+            <SiteHeader activeSeries="dubai-series" onAdminClick={onAdminClick} />
 
             {/* ─── HERO WITH DUBAI SKYLINE & FLAG ANIMATION ─────── */}
             <section className="sc-dubai-hero">
@@ -342,7 +342,7 @@ export default function DubaiSeriesPage({ onAdminClick }) {
                                     <div
                                         key={spk.id}
                                         className="sc-speaker"
-                                        onClick={() => navigate(`/dubai-series-2026/${slug}`)}
+                                        onClick={() => navigate(`/dubai-series/${slug}`)}
                                         title={`Open portal for ${spk.name}`}
                                     >
                                         <div className="sc-speaker-photo">

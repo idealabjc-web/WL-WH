@@ -61,7 +61,7 @@ export default function AdminApp() {
                         // Clean search params and navigate directly to their personalized slug
                         const speakerSlug = slugify(speakerObj.name);
                         const isParis = speakerObj.eventSlug === "paris" || window.location.pathname.includes("paris");
-                        const seriesPath = isParis ? "paris-series" : "dubai-series-2026";
+                        const seriesPath = isParis ? "paris-series" : "dubai-series";
                         navigate(`/${seriesPath}/${speakerSlug}`, { replace: true });
                     }
                 } catch (err) {
@@ -213,7 +213,7 @@ export default function AdminApp() {
                         </button>
                         <button
                             type="button"
-                            onClick={() => navigate("/dubai-series-2026")}
+                            onClick={() => navigate("/dubai-series")}
                             style={{ color: "#93c5fd", background: "none", border: 0, cursor: "pointer", fontWeight: 600 }}
                         >
                             Dubai Series →
@@ -241,12 +241,7 @@ export default function AdminApp() {
     }
 
     // 2. Public Read-Only Calendar Agenda Pages
-    if (
-        path === "/agenda" ||
-        path === "/dubai-series-2026/agenda" ||
-        path === "/dubai-series/agenda" ||
-        path === "/dubai-series-2025/agenda"
-    ) {
+    if (path === "/agenda" || path === "/dubai-series/agenda") {
         return (
             <PublicAgendaPage
                 eventSlug="dubai"
@@ -264,15 +259,9 @@ export default function AdminApp() {
         );
     }
 
-    // 3. Dubai Series Individual Speaker Portal: `/dubai-series-2026/:speakerName` (and legacy `/dubai-series/:speakerName`)
-    if (
-        path.startsWith("/dubai-series-2026/") ||
-        path.startsWith("/dubai-series/") ||
-        path.startsWith("/dubai-series-2025/")
-    ) {
-        const speakerSlugParam = path
-            .replace(/^\/dubai-series(-2026|-2025)?\//, "")
-            .replace(/\/+$/, "");
+    // 3. Dubai Series Individual Speaker Portal: `/dubai-series/:speakerName`
+    if (path.startsWith("/dubai-series/")) {
+        const speakerSlugParam = path.replace("/dubai-series/", "").replace(/\/+$/, "");
         if (speakerSlugParam) {
             return (
                 <SpeakerIndividualPage
@@ -304,8 +293,8 @@ export default function AdminApp() {
         }
     }
 
-    // 5. Dubai Series Flagship Page: `/dubai-series-2026` (and legacy `/dubai-series`)
-    if (path === "/dubai-series-2026" || path === "/dubai-series" || path === "/dubai-series-2025") {
+    // 5. Dubai Series Flagship Page: `/dubai-series`
+    if (path === "/dubai-series") {
         return (
             <DubaiSeriesPage
                 onAdminClick={() => navigate("/admin")}

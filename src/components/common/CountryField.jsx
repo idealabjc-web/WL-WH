@@ -94,6 +94,7 @@ export const WORLD_COUNTRIES = [
     { code: "pa", name: "Panama" },
     { code: "uy", name: "Uruguay" },
     { code: "cm", name: "Southwest, Cameroon" },
+    { code: "bs", name: "Bahamas" },
 ];
 
 function FlagImg({ code }) {

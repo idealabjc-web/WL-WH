@@ -43,7 +43,7 @@ export default function PublicAgendaPage({ eventSlug = "dubai", onAdminClick }) 
     return (
         <div className="sc-site sc-page" style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
             <SiteHeader
-                activeSeries={isParis ? "paris-series" : "dubai-series-2026"}
+                activeSeries={isParis ? "paris-series" : "dubai-series"}
                 activePage="agenda"
                 onAdminClick={onAdminClick}
             />

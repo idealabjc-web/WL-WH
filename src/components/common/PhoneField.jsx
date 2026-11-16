@@ -64,6 +64,7 @@ const COUNTRIES = [
     { code: "il", dial: "+972", name: "Israel",               flag: "il" },
     { code: "az", dial: "+994", name: "Azerbaijan",           flag: "az" },
     { code: "cm", dial: "+237", name: "Southwest, Cameroon",  flag: "cm" },
+    { code: "bs", dial: "+1242", name: "Bahamas",             flag: "bs" },
 ];
 
 function FlagImg({ code }) {
