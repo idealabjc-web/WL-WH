@@ -1448,7 +1448,6 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                 <th className="py-3 px-4 font-semibold sticky left-0 bg-slate-50/50 dark:bg-slate-900/50 z-10 backdrop-blur-sm shadow-xs">Speaker & Session</th>
                                 <th className="py-3 px-4 font-semibold">Schedule</th>
                                 <th className="py-3 px-4 font-semibold">Preferences</th>
-                                <th className="py-3 px-4 font-semibold">Concerns</th>
                                 <th className="py-3 px-4 font-semibold">Stay</th>
                                 <th className="py-3 px-4 font-semibold text-right">Status</th>
                             </tr>
@@ -1456,7 +1455,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                         <tbody>
                             {rows.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="text-center text-slate-500 py-8">
+                                    <td colSpan={5} className="text-center text-slate-500 py-8">
                                         No speakers match.
                                     </td>
                                 </tr>
@@ -1508,15 +1507,6 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                                         )}
                                                     </div>
                                                 </td>
-                                                <td className="py-3 px-4">
-                                                    {s.concerns ? (
-                                                        <div className="text-[11px] font-medium text-amber-800 max-w-[140px] xl:max-w-[200px] truncate bg-amber-50 border border-amber-200/60 px-2 py-1 rounded shadow-xs" title={s.concerns}>
-                                                            {s.concerns}
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-[11px] text-slate-400 font-medium tracking-wide">NOCONCERNS</span>
-                                                    )}
-                                                </td>
                                                 <td className="py-3 px-4 text-xs font-semibold text-slate-700 whitespace-nowrap">
                                                     {(() => {
                                                         const accVal = s.accommodationStatus ? s.accommodationStatus.toLowerCase() : "";
@@ -1530,7 +1520,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                             </tr>
                                             {isSelected && (
                                                 <tr className="bg-amber-50/20 border-b-2 border-amber-300">
-                                                    <td colSpan={6} className="p-3 sm:p-5 bg-slate-50/70 dark:bg-slate-900/70">
+                                                    <td colSpan={5} className="p-3 sm:p-5 bg-slate-50/70 dark:bg-slate-900/70">
                                                         <div className="animate-in slide-in-from-top-1 duration-200 max-w-4xl mx-auto">
                                                             <SpeakerDetail 
                                                                 speaker={s} 

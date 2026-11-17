@@ -64,6 +64,13 @@ export default function IdCardsPage({
         if (downloadPreviewModal?.pdfUrl) {
             try { URL.revokeObjectURL(downloadPreviewModal.pdfUrl); } catch {}
         }
+        if (downloadPreviewModal?.roomPdfUrls) {
+            Object.values(downloadPreviewModal.roomPdfUrls).forEach((u) => {
+                if (u) {
+                    try { URL.revokeObjectURL(u); } catch {}
+                }
+            });
+        }
         if (Array.isArray(downloadPreviewModal?.items)) {
             downloadPreviewModal.items.forEach((it) => {
                 if (it?.pdfUrl) {
@@ -458,62 +465,157 @@ export default function IdCardsPage({
 
             const timestamp = new Date().toISOString().slice(0, 10);
 
-            // Format: Single Multi-Page PDF Document
+            // Format: Single Multi-Page PDF Document(s)
             if (format === "single-pdf") {
-                setProgress(`Compiling single PDF document for ${cardList.length} badge(s)...`);
-                const pdf = new jsPDF({
-                    orientation: "portrait",
-                    unit: "px",
-                    format: [1080, 1800],
-                });
+                if (organizeByRooms) {
+                    // Generate two separate multi-page PDFs: one for Room 1 and one for Room 2
+                    const roomGroups = [
+                        { roomCategory: "Room 1", suffix: "Room_1", list: targetSpeakers.filter((s) => getRoomCategory(s) === "Room 1") },
+                        { roomCategory: "Room 2", suffix: "Room_2", list: targetSpeakers.filter((s) => getRoomCategory(s) === "Room 2") },
+                    ].filter((g) => g.list.length > 0);
 
-                let firstPage = true;
-                let current = 0;
-                const previewItems = [];
-
-                for (const s of targetSpeakers) {
-                    const c = allCards[s.id];
-                    if (!c) continue;
-                    current++;
-                    setProgress(`Adding page ${current} of ${cardList.length}: ${s.name || c.filename}...`);
-                    const dataUrl = await getCardDataUrl(c);
-                    if (dataUrl) {
-                        if (!firstPage) {
-                            pdf.addPage([1080, 1800], "portrait");
-                        }
-                        pdf.addImage(dataUrl, "JPEG", 0, 0, 1080, 1800);
-                        firstPage = false;
-                        const roomCategory = getRoomCategory(s);
-                        previewItems.push({
-                            id: s.id,
-                            speaker: s,
-                            card: c,
-                            dataUrl,
-                            roomCategory,
-                            folder: roomCategory,
-                            pdfFilename: `${c.filename.replace(/\.jpe?g$/i, "")}.pdf`,
+                    if (roomGroups.length === 0) {
+                        // Fallback if only Other speakers were selected
+                        roomGroups.push({
+                            roomCategory: "Other",
+                            suffix: "Other",
+                            list: targetSpeakers,
                         });
                     }
+
+                    const previewItems = [];
+                    const roomPdfUrls = {};
+                    const roomFilenames = {};
+                    let totalCompiled = 0;
+
+                    for (const group of roomGroups) {
+                        const pdf = new jsPDF({
+                            orientation: "portrait",
+                            unit: "px",
+                            format: [1080, 1800],
+                        });
+
+                        let firstPage = true;
+                        let groupCount = 0;
+
+                        for (const s of group.list) {
+                            const c = allCards[s.id];
+                            if (!c) continue;
+                            groupCount++;
+                            totalCompiled++;
+                            setProgress(`Compiling ${group.roomCategory} PDF (page ${groupCount} of ${group.list.length}): ${s.name || c.filename}...`);
+                            const dataUrl = await getCardDataUrl(c);
+                            if (dataUrl) {
+                                if (!firstPage) {
+                                    pdf.addPage([1080, 1800], "portrait");
+                                }
+                                pdf.addImage(dataUrl, "JPEG", 0, 0, 1080, 1800);
+                                firstPage = false;
+                                previewItems.push({
+                                    id: s.id,
+                                    speaker: s,
+                                    card: c,
+                                    dataUrl,
+                                    roomCategory: group.roomCategory,
+                                    folder: group.roomCategory,
+                                    pdfFilename: `${filenamePrefix}_${group.suffix}_${timestamp}.pdf (Page ${groupCount})`,
+                                });
+                            }
+                        }
+
+                        if (!firstPage) {
+                            const groupPdfName = `${filenamePrefix}_${group.suffix}_${timestamp}.pdf`;
+                            const pdfBlob = pdf.output("blob");
+                            const pdfUrl = URL.createObjectURL(pdfBlob);
+                            roomPdfUrls[group.roomCategory] = pdfUrl;
+                            roomFilenames[group.roomCategory] = groupPdfName;
+
+                            const link = document.createElement("a");
+                            link.href = pdfUrl;
+                            link.download = groupPdfName;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+
+                            // Small delay between downloads so browser allows both files cleanly
+                            await new Promise((r) => setTimeout(r, 350));
+                        }
+                    }
+
+                    const firstRoom = roomGroups[0]?.roomCategory || "Room 1";
+                    setPreviewRoomTab(firstRoom);
+                    setActivePreviewPdfItem(null);
+                    setDownloadPreviewModal({
+                        title: `Downloaded Separate Multi-Page PDFs — Room 1 & Room 2`,
+                        subtitle: `Downloaded ${Object.keys(roomPdfUrls).length} separate multi-page PDF(s): ${Object.values(roomFilenames).join(" & ")} (${totalCompiled} total badges).`,
+                        type: "single-pdf",
+                        filename: roomFilenames[firstRoom] || `${filenamePrefix}_${timestamp}.pdf`,
+                        pdfUrl: roomPdfUrls[firstRoom] || null,
+                        roomPdfUrls,
+                        roomFilenames,
+                        items: previewItems,
+                        organizeByRooms: true,
+                    });
+
+                    if (toast) {
+                        toast(`Downloaded ${Object.keys(roomPdfUrls).length} separate multi-page PDF(s) (Room 1 & Room 2). Opening preview...`);
+                    }
+                } else {
+                    setProgress(`Compiling single PDF document for ${cardList.length} badge(s)...`);
+                    const pdf = new jsPDF({
+                        orientation: "portrait",
+                        unit: "px",
+                        format: [1080, 1800],
+                    });
+
+                    let firstPage = true;
+                    let current = 0;
+                    const previewItems = [];
+
+                    for (const s of targetSpeakers) {
+                        const c = allCards[s.id];
+                        if (!c) continue;
+                        current++;
+                        setProgress(`Adding page ${current} of ${cardList.length}: ${s.name || c.filename}...`);
+                        const dataUrl = await getCardDataUrl(c);
+                        if (dataUrl) {
+                            if (!firstPage) {
+                                pdf.addPage([1080, 1800], "portrait");
+                            }
+                            pdf.addImage(dataUrl, "JPEG", 0, 0, 1080, 1800);
+                            firstPage = false;
+                            const roomCategory = getRoomCategory(s);
+                            previewItems.push({
+                                id: s.id,
+                                speaker: s,
+                                card: c,
+                                dataUrl,
+                                roomCategory,
+                                folder: roomCategory,
+                                pdfFilename: `${c.filename.replace(/\.jpe?g$/i, "")}.pdf`,
+                            });
+                        }
+                    }
+
+                    const finalPdfName = `${filenamePrefix}_${timestamp}.pdf`;
+                    const pdfBlob = pdf.output("blob");
+                    const pdfUrl = URL.createObjectURL(pdfBlob);
+                    pdf.save(finalPdfName);
+
+                    setPreviewRoomTab("all");
+                    setActivePreviewPdfItem(null);
+                    setDownloadPreviewModal({
+                        title: `Downloaded PDF Preview — ${finalPdfName}`,
+                        subtitle: `Multi-page PDF containing ${previewItems.length} speaker ID card(s).`,
+                        type: "single-pdf",
+                        filename: finalPdfName,
+                        pdfUrl,
+                        items: previewItems,
+                        organizeByRooms: true,
+                    });
+
+                    if (toast) toast(`Downloaded single PDF with ${cardList.length} ID card(s). Opening preview...`);
                 }
-
-                const finalPdfName = `${filenamePrefix}_${timestamp}.pdf`;
-                const pdfBlob = pdf.output("blob");
-                const pdfUrl = URL.createObjectURL(pdfBlob);
-                pdf.save(finalPdfName);
-
-                setPreviewRoomTab("all");
-                setActivePreviewPdfItem(null);
-                setDownloadPreviewModal({
-                    title: `Downloaded PDF Preview — ${finalPdfName}`,
-                    subtitle: `Multi-page PDF containing ${previewItems.length} speaker ID card(s).`,
-                    type: "single-pdf",
-                    filename: finalPdfName,
-                    pdfUrl,
-                    items: previewItems,
-                    organizeByRooms: true,
-                });
-
-                if (toast) toast(`Downloaded single PDF with ${cardList.length} ID card(s). Opening preview...`);
             } else {
                 // Format: ZIP Archive (either PDFs or JPEGs)
                 setProgress(`Building ZIP archive for ${cardList.length} badge(s)...`);
@@ -665,8 +767,22 @@ export default function IdCardsPage({
         handleBatchExport({
             targetSpeakers: speakers,
             format: "single-pdf",
-            organizeByRooms: false,
+            organizeByRooms: true,
             filenamePrefix: "WL-WH-Combined-Speaker-ID-Cards",
+        });
+    };
+
+    const handleDownloadRoomSinglePdf = (roomCategory) => {
+        const roomSpeakers = speakers.filter((s) => getRoomCategory(s) === roomCategory);
+        if (roomSpeakers.length === 0) {
+            if (toast) toast(`No registered speakers found in ${roomCategory}.`);
+            return;
+        }
+        handleBatchExport({
+            targetSpeakers: roomSpeakers,
+            format: "single-pdf",
+            organizeByRooms: false,
+            filenamePrefix: `WL-WH-${roomCategory.replace(/\s+/g, "-")}-Combined-ID-Cards`,
         });
     };
 
@@ -1674,7 +1790,7 @@ export default function IdCardsPage({
                                 </div>
                             </div>
 
-                            {/* Card 2: Single Multi-Page PDF Document */}
+                            {/* Card 2: Combined Multi-Page PDF Documents (Room 1 & Room 2 Separate) */}
                             <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs hover:border-emerald-400 dark:hover:border-emerald-600 transition-all flex flex-col justify-between">
                                 <div>
                                     <div className="flex items-start justify-between gap-3 mb-3">
@@ -1682,25 +1798,45 @@ export default function IdCardsPage({
                                             <Printer size={22} />
                                         </div>
                                         <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                                            Multi-Page PDF
+                                            2 Separate PDFs (Room 1 &amp; 2)
                                         </span>
                                     </div>
                                     <h4 className="font-bold text-sm sm:text-base text-slate-900 dark:text-slate-100">
                                         Combined Multi-Page PDF
                                     </h4>
                                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-                                        All speaker ID cards compiled sequentially into one high-resolution PDF document (1080×1800 px per page), ready for bulk printing.
+                                        All speaker ID cards compiled sequentially into <strong>two separate high-resolution PDF documents</strong> (<strong>Room 1 PDF</strong>: {room1Speakers.length} cards • <strong>Room 2 PDF</strong>: {room2Speakers.length} cards, 1080×1800 px per page).
                                     </p>
                                 </div>
-                                <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
                                     <button
                                         onClick={handleDownloadSinglePdf}
                                         disabled={zipping || generating || totalSpeakers === 0}
                                         className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white text-xs sm:text-sm font-bold rounded-xl shadow-xs transition-all active:scale-98 min-h-[42px]"
                                     >
                                         <Download size={15} />
-                                        {zipping ? "Processing..." : "Download Single PDF"}
+                                        {zipping ? "Processing..." : "Download Room 1 & Room 2 PDFs"}
                                     </button>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDownloadRoomSinglePdf("Room 1")}
+                                            disabled={zipping || generating || room1Speakers.length === 0}
+                                            className="inline-flex items-center justify-center gap-1.5 py-1.5 px-2.5 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[11px] font-bold rounded-lg transition-all"
+                                        >
+                                            <FileText size={12} />
+                                            Room 1 PDF ({room1Speakers.length})
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDownloadRoomSinglePdf("Room 2")}
+                                            disabled={zipping || generating || room2Speakers.length === 0}
+                                            className="inline-flex items-center justify-center gap-1.5 py-1.5 px-2.5 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-[11px] font-bold rounded-lg transition-all"
+                                        >
+                                            <FileText size={12} />
+                                            Room 2 PDF ({room2Speakers.length})
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -2626,36 +2762,66 @@ export default function IdCardsPage({
 
                             {/* Modal Body */}
                             <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
-                                {/* Direct Embedded PDF Viewer (when a single PDF or selected item PDF is active) */}
-                                {(downloadPreviewModal.pdfUrl || activePreviewPdfItem?.pdfUrl) && (
-                                    <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-lg">
-                                        <div className="px-4 py-2.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between gap-2 text-xs text-slate-300">
-                                            <div className="flex items-center gap-2 truncate">
-                                                <FileText size={15} className="text-amber-400 shrink-0" />
-                                                <span className="font-bold text-white truncate">
-                                                    Live PDF Document Preview:{" "}
-                                                    {activePreviewPdfItem
-                                                        ? `${activePreviewPdfItem.folder ? activePreviewPdfItem.folder + " / " : ""}${activePreviewPdfItem.pdfFilename}`
-                                                        : downloadPreviewModal.filename}
-                                                </span>
+                                {/* Direct Embedded PDF Viewer (when a single PDF, room PDF, or selected item PDF is active) */}
+                                {(activePreviewPdfItem?.pdfUrl ||
+                                    (downloadPreviewModal.roomPdfUrls && downloadPreviewModal.roomPdfUrls[previewRoomTab]) ||
+                                    downloadPreviewModal.pdfUrl) && (() => {
+                                    const activePdfSrc =
+                                        activePreviewPdfItem?.pdfUrl ||
+                                        (downloadPreviewModal.roomPdfUrls && downloadPreviewModal.roomPdfUrls[previewRoomTab]) ||
+                                        downloadPreviewModal.pdfUrl;
+                                    const activePdfTitle = activePreviewPdfItem
+                                        ? `${activePreviewPdfItem.folder ? activePreviewPdfItem.folder + " / " : ""}${activePreviewPdfItem.pdfFilename}`
+                                        : (downloadPreviewModal.roomFilenames && downloadPreviewModal.roomFilenames[previewRoomTab]) ||
+                                          downloadPreviewModal.filename;
+
+                                    return (
+                                        <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-lg">
+                                            <div className="px-4 py-2.5 bg-slate-950 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-300">
+                                                <div className="flex items-center gap-2 truncate">
+                                                    <FileText size={15} className="text-amber-400 shrink-0" />
+                                                    <span className="font-bold text-white truncate">
+                                                        Live PDF Document Preview: {activePdfTitle}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    {downloadPreviewModal.roomPdfUrls &&
+                                                        Object.keys(downloadPreviewModal.roomPdfUrls).map((roomKey) => (
+                                                            <button
+                                                                key={roomKey}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setActivePreviewPdfItem(null);
+                                                                    setPreviewRoomTab(roomKey);
+                                                                }}
+                                                                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors ${
+                                                                    !activePreviewPdfItem && previewRoomTab === roomKey
+                                                                        ? "bg-amber-500 text-slate-950"
+                                                                        : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                                                                }`}
+                                                            >
+                                                                Preview {roomKey} PDF
+                                                            </button>
+                                                        ))}
+                                                    <a
+                                                        href={activePdfSrc}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-1 text-amber-400 hover:text-amber-300 font-semibold ml-1"
+                                                    >
+                                                        <span>Open PDF in New Tab</span>
+                                                        <ExternalLink size={13} />
+                                                    </a>
+                                                </div>
                                             </div>
-                                            <a
-                                                href={activePreviewPdfItem?.pdfUrl || downloadPreviewModal.pdfUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex items-center gap-1 text-amber-400 hover:text-amber-300 font-semibold shrink-0"
-                                            >
-                                                <span>Open PDF in New Tab</span>
-                                                <ExternalLink size={13} />
-                                            </a>
+                                            <iframe
+                                                src={activePdfSrc}
+                                                title="Downloaded PDF Preview"
+                                                className="w-full h-[420px] sm:h-[480px] border-0 bg-slate-800"
+                                            />
                                         </div>
-                                        <iframe
-                                            src={activePreviewPdfItem?.pdfUrl || downloadPreviewModal.pdfUrl}
-                                            title="Downloaded PDF Preview"
-                                            className="w-full h-[420px] sm:h-[480px] border-0 bg-slate-800"
-                                        />
-                                    </div>
-                                )}
+                                    );
+                                })()}
 
                                 {/* Room Folder Breakdown & Card / Sheet Grid */}
                                 {Array.isArray(downloadPreviewModal.items) && downloadPreviewModal.items.length > 0 && (() => {
