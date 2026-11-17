@@ -243,26 +243,41 @@ export async function fetchSpeakers(eventSlug = "dubai") {
             accommodations: accMap[r.id] ? [accMap[r.id]] : []
         }));
     } else {
-        const query = supabase
-            .from(tables.speakers)
-            .select(`*, ${tables.sessions}(*), ${tables.accommodations}(*), ${tables.attendance}(*)`)
-            .order("created_at", { ascending: true });
+        // Dubai: join sessions + attendance (FKs exist) and fetch accommodations separately,
+        // because `accommodations` has no FK to `speakers` (a PostgREST join on it fails).
+        const [spkRes, accRes] = await Promise.all([
+            supabase
+                .from(tables.speakers)
+                .select(`*, ${tables.sessions}(*), ${tables.attendance}(*)`)
+                .order("created_at", { ascending: true }),
+            supabase
+                .from(tables.accommodations)
+                .select("*")
+                .or("event.is.null,event.eq.dubai")
+        ]);
 
-        const res = await query;
-        data = res.data;
-        error = res.error;
-
-        if (error) {
+        if (spkRes.error) {
             const simple = await supabase
                 .from(tables.speakers)
                 .select("*")
                 .order("created_at", { ascending: true });
-
             if (!simple.error) {
                 data = simple.data || [];
-                error = null;
+            } else {
+                error = spkRes.error;
             }
+        } else {
+            data = spkRes.data || [];
         }
+
+        const accMap = {};
+        for (const a of (accRes.data || [])) {
+            if (a.speaker_id) accMap[a.speaker_id] = a;
+        }
+        data = data.map(r => ({
+            ...r,
+            accommodations: accMap[r.id] ? [accMap[r.id]] : []
+        }));
     }
 
     if (error) throw error;

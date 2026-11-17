@@ -85,7 +85,7 @@ export async function loginSpeaker(identifier, password, targetSpeakerId = null,
     let records = [];
 
     const fetchFromTable = async (t) => {
-        let q = supabase.from(t.speakers).select(`*, ${t.sessions}(*), ${t.accommodations}(*), ${t.attendance}(*)`);
+        let q = supabase.from(t.speakers).select(`*, ${t.sessions}(*), ${t.attendance}(*)`);
         if (targetSpeakerId) {
             q = q.eq("id", targetSpeakerId);
         } else if (id.includes("@")) {
@@ -168,7 +168,7 @@ export async function loginWithMagicLink(speakerId, token, eventSlug = null) {
     const fetchLink = async (t) => {
         let { data, error } = await supabase
             .from(t.speakers)
-            .select(`*, ${t.sessions}(*), ${t.accommodations}(*), ${t.attendance}(*)`)
+            .select(`*, ${t.sessions}(*), ${t.attendance}(*)`)
             .eq("id", speakerId.toUpperCase())
             .eq("portal_token", token.toUpperCase())
             .maybeSingle();
