@@ -55,6 +55,26 @@ export default function IdCardsPage({
     const [roomFilter, setRoomFilter] = useState("all");
     const [previewCard, setPreviewCard] = useState(null);
 
+    // Post-Download PDF & Room Folder Preview Modal state
+    const [downloadPreviewModal, setDownloadPreviewModal] = useState(null);
+    const [previewRoomTab, setPreviewRoomTab] = useState("all");
+    const [activePreviewPdfItem, setActivePreviewPdfItem] = useState(null);
+
+    const closeDownloadPreviewModal = () => {
+        if (downloadPreviewModal?.pdfUrl) {
+            try { URL.revokeObjectURL(downloadPreviewModal.pdfUrl); } catch {}
+        }
+        if (Array.isArray(downloadPreviewModal?.items)) {
+            downloadPreviewModal.items.forEach((it) => {
+                if (it?.pdfUrl) {
+                    try { URL.revokeObjectURL(it.pdfUrl); } catch {}
+                }
+            });
+        }
+        setActivePreviewPdfItem(null);
+        setDownloadPreviewModal(null);
+    };
+
     // Crop state
     const [editingSpeaker, setEditingSpeaker] = useState(null);
     const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -73,7 +93,12 @@ export default function IdCardsPage({
     const [selectedSpeakerIds, setSelectedSpeakerIds] = useState(() => new Set());
 
     // Room categorization helper
-    const getRoomName = (s) => (s?.conferenceRoom || s?.conference_room || s?.room || "").trim();
+    const getRoomName = (s) => {
+        const topRoom = (s?.conferenceRoom || s?.conference_room || s?.room || "").trim();
+        if (topRoom) return topRoom;
+        const firstSess = Array.isArray(s?.sessions) && s.sessions.length > 0 ? s.sessions[0] : null;
+        return (firstSess?.conferenceRoom || firstSess?.conference_room || firstSess?.room || "").trim();
+    };
     const getRoomCategory = (s) => {
         const r = getRoomName(s).toLowerCase();
         if (r.includes("room 1") || r === "1") return "Room 1";
@@ -110,25 +135,52 @@ export default function IdCardsPage({
         return Array.from(set).sort();
     }, [speakers]);
 
-    // Special Download: Printing Works (19" × 13" Press Sheets) Constants & Memos
+    // Special Download: Printing Works (19" × 13" Press Sheets) Constants & Memos (Separated by Room 1 & Room 2)
+    const [printingRoomTab, setPrintingRoomTab] = useState("all"); // 'all' | 'Room 1' | 'Room 2' | 'Other'
     const SPEAKERS_PER_PRINT_SHEET = 10;
-    const totalPrintingSheets = Math.ceil(speakers.length / SPEAKERS_PER_PRINT_SHEET);
 
-    const printingSheets = useMemo(() => {
+    const buildRoomPrintingSheets = (roomList, roomCategory, roomPrefix, folderName) => {
+        const count = Math.ceil(roomList.length / SPEAKERS_PER_PRINT_SHEET);
         const list = [];
-        for (let i = 0; i < totalPrintingSheets; i++) {
+        for (let i = 0; i < count; i++) {
             const start = i * SPEAKERS_PER_PRINT_SHEET;
-            const end = Math.min(start + SPEAKERS_PER_PRINT_SHEET, speakers.length);
+            const end = Math.min(start + SPEAKERS_PER_PRINT_SHEET, roomList.length);
+            const padIdx = String(i + 1).padStart(2, "0");
             list.push({
+                id: `${roomPrefix}_Sheet_${padIdx}`,
+                roomCategory,
+                roomPrefix,
+                folderName,
                 index: i,
                 sheetNumber: i + 1,
-                speakers: speakers.slice(start, end),
+                totalRoomSheets: count,
+                speakers: roomList.slice(start, end),
                 startNumber: start + 1,
                 endNumber: end,
+                filename: `${roomPrefix}_Sheet_${padIdx}.pdf`,
             });
         }
         return list;
-    }, [speakers, totalPrintingSheets]);
+    };
+
+    const room1PrintingSheets = useMemo(
+        () => buildRoomPrintingSheets(room1Speakers, "Room 1", "Room_1", "Room_1_Press_Sheets"),
+        [room1Speakers]
+    );
+    const room2PrintingSheets = useMemo(
+        () => buildRoomPrintingSheets(room2Speakers, "Room 2", "Room_2", "Room_2_Press_Sheets"),
+        [room2Speakers]
+    );
+    const otherPrintingSheets = useMemo(
+        () => buildRoomPrintingSheets(otherSpeakers, "Other", "Other", "Other_Press_Sheets"),
+        [otherSpeakers]
+    );
+
+    const printingSheets = useMemo(
+        () => [...room1PrintingSheets, ...room2PrintingSheets, ...otherPrintingSheets],
+        [room1PrintingSheets, room2PrintingSheets, otherPrintingSheets]
+    );
+    const totalPrintingSheets = printingSheets.length;
 
     // Keep selection updated when speakers array loads
     useEffect(() => {
@@ -417,10 +469,13 @@ export default function IdCardsPage({
 
                 let firstPage = true;
                 let current = 0;
+                const previewItems = [];
 
-                for (const c of cardList) {
+                for (const s of targetSpeakers) {
+                    const c = allCards[s.id];
+                    if (!c) continue;
                     current++;
-                    setProgress(`Adding page ${current} of ${cardList.length}: ${c.speaker?.name || c.filename}...`);
+                    setProgress(`Adding page ${current} of ${cardList.length}: ${s.name || c.filename}...`);
                     const dataUrl = await getCardDataUrl(c);
                     if (dataUrl) {
                         if (!firstPage) {
@@ -428,11 +483,37 @@ export default function IdCardsPage({
                         }
                         pdf.addImage(dataUrl, "JPEG", 0, 0, 1080, 1800);
                         firstPage = false;
+                        const roomCategory = getRoomCategory(s);
+                        previewItems.push({
+                            id: s.id,
+                            speaker: s,
+                            card: c,
+                            dataUrl,
+                            roomCategory,
+                            folder: roomCategory,
+                            pdfFilename: `${c.filename.replace(/\.jpe?g$/i, "")}.pdf`,
+                        });
                     }
                 }
 
-                pdf.save(`${filenamePrefix}_${timestamp}.pdf`);
-                if (toast) toast(`Downloaded single PDF with ${cardList.length} ID card(s).`);
+                const finalPdfName = `${filenamePrefix}_${timestamp}.pdf`;
+                const pdfBlob = pdf.output("blob");
+                const pdfUrl = URL.createObjectURL(pdfBlob);
+                pdf.save(finalPdfName);
+
+                setPreviewRoomTab("all");
+                setActivePreviewPdfItem(null);
+                setDownloadPreviewModal({
+                    title: `Downloaded PDF Preview — ${finalPdfName}`,
+                    subtitle: `Multi-page PDF containing ${previewItems.length} speaker ID card(s).`,
+                    type: "single-pdf",
+                    filename: finalPdfName,
+                    pdfUrl,
+                    items: previewItems,
+                    organizeByRooms: true,
+                });
+
+                if (toast) toast(`Downloaded single PDF with ${cardList.length} ID card(s). Opening preview...`);
             } else {
                 // Format: ZIP Archive (either PDFs or JPEGs)
                 setProgress(`Building ZIP archive for ${cardList.length} badge(s)...`);
@@ -442,31 +523,35 @@ export default function IdCardsPage({
                 if (organizeByRooms) {
                     room1Folder = zip.folder("Room 1");
                     room2Folder = zip.folder("Room 2");
-                    otherFolder = zip.folder("Other");
+                    if (targetSpeakers.some((s) => getRoomCategory(s) === "Other")) {
+                        otherFolder = zip.folder("Other");
+                    }
                 }
 
                 let doneCount = 0;
-                for (const c of cardList) {
-                    doneCount++;
-                    setProgress(`Packaging card ${doneCount} of ${cardList.length}: ${c.speaker?.name || c.filename}...`);
+                const previewItems = [];
 
-                    const roomCategory = getRoomCategory(c.speaker);
+                for (const s of targetSpeakers) {
+                    const c = allCards[s.id];
+                    if (!c) continue;
+                    doneCount++;
+                    setProgress(`Packaging card ${doneCount} of ${cardList.length}: ${s.name || c.filename}...`);
+
+                    const roomCategory = getRoomCategory(s);
                     const targetFolder = organizeByRooms
                         ? roomCategory === "Room 1"
                             ? room1Folder
                             : roomCategory === "Room 2"
                             ? room2Folder
-                            : otherFolder
+                            : (otherFolder || zip.folder("Other"))
                         : zip;
 
                     if (format === "jpeg-zip") {
                         let blob = c.blob;
-                        if (!blob) {
-                            const dataUrl = await getCardDataUrl(c);
-                            if (dataUrl) {
-                                const res = await fetch(dataUrl);
-                                blob = await res.blob();
-                            }
+                        const dataUrl = await getCardDataUrl(c);
+                        if (!blob && dataUrl) {
+                            const res = await fetch(dataUrl);
+                            blob = await res.blob();
                         }
                         if (blob) {
                             const jpegName =
@@ -474,6 +559,15 @@ export default function IdCardsPage({
                                     ? c.filename
                                     : `${c.filename}.jpg`;
                             targetFolder.file(jpegName, blob);
+                            previewItems.push({
+                                id: s.id,
+                                speaker: s,
+                                card: c,
+                                dataUrl,
+                                roomCategory,
+                                folder: organizeByRooms ? roomCategory : null,
+                                pdfFilename: jpegName,
+                            });
                         }
                     } else {
                         // Default: individual PDF per badge
@@ -489,6 +583,18 @@ export default function IdCardsPage({
                             const pdfFilename =
                                 c.filename.replace(/\.jpe?g$/i, "") + `_${Date.now()}.pdf`;
                             targetFolder.file(pdfFilename, pdfBlob);
+
+                            const itemPdfUrl = URL.createObjectURL(pdfBlob);
+                            previewItems.push({
+                                id: s.id,
+                                speaker: s,
+                                card: c,
+                                dataUrl,
+                                roomCategory,
+                                folder: organizeByRooms ? roomCategory : null,
+                                pdfFilename,
+                                pdfUrl: itemPdfUrl,
+                            });
                         }
                     }
                 }
@@ -500,15 +606,32 @@ export default function IdCardsPage({
                     compressionOptions: { level: 6 },
                 });
 
+                const finalZipName = `${filenamePrefix}_${timestamp}.zip`;
                 const link = document.createElement("a");
                 link.href = URL.createObjectURL(zipBlob);
-                link.download = `${filenamePrefix}_${timestamp}.zip`;
+                link.download = finalZipName;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
                 URL.revokeObjectURL(link.href);
 
-                if (toast) toast(`Downloaded ZIP archive with ${cardList.length} ID card(s).`);
+                const r1Count = previewItems.filter((i) => i.roomCategory === "Room 1").length;
+                const r2Count = previewItems.filter((i) => i.roomCategory === "Room 2").length;
+
+                setPreviewRoomTab("all");
+                setActivePreviewPdfItem(previewItems[0] || null);
+                setDownloadPreviewModal({
+                    title: `Downloaded Archive Preview — ${finalZipName}`,
+                    subtitle: organizeByRooms
+                        ? `Separated into folders: Room 1 (${r1Count} PDFs) & Room 2 (${r2Count} PDFs) • Total ${previewItems.length} ID Card PDFs.`
+                        : `Archive containing ${previewItems.length} ID Card PDF(s).`,
+                    type: "zip-pdfs",
+                    filename: finalZipName,
+                    items: previewItems,
+                    organizeByRooms,
+                });
+
+                if (toast) toast(`Downloaded ZIP archive with ${cardList.length} ID card PDF(s). Opening preview...`);
             }
         } catch (err) {
             console.error("Export failed:", err);
@@ -524,7 +647,7 @@ export default function IdCardsPage({
         handleBatchExport({
             targetSpeakers: speakers,
             format: "pdf-zip",
-            organizeByRooms: false,
+            organizeByRooms: true,
             filenamePrefix: "WL-WH-All-Speaker-ID-Cards",
         });
     };
@@ -562,9 +685,14 @@ export default function IdCardsPage({
     };
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // SPECIAL DOWNLOAD: PRINTING WORKS (19" × 13" PRESS CUT SHEETS)
+    // SPECIAL DOWNLOAD: PRINTING WORKS (19" × 13" PRESS CUT SHEETS — SEPARATED BY ROOM)
     // ═══════════════════════════════════════════════════════════════════════════
-    const renderPrintingWorksSheetToDoc = async (doc, sheetSpeakers, sheetIndex, totalSheets, allCards) => {
+    const renderPrintingWorksSheetToDoc = async (doc, sheet, allCards) => {
+        const sheetSpeakers = sheet.speakers || [];
+        const roomLabel = sheet.roomCategory || "Conference";
+        const sheetNum = sheet.sheetNumber || 1;
+        const totalRoomSheets = sheet.totalRoomSheets || 1;
+
         const SHEET_WIDTH_MM = 482.6; // 19 inches
         const SHEET_HEIGHT_MM = 330.2; // 13 inches
         const CARD_WIDTH_MM = 95;
@@ -581,13 +709,17 @@ export default function IdCardsPage({
         doc.setFont("helvetica", "bold");
         doc.setFontSize(13);
         doc.setTextColor(30, 41, 59);
-        doc.text(`WL-WH CONFERENCE 2026 — ID BADGES PRESS SHEET ${sheetIndex + 1} OF ${totalSheets}`, 15, 18);
+        doc.text(
+            `WL-WH CONFERENCE 2026 — [${roomLabel.toUpperCase()}] ID BADGES PRESS SHEET ${sheetNum} OF ${totalRoomSheets}`,
+            15,
+            18
+        );
 
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
         doc.setTextColor(100, 116, 139);
         doc.text(
-            `Sheet Dimensions: 19" × 13" (482.6mm × 330.2mm) • Badge Cut Size: 95mm × 120mm • Grid: 2 Rows × 5 Columns • Badges on sheet: ${sheetSpeakers.length}`,
+            `Room: ${roomLabel} • Sheet Dimensions: 19" × 13" (482.6mm × 330.2mm) • Badge Cut Size: 95mm × 120mm • Grid: 2 Rows × 5 Columns • Badges on sheet: ${sheetSpeakers.length}`,
             15,
             25
         );
@@ -671,30 +803,28 @@ export default function IdCardsPage({
         doc.setFontSize(8.5);
         doc.setTextColor(148, 163, 184);
         const nowStr = new Date().toLocaleDateString();
-        const startNum = sheetIndex * 10 + 1;
-        const endNum = sheetIndex * 10 + sheetSpeakers.length;
+        const startNum = sheet.startNumber || (sheet.index * 10 + 1);
+        const endNum = sheet.endNumber || (sheet.index * 10 + sheetSpeakers.length);
         doc.text(
-            `Sheet ${sheetIndex + 1} of ${totalSheets} • Commercial Cut Sheet • Badges #${startNum}–#${endNum} (${sheetSpeakers.length} on sheet) • 19" × 13" Press Layout • ${nowStr}`,
+            `${roomLabel} • Sheet ${sheetNum} of ${totalRoomSheets} • Commercial Cut Sheet • ${roomLabel} Badges #${startNum}–#${endNum} (${sheetSpeakers.length} on sheet) • 19" × 13" Press Layout • ${nowStr}`,
             15,
             318
         );
     };
 
-    const generatePrintingWorksSheetPdf = async (sheetSpeakers, sheetIndex, totalSheets, allCards) => {
+    const generatePrintingWorksSheetPdf = async (sheet, allCards) => {
         const doc = new jsPDF({
             orientation: "landscape",
             unit: "mm",
             format: [482.6, 330.2],
         });
-        await renderPrintingWorksSheetToDoc(doc, sheetSpeakers, sheetIndex, totalSheets, allCards);
+        await renderPrintingWorksSheetToDoc(doc, sheet, allCards);
         return doc;
     };
 
-    // Download Individual Sheet as PDF (e.g. Sheet_01.pdf)
-    const handleDownloadSinglePrintingSheet = async (sheetIndex) => {
-        const startIdx = sheetIndex * 10;
-        const endIdx = Math.min(startIdx + 10, speakers.length);
-        const sheetSpeakers = speakers.slice(startIdx, endIdx);
+    // Download Individual Sheet as PDF (e.g. Room_1_Sheet_01.pdf or Room_2_Sheet_01.pdf)
+    const handleDownloadSinglePrintingSheet = async (sheet) => {
+        const sheetSpeakers = sheet?.speakers || [];
 
         if (sheetSpeakers.length === 0) {
             if (toast) toast("No speakers found for this sheet.");
@@ -702,17 +832,41 @@ export default function IdCardsPage({
         }
 
         setZipping(true);
-        setProgress(`Preparing ID cards for Sheet ${sheetIndex + 1} (${sheetSpeakers.length} badges)...`);
+        setProgress(`Preparing ID cards for ${sheet.roomCategory} — Sheet ${sheet.sheetNumber} (${sheetSpeakers.length} badges)...`);
 
         try {
             const allCards = await ensureCardsForSpeakers(sheetSpeakers);
-            setProgress(`Rendering 19" × 13" Press Sheet ${sheetIndex + 1}...`);
+            setProgress(`Rendering 19" × 13" Press Sheet (${sheet.roomCategory} Sheet ${sheet.sheetNumber})...`);
 
-            const doc = await generatePrintingWorksSheetPdf(sheetSpeakers, sheetIndex, totalPrintingSheets, allCards);
-            const padIndex = String(sheetIndex + 1).padStart(2, "0");
-            doc.save(`Sheet_${padIndex}.pdf`);
+            const doc = await generatePrintingWorksSheetPdf(sheet, allCards);
+            const finalSheetName = sheet.filename || `Sheet_${String(sheet.sheetNumber).padStart(2, "0")}.pdf`;
+            const pdfBlob = doc.output("blob");
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            doc.save(finalSheetName);
 
-            if (toast) toast(`Downloaded Sheet ${sheetIndex + 1} (${sheetSpeakers.length} badges on 19" × 13" press layout).`);
+            const sheetPreviewItems = sheetSpeakers.map((s) => ({
+                id: s.id,
+                speaker: s,
+                card: allCards[s.id],
+                dataUrl: allCards[s.id]?.dataUrl || allCards[s.id]?.publicUrl,
+                roomCategory: sheet.roomCategory,
+                folder: sheet.roomCategory,
+                pdfFilename: finalSheetName,
+            }));
+
+            setPreviewRoomTab(sheet.roomCategory);
+            setActivePreviewPdfItem(null);
+            setDownloadPreviewModal({
+                title: `Downloaded Press Sheet Preview — ${finalSheetName}`,
+                subtitle: `${sheet.roomCategory} • Sheet ${sheet.sheetNumber} of ${sheet.totalRoomSheets} (${sheetSpeakers.length} badges on 19" × 13" press layout).`,
+                type: "single-pdf",
+                filename: finalSheetName,
+                pdfUrl,
+                items: sheetPreviewItems,
+                organizeByRooms: true,
+            });
+
+            if (toast) toast(`Downloaded ${sheet.roomCategory} — Sheet ${sheet.sheetNumber}. Opening preview...`);
         } catch (err) {
             console.error("Failed to generate sheet PDF:", err);
             if (toast) toast("Failed to generate sheet PDF.");
@@ -722,49 +876,102 @@ export default function IdCardsPage({
         }
     };
 
-    // Download ZIP of all sheet PDFs (Sheet_01.pdf to Sheet_N.pdf)
-    const handleDownloadAllPrintingSheetsZip = async () => {
-        if (speakers.length === 0) {
-            if (toast) toast("No registered speakers found to print.");
+    // Download ZIP of sheets for a specific room (or all rooms separated into room folders)
+    const handleDownloadRoomPrintingSheetsZip = async (roomCategory = "all") => {
+        const targetSheets =
+            roomCategory === "Room 1"
+                ? room1PrintingSheets
+                : roomCategory === "Room 2"
+                ? room2PrintingSheets
+                : roomCategory === "Other"
+                ? otherPrintingSheets
+                : printingSheets;
+
+        const targetSpeakers =
+            roomCategory === "Room 1"
+                ? room1Speakers
+                : roomCategory === "Room 2"
+                ? room2Speakers
+                : roomCategory === "Other"
+                ? otherSpeakers
+                : speakers;
+
+        if (targetSheets.length === 0 || targetSpeakers.length === 0) {
+            if (toast) toast(`No speakers found for ${roomCategory === "all" ? "printing" : roomCategory}.`);
             return;
         }
 
         setZipping(true);
-        setProgress(`Verifying ID cards for all ${speakers.length} speakers across ${totalPrintingSheets} sheets...`);
+        setProgress(`Verifying ID cards for ${targetSpeakers.length} speakers across ${targetSheets.length} press sheets...`);
 
         try {
-            const allCards = await ensureCardsForSpeakers(speakers);
+            const allCards = await ensureCardsForSpeakers(targetSpeakers);
             const zip = new JSZip();
 
-            for (let sheetIdx = 0; sheetIdx < totalPrintingSheets; sheetIdx++) {
-                const startIdx = sheetIdx * 10;
-                const endIdx = Math.min(startIdx + 10, speakers.length);
-                const sheetSpeakers = speakers.slice(startIdx, endIdx);
-
-                setProgress(`Generating Sheet ${sheetIdx + 1} of ${totalPrintingSheets} (${sheetSpeakers.length} badges)...`);
-                const doc = await generatePrintingWorksSheetPdf(sheetSpeakers, sheetIdx, totalPrintingSheets, allCards);
+            const previewSheets = [];
+            for (let i = 0; i < targetSheets.length; i++) {
+                const sheet = targetSheets[i];
+                setProgress(`Generating ${sheet.roomCategory} — Sheet ${sheet.sheetNumber} of ${sheet.totalRoomSheets} (${sheet.speakers.length} badges)...`);
+                const doc = await generatePrintingWorksSheetPdf(sheet, allCards);
                 const pdfBlob = doc.output("blob");
 
-                const padIndex = String(sheetIdx + 1).padStart(2, "0");
-                zip.file(`Sheet_${padIndex}.pdf`, pdfBlob);
+                if (roomCategory === "all") {
+                    zip.folder(sheet.folderName).file(sheet.filename, pdfBlob);
+                } else {
+                    zip.file(sheet.filename, pdfBlob);
+                }
+
+                const sheetPdfUrl = URL.createObjectURL(pdfBlob);
+                previewSheets.push({
+                    id: sheet.id,
+                    speaker: { name: `${sheet.roomCategory} — Sheet ${sheet.sheetNumber} of ${sheet.totalRoomSheets}`, id: `${sheet.speakers.length} Badges` },
+                    roomCategory: sheet.roomCategory,
+                    folder: roomCategory === "all" ? sheet.folderName : sheet.roomCategory,
+                    pdfFilename: sheet.filename,
+                    pdfUrl: sheetPdfUrl,
+                    isPressSheet: true,
+                    sheet,
+                });
             }
 
-            setProgress("Compressing ZIP file containing all sheets...");
+            setProgress("Compressing ZIP file containing press sheets...");
             const zipBlob = await zip.generateAsync({
                 type: "blob",
                 compression: "DEFLATE",
                 compressionOptions: { level: 6 },
             });
 
+            const fileTag = roomCategory === "all" ? "All-Rooms-Separated" : roomCategory.replace(/\s+/g, "-");
+            const finalZipName = `WL-WH-Printing-Works-${fileTag}-Sheets-(19x13)-${new Date().toISOString().slice(0, 10)}.zip`;
             const link = document.createElement("a");
             link.href = URL.createObjectURL(zipBlob);
-            link.download = `WL-WH-Printing-Works-All-Sheets-(19x13)-${new Date().toISOString().slice(0, 10)}.zip`;
+            link.download = finalZipName;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(link.href);
 
-            if (toast) toast(`Downloaded ZIP with all ${totalPrintingSheets} press sheet PDFs (Sheet 1 to Sheet ${totalPrintingSheets}).`);
+            setPreviewRoomTab(roomCategory === "all" ? "all" : roomCategory);
+            setActivePreviewPdfItem(previewSheets[0] || null);
+            setDownloadPreviewModal({
+                title: `Downloaded Press Sheets ZIP Preview — ${finalZipName}`,
+                subtitle:
+                    roomCategory === "all"
+                        ? `Separated into Room_1_Press_Sheets (${room1PrintingSheets.length}) & Room_2_Press_Sheets (${room2PrintingSheets.length}). Click any sheet below to preview its PDF.`
+                        : `${roomCategory} Press Sheets (${targetSheets.length} PDFs). Click any sheet below to preview its PDF.`,
+                type: "zip-pdfs",
+                filename: finalZipName,
+                items: previewSheets,
+                organizeByRooms: true,
+            });
+
+            if (toast) {
+                toast(
+                    roomCategory === "all"
+                        ? `Downloaded ZIP with ${room1PrintingSheets.length} Room 1 sheets & ${room2PrintingSheets.length} Room 2 sheets in separate folders.`
+                        : `Downloaded ${roomCategory} ZIP with ${targetSheets.length} press sheet PDFs.`
+                );
+            }
         } catch (err) {
             console.error("Failed to generate printing works ZIP:", err);
             if (toast) toast("Failed to build printing works ZIP file.");
@@ -774,38 +981,87 @@ export default function IdCardsPage({
         }
     };
 
-    // Download Combined multi-page PDF (all sheets in 1 document)
-    const handleDownloadAllPrintingSheetsCombinedPdf = async () => {
-        if (speakers.length === 0) {
-            if (toast) toast("No registered speakers found to print.");
+    const handleDownloadAllPrintingSheetsZip = () => handleDownloadRoomPrintingSheetsZip("all");
+
+    // Download Combined multi-page PDF for a specific room or all rooms (Room 1 sheets first, then Room 2 sheets, never mixed)
+    const handleDownloadRoomPrintingSheetsCombinedPdf = async (roomCategory = "all") => {
+        const targetSheets =
+            roomCategory === "Room 1"
+                ? room1PrintingSheets
+                : roomCategory === "Room 2"
+                ? room2PrintingSheets
+                : roomCategory === "Other"
+                ? otherPrintingSheets
+                : printingSheets;
+
+        const targetSpeakers =
+            roomCategory === "Room 1"
+                ? room1Speakers
+                : roomCategory === "Room 2"
+                ? room2Speakers
+                : roomCategory === "Other"
+                ? otherSpeakers
+                : speakers;
+
+        if (targetSheets.length === 0 || targetSpeakers.length === 0) {
+            if (toast) toast(`No speakers found for ${roomCategory === "all" ? "printing" : roomCategory}.`);
             return;
         }
 
         setZipping(true);
-        setProgress(`Verifying ID cards for all ${speakers.length} speakers across ${totalPrintingSheets} sheets...`);
+        setProgress(`Verifying ID cards for ${targetSpeakers.length} speakers across ${targetSheets.length} press sheets...`);
 
         try {
-            const allCards = await ensureCardsForSpeakers(speakers);
+            const allCards = await ensureCardsForSpeakers(targetSpeakers);
             const combinedDoc = new jsPDF({
                 orientation: "landscape",
                 unit: "mm",
                 format: [482.6, 330.2],
             });
 
-            for (let sheetIdx = 0; sheetIdx < totalPrintingSheets; sheetIdx++) {
-                const startIdx = sheetIdx * 10;
-                const endIdx = Math.min(startIdx + 10, speakers.length);
-                const sheetSpeakers = speakers.slice(startIdx, endIdx);
-
-                setProgress(`Compiling Sheet ${sheetIdx + 1} of ${totalPrintingSheets}...`);
-                if (sheetIdx > 0) {
+            for (let i = 0; i < targetSheets.length; i++) {
+                const sheet = targetSheets[i];
+                setProgress(`Compiling ${sheet.roomCategory} — Sheet ${sheet.sheetNumber} of ${sheet.totalRoomSheets}...`);
+                if (i > 0) {
                     combinedDoc.addPage([482.6, 330.2], "landscape");
                 }
-                await renderPrintingWorksSheetToDoc(combinedDoc, sheetSpeakers, sheetIdx, totalPrintingSheets, allCards);
+                await renderPrintingWorksSheetToDoc(combinedDoc, sheet, allCards);
             }
 
-            combinedDoc.save(`WL-WH-Printing-Works-Combined-Sheets-(19x13)-${new Date().toISOString().slice(0, 10)}.pdf`);
-            if (toast) toast(`Downloaded combined ${totalPrintingSheets}-page press PDF.`);
+            const fileTag = roomCategory === "all" ? "All-Rooms-Separated" : roomCategory.replace(/\s+/g, "-");
+            const finalCombinedName = `WL-WH-Printing-Works-${fileTag}-Combined-(19x13)-${new Date().toISOString().slice(0, 10)}.pdf`;
+            const pdfBlob = combinedDoc.output("blob");
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            combinedDoc.save(finalCombinedName);
+
+            const previewItems = targetSpeakers.map((s) => ({
+                id: s.id,
+                speaker: s,
+                card: allCards[s.id],
+                dataUrl: allCards[s.id]?.dataUrl || allCards[s.id]?.publicUrl,
+                roomCategory: getRoomCategory(s),
+                folder: getRoomCategory(s),
+                pdfFilename: finalCombinedName,
+            }));
+
+            setPreviewRoomTab(roomCategory === "all" ? "all" : roomCategory);
+            setActivePreviewPdfItem(null);
+            setDownloadPreviewModal({
+                title: `Downloaded Combined Press PDF Preview — ${finalCombinedName}`,
+                subtitle: `${targetSheets.length} press sheet page(s) (19" × 13") with Room 1 and Room 2 on separate sheets.`,
+                type: "single-pdf",
+                filename: finalCombinedName,
+                pdfUrl,
+                items: previewItems,
+                organizeByRooms: true,
+            });
+            if (toast) {
+                toast(
+                    roomCategory === "all"
+                        ? `Downloaded combined ${targetSheets.length}-page press PDF (Room 1 & Room 2 on separate sheets).`
+                        : `Downloaded ${roomCategory} combined ${targetSheets.length}-page press PDF.`
+                );
+            }
         } catch (err) {
             console.error("Failed to generate combined PDF:", err);
             if (toast) toast("Failed to generate combined printing sheet PDF.");
@@ -814,6 +1070,8 @@ export default function IdCardsPage({
             setProgress(null);
         }
     };
+
+    const handleDownloadAllPrintingSheetsCombinedPdf = () => handleDownloadRoomPrintingSheetsCombinedPdf("all");
 
     // 5. Download single card as PDF
     const downloadSingleCard = async (card) => {
@@ -843,9 +1101,37 @@ export default function IdCardsPage({
 
             const timestamp = Date.now();
             const pdfFilename = card.filename.replace(".jpg", "").replace(".jpeg", "") + `_${timestamp}.pdf`;
+            const pdfBlob = pdf.output("blob");
+            const pdfUrl = URL.createObjectURL(pdfBlob);
 
             pdf.save(pdfFilename);
-            if (toast) toast(`Downloaded ${pdfFilename}`);
+
+            const matchedSpk = speakers.find((s) => s.id === card.id) || card.speaker || { id: card.id, name: card.filename };
+            const roomCategory = getRoomCategory(matchedSpk);
+            setPreviewRoomTab("all");
+            setActivePreviewPdfItem(null);
+            setDownloadPreviewModal({
+                title: `Downloaded ID Card PDF Preview — ${pdfFilename}`,
+                subtitle: `${matchedSpk.name || card.filename} • ${roomCategory}`,
+                type: "single-pdf",
+                filename: pdfFilename,
+                pdfUrl,
+                items: [
+                    {
+                        id: matchedSpk.id || card.id,
+                        speaker: matchedSpk,
+                        card,
+                        dataUrl: dataUrlToUse,
+                        roomCategory,
+                        folder: roomCategory,
+                        pdfFilename,
+                        pdfUrl,
+                    },
+                ],
+                organizeByRooms: true,
+            });
+
+            if (toast) toast(`Downloaded ${pdfFilename}. Opening preview...`);
         } catch (err) {
             console.error("Download failed:", err);
             if (toast) toast("Download failed. Please try again.");
@@ -1418,7 +1704,7 @@ export default function IdCardsPage({
                                 </div>
                             </div>
 
-                            {/* Card 3: Complete Archive (ZIP of PDFs) */}
+                            {/* Card 3: Complete Archive (ZIP of PDFs Separated by Room) */}
                             <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs hover:border-amber-400 dark:hover:border-amber-600 transition-all flex flex-col justify-between">
                                 <div>
                                     <div className="flex items-start justify-between gap-3 mb-3">
@@ -1426,14 +1712,14 @@ export default function IdCardsPage({
                                             <FileArchive size={22} />
                                         </div>
                                         <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                                            Flat Archive
+                                            Room 1 &amp; Room 2 Folders
                                         </span>
                                     </div>
                                     <h4 className="font-bold text-sm sm:text-base text-slate-900 dark:text-slate-100">
                                         All ID Cards Archive (ZIP)
                                     </h4>
                                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-                                        Standard flat ZIP archive containing separate individual printable PDF files for every registered speaker ({totalSpeakers} total).
+                                        ZIP archive containing separate individual printable PDF files for every registered speaker ({totalSpeakers} total), separated into <strong>Room 1</strong> and <strong>Room 2</strong> folders with live PDF preview after download.
                                     </p>
                                 </div>
                                 <div className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800">
@@ -1553,7 +1839,7 @@ export default function IdCardsPage({
                                         Printing Works Sheets (ZIP)
                                     </h4>
                                     <p className="text-xs text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed">
-                                        <strong>10 Badges/sheet</strong> (Row 1: 5 | Row 2: 5). Sized <strong>95mm × 120mm</strong> on 19" × 13" press sheets. <strong>{totalPrintingSheets} sheets</strong> for {totalSpeakers} speakers.
+                                        <strong>10 Badges/sheet</strong> separated by room. <strong>Room 1: {room1PrintingSheets.length} sheets</strong> ({room1Speakers.length} spk) • <strong>Room 2: {room2PrintingSheets.length} sheets</strong> ({room2Speakers.length} spk).
                                     </p>
                                 </div>
                                 <div className="mt-5 pt-4 border-t border-violet-200/60 dark:border-violet-900/40 flex flex-col sm:flex-row gap-2">
@@ -1578,7 +1864,7 @@ export default function IdCardsPage({
                         </div>
                     </div>
 
-                    {/* SECTION 2: SPECIAL DOWNLOAD — PRINTING WORKS (19" × 13" PRESS SHEETS) */}
+                    {/* SECTION 2: SPECIAL DOWNLOAD — PRINTING WORKS (19" × 13" PRESS SHEETS — SEPARATED BY ROOM 1 & ROOM 2) */}
                     <div className="bg-white dark:bg-slate-950 border-2 border-violet-200 dark:border-violet-900/60 rounded-2xl p-5 sm:p-6 shadow-xs">
                         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-100 dark:border-slate-800">
                             <div>
@@ -1592,26 +1878,30 @@ export default function IdCardsPage({
                                                 Printing Works — 19" × 13" Press Cut Sheets
                                             </h3>
                                             <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-violet-100 text-violet-800 dark:bg-violet-950/80 dark:text-violet-300 border border-violet-300 dark:border-violet-800">
-                                                Special Download
+                                                Room 1 &amp; Room 2 Separated
                                             </span>
                                         </div>
                                         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                            Each ID card: <strong>95mm Width × 120mm Height</strong> • Sheet: <strong>19" Width × 13" Height</strong> (482.6mm × 330.2mm) • <strong>10 badges per sheet</strong> (Row 1: 5 | Row 2: 5).
+                                            Each ID card: <strong>95mm Width × 120mm Height</strong> • Sheet: <strong>19" Width × 13" Height</strong> (482.6mm × 330.2mm) • <strong>10 badges per sheet</strong> (Room 1 and Room 2 never mix on the same sheet).
                                         </p>
                                     </div>
                                 </div>
 
                                 <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-3 text-xs font-medium text-slate-600 dark:text-slate-400">
-                                    <span>
-                                        Total Speakers: <strong className="text-slate-900 dark:text-slate-100">{totalSpeakers}</strong>
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
+                                        Room 1: <strong>{room1PrintingSheets.length} Sheets</strong> ({room1Speakers.length} Speakers)
                                     </span>
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60">
+                                        Room 2: <strong>{room2PrintingSheets.length} Sheets</strong> ({room2Speakers.length} Speakers)
+                                    </span>
+                                    {otherPrintingSheets.length > 0 && (
+                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
+                                            Unassigned/Other: <strong>{otherPrintingSheets.length} Sheets</strong> ({otherSpeakers.length} Speakers)
+                                        </span>
+                                    )}
                                     <span>•</span>
                                     <span>
-                                        Total Sheets: <strong className="text-violet-700 dark:text-violet-400">{totalPrintingSheets} Sheets</strong>
-                                    </span>
-                                    <span>•</span>
-                                    <span>
-                                        Last Sheet: <strong className="text-amber-700 dark:text-amber-400">{speakers.length % 10 === 0 ? 10 : speakers.length % 10} Badges</strong>
+                                        Total Separated Sheets: <strong className="text-violet-700 dark:text-violet-400">{totalPrintingSheets} Sheets</strong>
                                     </span>
                                 </div>
                             </div>
@@ -1622,17 +1912,17 @@ export default function IdCardsPage({
                                     onClick={handleDownloadAllPrintingSheetsZip}
                                     disabled={zipping || generating || totalSpeakers === 0}
                                     className="inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-300 text-white text-xs sm:text-sm font-bold rounded-xl shadow-xs transition-all active:scale-95 min-h-[42px]"
-                                    title="Download all sheet PDFs in a single ZIP"
+                                    title="Download all separated Room 1 & Room 2 sheet PDFs in a single ZIP"
                                 >
                                     <FileArchive size={16} />
-                                    {zipping ? "Processing..." : `Download All Sheets ZIP (${totalPrintingSheets})`}
+                                    {zipping ? "Processing..." : `All Separated Sheets ZIP (${totalPrintingSheets})`}
                                 </button>
 
                                 <button
                                     onClick={handleDownloadAllPrintingSheetsCombinedPdf}
                                     disabled={zipping || generating || totalSpeakers === 0}
                                     className="inline-flex items-center justify-center gap-2 py-2.5 px-4 bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 disabled:bg-slate-300 text-white text-xs sm:text-sm font-bold rounded-xl shadow-xs transition-all active:scale-95 min-h-[42px]"
-                                    title="Download all sheets compiled into one continuous PDF"
+                                    title="Download all sheets compiled into one continuous PDF (Room 1 sheets then Room 2 sheets)"
                                 >
                                     <Printer size={16} />
                                     Combined Press PDF
@@ -1640,45 +1930,193 @@ export default function IdCardsPage({
                             </div>
                         </div>
 
-                        {/* Individual Sheets Grid */}
+                        {/* Dedicated Room 1 & Room 2 Press Sheet Download Bars */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5 pb-5 border-b border-slate-100 dark:border-slate-800">
+                            {/* Room 1 Press Sheets Action Box */}
+                            <div className="p-4 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/50 dark:bg-emerald-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-600 text-white">
+                                            Room 1 Press Sheets
+                                        </span>
+                                        <span className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                                            {room1PrintingSheets.length} {room1PrintingSheets.length === 1 ? "Sheet" : "Sheets"} • {room1Speakers.length} Badges
+                                        </span>
+                                    </div>
+                                    <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1">
+                                        Contains only Room 1 speakers (10 badges per 19" × 13" sheet).
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDownloadRoomPrintingSheetsZip("Room 1")}
+                                        disabled={zipping || generating || room1PrintingSheets.length === 0}
+                                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300 text-white text-xs font-bold rounded-xl shadow-xs transition-all"
+                                    >
+                                        <FileArchive size={14} />
+                                        Room 1 ZIP ({room1PrintingSheets.length})
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDownloadRoomPrintingSheetsCombinedPdf("Room 1")}
+                                        disabled={zipping || generating || room1PrintingSheets.length === 0}
+                                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-900 hover:bg-emerald-50 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 text-xs font-bold rounded-xl transition-all"
+                                    >
+                                        <Printer size={14} />
+                                        Room 1 PDF
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Room 2 Press Sheets Action Box */}
+                            <div className="p-4 rounded-2xl border border-blue-200 dark:border-blue-800/60 bg-blue-50/50 dark:bg-blue-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-600 text-white">
+                                            Room 2 Press Sheets
+                                        </span>
+                                        <span className="text-xs font-bold text-blue-900 dark:text-blue-200">
+                                            {room2PrintingSheets.length} {room2PrintingSheets.length === 1 ? "Sheet" : "Sheets"} • {room2Speakers.length} Badges
+                                        </span>
+                                    </div>
+                                    <p className="text-[11px] text-blue-700 dark:text-blue-400 mt-1">
+                                        Contains only Room 2 speakers (10 badges per 19" × 13" sheet).
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDownloadRoomPrintingSheetsZip("Room 2")}
+                                        disabled={zipping || generating || room2PrintingSheets.length === 0}
+                                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-xs font-bold rounded-xl shadow-xs transition-all"
+                                    >
+                                        <FileArchive size={14} />
+                                        Room 2 ZIP ({room2PrintingSheets.length})
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDownloadRoomPrintingSheetsCombinedPdf("Room 2")}
+                                        disabled={zipping || generating || room2PrintingSheets.length === 0}
+                                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-slate-900 hover:bg-blue-50 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700 text-xs font-bold rounded-xl transition-all"
+                                    >
+                                        <Printer size={14} />
+                                        Room 2 PDF
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Individual Sheets Grid (Filterable by Room 1 / Room 2) */}
                         <div className="mt-5">
-                            <div className="flex items-center justify-between mb-3 px-1">
-                                <h4 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
-                                    Individual Press Sheets ({totalPrintingSheets} Total)
-                                </h4>
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 px-1">
+                                <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl w-fit flex-wrap">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPrintingRoomTab("all")}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                            printingRoomTab === "all"
+                                                ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs"
+                                                : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                                        }`}
+                                    >
+                                        All Separated Sheets ({totalPrintingSheets})
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPrintingRoomTab("Room 1")}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                            printingRoomTab === "Room 1"
+                                                ? "bg-emerald-600 text-white shadow-xs"
+                                                : "text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                                        }`}
+                                    >
+                                        Room 1 Sheets ({room1PrintingSheets.length})
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPrintingRoomTab("Room 2")}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                            printingRoomTab === "Room 2"
+                                                ? "bg-blue-600 text-white shadow-xs"
+                                                : "text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40"
+                                        }`}
+                                    >
+                                        Room 2 Sheets ({room2PrintingSheets.length})
+                                    </button>
+                                    {otherPrintingSheets.length > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setPrintingRoomTab("Other")}
+                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                                printingRoomTab === "Other"
+                                                    ? "bg-amber-600 text-white shadow-xs"
+                                                    : "text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+                                            }`}
+                                        >
+                                            Other Sheets ({otherPrintingSheets.length})
+                                        </button>
+                                    )}
+                                </div>
                                 <span className="text-[11px] text-slate-500">
-                                    Click any sheet to download individual PDF
+                                    Click any sheet to download its individual 19" × 13" PDF
                                 </span>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                                {printingSheets.map((sheet) => {
-                                    const isLast = sheet.index === totalPrintingSheets - 1;
+                                {(printingRoomTab === "Room 1"
+                                    ? room1PrintingSheets
+                                    : printingRoomTab === "Room 2"
+                                    ? room2PrintingSheets
+                                    : printingRoomTab === "Other"
+                                    ? otherPrintingSheets
+                                    : printingSheets
+                                ).map((sheet) => {
+                                    const isLast = sheet.index === sheet.totalRoomSheets - 1;
                                     const count = sheet.speakers.length;
                                     const row1Count = Math.min(5, count);
                                     const row2Count = Math.max(0, count - 5);
+                                    const isRoom1 = sheet.roomCategory === "Room 1";
+                                    const isRoom2 = sheet.roomCategory === "Room 2";
+
+                                    const roomBadgeCls = isRoom1
+                                        ? "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800"
+                                        : isRoom2
+                                        ? "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800"
+                                        : "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800";
+
+                                    const btnCls = isRoom1
+                                        ? "bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-300"
+                                        : isRoom2
+                                        ? "bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300"
+                                        : "bg-violet-600 hover:bg-violet-700 disabled:bg-violet-300";
 
                                     return (
                                         <div
-                                            key={sheet.sheetNumber}
+                                            key={sheet.id}
                                             className="border border-slate-200 dark:border-slate-800 rounded-2xl p-4 bg-slate-50/60 dark:bg-slate-900/40 hover:border-violet-400 dark:hover:border-violet-600 hover:shadow-md transition-all flex flex-col justify-between group"
                                         >
                                             {/* Card Top */}
                                             <div>
                                                 <div className="flex items-center justify-between gap-2 mb-2">
-                                                    <span className="font-bold text-sm text-slate-900 dark:text-slate-100">
-                                                        Sheet {sheet.sheetNumber} of {totalPrintingSheets}
-                                                    </span>
-                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-950 text-violet-800 dark:text-violet-300 border border-violet-200 dark:border-violet-800">
+                                                    <div className="flex items-center gap-1.5 min-w-0">
+                                                        <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border shrink-0 ${roomBadgeCls}`}>
+                                                            {sheet.roomCategory}
+                                                        </span>
+                                                        <span className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate">
+                                                            Sheet {sheet.sheetNumber} of {sheet.totalRoomSheets}
+                                                        </span>
+                                                    </div>
+                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-950 text-violet-800 dark:text-violet-300 border border-violet-200 dark:border-violet-800 shrink-0">
                                                         {count} {count === 1 ? "Badge" : "Badges"}
                                                     </span>
                                                 </div>
 
                                                 <div className="text-[11px] text-slate-500 dark:text-slate-400 mb-3">
-                                                    Speakers #{sheet.startNumber}–#{sheet.endNumber} • Row 1: {row1Count} | Row 2: {row2Count}
+                                                    {sheet.roomCategory} #{sheet.startNumber}–#{sheet.endNumber} • Row 1: {row1Count} | Row 2: {row2Count}
                                                     {isLast && count < 10 && (
                                                         <span className="text-amber-600 dark:text-amber-400 font-semibold ml-1">
-                                                            (Last sheet: {10 - count} empty slots)
+                                                            ({10 - count} empty slots)
                                                         </span>
                                                     )}
                                                 </div>
@@ -1705,7 +2143,7 @@ export default function IdCardsPage({
                                                                 <div
                                                                     key={slotIdx}
                                                                     className="aspect-[95/120] rounded-sm border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center p-0.5 relative overflow-hidden group/slot"
-                                                                    title={`${sp.name} (${sp.id})`}
+                                                                    title={`${sp.name} (${sp.id}) — ${sheet.roomCategory}`}
                                                                 >
                                                                     {sp.photoUrl ? (
                                                                         <img
@@ -1733,12 +2171,12 @@ export default function IdCardsPage({
 
                                             {/* Download Button */}
                                             <button
-                                                onClick={() => handleDownloadSinglePrintingSheet(sheet.index)}
+                                                onClick={() => handleDownloadSinglePrintingSheet(sheet)}
                                                 disabled={zipping || generating}
-                                                className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-violet-600 hover:bg-violet-700 disabled:bg-violet-300 text-white text-xs font-bold rounded-xl shadow-xs transition-all active:scale-98 min-h-[38px]"
+                                                className={`w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 text-white text-xs font-bold rounded-xl shadow-xs transition-all active:scale-98 min-h-[38px] ${btnCls}`}
                                             >
                                                 <Download size={13} />
-                                                Download Sheet {sheet.sheetNumber} (PDF)
+                                                Download {sheet.roomCategory} Sheet {sheet.sheetNumber} (PDF)
                                             </button>
                                         </div>
                                     );
@@ -2139,6 +2577,241 @@ export default function IdCardsPage({
                                     className="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors min-h-[40px]"
                                 >
                                     Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>,
+                    document.body
+                )}
+
+            {/* Post-Download PDF & Room Folder Preview Modal */}
+            {downloadPreviewModal &&
+                createPortal(
+                    <div
+                        onClick={closeDownloadPreviewModal}
+                        className="fixed inset-0 z-[10000] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+                    >
+                        <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden"
+                        >
+                            {/* Modal Header */}
+                            <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4 bg-slate-50 dark:bg-slate-950 shrink-0">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="p-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 shrink-0">
+                                        <CheckCircle2 size={22} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-slate-100 truncate">
+                                                {downloadPreviewModal.title}
+                                            </h3>
+                                            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                                                Downloaded &amp; Ready
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                                            {downloadPreviewModal.subtitle}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={closeDownloadPreviewModal}
+                                    className="p-2 rounded-xl text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors shrink-0"
+                                    aria-label="Close download preview"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            {/* Modal Body */}
+                            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+                                {/* Direct Embedded PDF Viewer (when a single PDF or selected item PDF is active) */}
+                                {(downloadPreviewModal.pdfUrl || activePreviewPdfItem?.pdfUrl) && (
+                                    <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-lg">
+                                        <div className="px-4 py-2.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between gap-2 text-xs text-slate-300">
+                                            <div className="flex items-center gap-2 truncate">
+                                                <FileText size={15} className="text-amber-400 shrink-0" />
+                                                <span className="font-bold text-white truncate">
+                                                    Live PDF Document Preview:{" "}
+                                                    {activePreviewPdfItem
+                                                        ? `${activePreviewPdfItem.folder ? activePreviewPdfItem.folder + " / " : ""}${activePreviewPdfItem.pdfFilename}`
+                                                        : downloadPreviewModal.filename}
+                                                </span>
+                                            </div>
+                                            <a
+                                                href={activePreviewPdfItem?.pdfUrl || downloadPreviewModal.pdfUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-1 text-amber-400 hover:text-amber-300 font-semibold shrink-0"
+                                            >
+                                                <span>Open PDF in New Tab</span>
+                                                <ExternalLink size={13} />
+                                            </a>
+                                        </div>
+                                        <iframe
+                                            src={activePreviewPdfItem?.pdfUrl || downloadPreviewModal.pdfUrl}
+                                            title="Downloaded PDF Preview"
+                                            className="w-full h-[420px] sm:h-[480px] border-0 bg-slate-800"
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Room Folder Breakdown & Card / Sheet Grid */}
+                                {Array.isArray(downloadPreviewModal.items) && downloadPreviewModal.items.length > 0 && (() => {
+                                    const allItems = downloadPreviewModal.items;
+                                    const r1Items = allItems.filter((i) => i.roomCategory === "Room 1");
+                                    const r2Items = allItems.filter((i) => i.roomCategory === "Room 2");
+                                    const otherItems = allItems.filter((i) => i.roomCategory === "Other");
+                                    const visibleItems =
+                                        previewRoomTab === "Room 1"
+                                            ? r1Items
+                                            : previewRoomTab === "Room 2"
+                                            ? r2Items
+                                            : previewRoomTab === "Other"
+                                            ? otherItems
+                                            : allItems;
+
+                                    return (
+                                        <div>
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                                                <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-fit flex-wrap">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setPreviewRoomTab("all")}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                                            previewRoomTab === "all"
+                                                                ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
+                                                                : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                                                        }`}
+                                                    >
+                                                        All Downloaded ({allItems.length})
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setPreviewRoomTab("Room 1")}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                                            previewRoomTab === "Room 1"
+                                                                ? "bg-emerald-600 text-white shadow-xs"
+                                                                : "text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50"
+                                                        }`}
+                                                    >
+                                                        📁 Room 1 Folder ({r1Items.length})
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setPreviewRoomTab("Room 2")}
+                                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                                            previewRoomTab === "Room 2"
+                                                                ? "bg-blue-600 text-white shadow-xs"
+                                                                : "text-blue-700 dark:text-blue-400 hover:bg-blue-50"
+                                                        }`}
+                                                    >
+                                                        📁 Room 2 Folder ({r2Items.length})
+                                                    </button>
+                                                    {otherItems.length > 0 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setPreviewRoomTab("Other")}
+                                                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                                                previewRoomTab === "Other"
+                                                                    ? "bg-amber-600 text-white shadow-xs"
+                                                                    : "text-amber-700 dark:text-amber-400 hover:bg-amber-50"
+                                                            }`}
+                                                        >
+                                                            📁 Other Folder ({otherItems.length})
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <span className="text-xs text-slate-500">
+                                                    Click any item below to preview its exact PDF above
+                                                </span>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                                                {visibleItems.map((item, idx) => {
+                                                    const isSelected = activePreviewPdfItem?.id === item.id;
+                                                    const isR1 = item.roomCategory === "Room 1";
+                                                    const isR2 = item.roomCategory === "Room 2";
+
+                                                    return (
+                                                        <div
+                                                            key={item.id || idx}
+                                                            onClick={() => {
+                                                                if (item.pdfUrl) {
+                                                                    setActivePreviewPdfItem(item);
+                                                                } else if (item.card) {
+                                                                    setPreviewCard(item.card);
+                                                                }
+                                                            }}
+                                                            className={`cursor-pointer rounded-xl border p-2.5 transition-all flex flex-col justify-between ${
+                                                                isSelected
+                                                                    ? "border-indigo-500 ring-2 ring-indigo-500/30 bg-indigo-50/40 dark:bg-indigo-950/30"
+                                                                    : "border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950/50 hover:border-indigo-400"
+                                                            }`}
+                                                        >
+                                                            <div>
+                                                                <div className="flex items-center justify-between gap-1 mb-2">
+                                                                    <span
+                                                                        className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                                                                            isR1
+                                                                                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                                                                                : isR2
+                                                                                ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                                                                                : "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                                                                        }`}
+                                                                    >
+                                                                        {item.folder || item.roomCategory}
+                                                                    </span>
+                                                                    <Eye size={13} className="text-slate-400" />
+                                                                </div>
+
+                                                                {item.dataUrl ? (
+                                                                    <div className="rounded-lg overflow-hidden border border-slate-200 dark:border-slate-800 bg-white mb-2 aspect-[3/5] flex items-center justify-center">
+                                                                        <img
+                                                                            src={item.dataUrl}
+                                                                            alt={item.speaker?.name || item.pdfFilename}
+                                                                            className="w-full h-full object-contain"
+                                                                            loading="lazy"
+                                                                        />
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="rounded-lg border border-dashed border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 py-6 mb-2 flex flex-col items-center justify-center text-center px-2">
+                                                                        <FileText size={24} className="text-violet-500 mb-1" />
+                                                                        <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300">
+                                                                            19&quot; × 13&quot; Press Sheet PDF
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            <div>
+                                                                <div className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">
+                                                                    {item.speaker?.name || item.pdfFilename}
+                                                                </div>
+                                                                <div className="text-[10px] text-slate-500 font-mono truncate mt-0.5">
+                                                                    {item.folder ? `${item.folder}/` : ""}{item.pdfFilename}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+
+                            {/* Modal Footer */}
+                            <div className="px-5 py-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 flex items-center justify-between gap-3 shrink-0">
+                                <span className="text-xs text-slate-500">
+                                    Room 1 and Room 2 files are separated into their own dedicated folders.
+                                </span>
+                                <button
+                                    onClick={closeDownloadPreviewModal}
+                                    className="px-5 py-2 rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 text-white text-xs font-bold transition-colors"
+                                >
+                                    Done &amp; Close Preview
                                 </button>
                             </div>
                         </div>
