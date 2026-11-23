@@ -196,6 +196,95 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
     const checkedOutCount = daySpeakers.filter(s => s.isCheckedOut).length;
     const totalDayCount = daySpeakers.length;
 
+    // Split speakers by Room 1 and Room 2 for All Halls 6-column view
+    const isRoom1Speaker = (s) => {
+        const rm = (s.room || "").toLowerCase().trim();
+        const target1 = (rooms[0] || "Room 1").toLowerCase().trim();
+        return rm === target1 || rm.includes("room 1") || rm.includes("hall 1");
+    };
+
+    const isRoom2Speaker = (s) => {
+        const rm = (s.room || "").toLowerCase().trim();
+        const target2 = (rooms[1] || "Room 2").toLowerCase().trim();
+        return rm === target2 || rm.includes("room 2") || rm.includes("hall 2");
+    };
+
+    const room1Speakers = useMemo(() => filteredSpeakers.filter(isRoom1Speaker), [filteredSpeakers, rooms]);
+    const room2Speakers = useMemo(() => filteredSpeakers.filter(isRoom2Speaker), [filteredSpeakers, rooms]);
+    const otherSpeakers = useMemo(() => filteredSpeakers.filter(s => !isRoom1Speaker(s) && !isRoom2Speaker(s)), [filteredSpeakers, rooms]);
+
+    const renderSpeakerCard = (speaker) => {
+        const isOnsite = speaker.isCurrentlyOnsite;
+        const isCheckedOut = speaker.isCheckedOut;
+
+        const borderCls = isOnsite
+            ? "border-emerald-400 dark:border-emerald-500/80 bg-gradient-to-b from-emerald-500/10 via-white to-emerald-50/60 dark:from-emerald-950/40 dark:via-slate-900 dark:to-emerald-950/20 shadow-md shadow-emerald-500/10 hover:border-emerald-500"
+            : isCheckedOut
+            ? "border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 opacity-60 hover:opacity-100"
+            : "border-rose-300 dark:border-rose-900/70 bg-gradient-to-b from-rose-500/10 via-white to-rose-50/60 dark:from-rose-950/40 dark:via-slate-900 dark:to-rose-950/20 shadow-sm hover:border-rose-500";
+
+        const pillBadgeCls = isOnsite
+            ? "bg-emerald-500 text-white shadow-xs"
+            : isCheckedOut
+            ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
+            : "bg-rose-500 text-white shadow-xs";
+
+        const glowHalo = isOnsite
+            ? "ring-2 ring-emerald-500/30"
+            : isCheckedOut
+            ? ""
+            : "ring-2 ring-rose-500/20";
+
+        return (
+            <div
+                key={speaker.id}
+                onClick={() => setActiveSpeaker(speaker)}
+                className={`group relative rounded-2xl border-2 p-3.5 flex flex-col items-center text-center cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-xl ${borderCls} ${glowHalo}`}
+            >
+                <div className="w-full flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate max-w-[80px]">
+                        {speaker.room}
+                    </span>
+                    <span className={`text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full ${pillBadgeCls}`}>
+                        {isOnsite ? "Checked In" : isCheckedOut ? "Checked Out" : "Not In"}
+                    </span>
+                </div>
+
+                <div className="relative my-1">
+                    <div className={`p-1 rounded-full transition-transform group-hover:scale-105 ${
+                        isOnsite 
+                            ? "ring-3 ring-emerald-500 bg-emerald-100 shadow-sm shadow-emerald-500/40" 
+                            : isCheckedOut 
+                            ? "ring-2 ring-slate-300 bg-slate-100" 
+                            : "ring-3 ring-rose-500 bg-rose-100 shadow-sm shadow-rose-500/30"
+                    }`}>
+                        <SpeakerAvatar src={speaker.photoUrl} size={58} />
+                    </div>
+
+                    <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center text-[10px] text-white font-black shadow-xs ${
+                        isOnsite ? "bg-emerald-500" : isCheckedOut ? "bg-purple-500" : "bg-rose-500"
+                    }`}>
+                        {isOnsite ? "✓" : isCheckedOut ? "↳" : "✕"}
+                    </div>
+                </div>
+
+                <div className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white mt-2 leading-tight line-clamp-1 group-hover:text-emerald-700 dark:group-hover:text-emerald-400">
+                    {speaker.name}
+                </div>
+
+                <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-0.5 whitespace-nowrap">
+                    {formatTimeAmPm(speaker.timeSlot) || "Time TBA"}
+                </div>
+
+                {speaker.sessionTitle && (
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 line-clamp-1 italic w-full">
+                        "{speaker.sessionTitle}"
+                    </p>
+                )}
+            </div>
+        );
+    };
+
     // Stage monitor ordered sessions for the chosen room, sorted by time
     const stageMonitorSpeakers = useMemo(() => {
         return daySpeakers
@@ -439,13 +528,15 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                         </div>
                     </div>
 
-                    {/* Theatre Stage Podium Graphic */}
-                    <div className="relative py-4 text-center">
-                        <div className="w-full max-w-md mx-auto h-7 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 dark:from-slate-800 dark:to-slate-950 text-white font-extrabold text-[11px] tracking-[0.25em] uppercase rounded-t-3xl flex items-center justify-center shadow-lg border-t-2 border-emerald-400">
-                            PODIUM / MAIN STAGE
+                    {/* Theatre Stage Podium Graphic (shown when a single room is selected) */}
+                    {selectedRoom !== "all" && (
+                        <div className="relative py-4 text-center">
+                            <div className="w-full max-w-md mx-auto h-7 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 dark:from-slate-800 dark:to-slate-950 text-white font-extrabold text-[11px] tracking-[0.25em] uppercase rounded-t-3xl flex items-center justify-center shadow-lg border-t-2 border-emerald-400">
+                                {selectedRoom} &middot; PODIUM / STAGE
+                            </div>
+                            <div className="w-full max-w-lg mx-auto h-2 bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent -mt-0.5" />
                         </div>
-                        <div className="w-full max-w-lg mx-auto h-2 bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent -mt-0.5" />
-                    </div>
+                    )}
 
                     {/* Seating Grid */}
                     {filteredSpeakers.length === 0 ? (
@@ -454,79 +545,83 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                                 No speakers found for {activeDayObj.label} with the selected filters.
                             </p>
                         </div>
+                    ) : selectedRoom === "all" ? (
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
+                                {/* Room 1: First 3 columns on xl with Premium Podium Stage */}
+                                <div className="space-y-3">
+                                    <div className="relative py-2 text-center">
+                                        <div className="w-full max-w-xs sm:max-w-sm mx-auto h-7 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 dark:from-slate-800 dark:to-slate-950 text-white font-extrabold text-[11px] tracking-[0.22em] uppercase rounded-t-3xl flex items-center justify-center gap-1.5 shadow-lg border-t-2 border-emerald-400">
+                                            <span>{rooms[0] || "Room 1"}</span>
+                                            <span className="text-emerald-400 opacity-60">&middot;</span>
+                                            <span className="text-emerald-400 font-bold text-[10px]">PODIUM STAGE</span>
+                                        </div>
+                                        <div className="w-full max-w-sm mx-auto h-2 bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent -mt-0.5" />
+                                        <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-1">
+                                            {room1Speakers.length} Scheduled Speakers
+                                        </div>
+                                    </div>
+
+                                    {room1Speakers.length === 0 ? (
+                                        <div className="p-8 text-center text-xs font-semibold text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+                                            No scheduled sessions in {rooms[0] || "Room 1"}
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                                            {room1Speakers.map(renderSpeakerCard)}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Room 2: Last 3 columns on xl with Premium Podium Stage */}
+                                <div className="space-y-3">
+                                    <div className="relative py-2 text-center">
+                                        <div className="w-full max-w-xs sm:max-w-sm mx-auto h-7 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 dark:from-slate-800 dark:to-slate-950 text-white font-extrabold text-[11px] tracking-[0.22em] uppercase rounded-t-3xl flex items-center justify-center gap-1.5 shadow-lg border-t-2 border-teal-400">
+                                            <span>{rooms[1] || "Room 2"}</span>
+                                            <span className="text-teal-400 opacity-60">&middot;</span>
+                                            <span className="text-teal-400 font-bold text-[10px]">PODIUM STAGE</span>
+                                        </div>
+                                        <div className="w-full max-w-sm mx-auto h-2 bg-gradient-to-r from-transparent via-teal-400/50 to-transparent -mt-0.5" />
+                                        <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-1">
+                                            {room2Speakers.length} Scheduled Speakers
+                                        </div>
+                                    </div>
+
+                                    {room2Speakers.length === 0 ? (
+                                        <div className="p-8 text-center text-xs font-semibold text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+                                            No scheduled sessions in {rooms[1] || "Room 2"}
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                                            {room2Speakers.map(renderSpeakerCard)}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Other Halls (if any speakers are not Room 1 or Room 2) */}
+                            {otherSpeakers.length > 0 && (
+                                <div className="space-y-3 pt-6 border-t border-slate-200 dark:border-slate-800">
+                                    <div className="relative py-2 text-center">
+                                        <div className="w-full max-w-xs sm:max-w-sm mx-auto h-7 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 dark:from-slate-800 dark:to-slate-950 text-white font-extrabold text-[11px] tracking-[0.22em] uppercase rounded-t-3xl flex items-center justify-center gap-1.5 shadow-lg border-t-2 border-purple-400">
+                                            <span>Other Halls</span>
+                                            <span className="text-purple-400 opacity-60">&middot;</span>
+                                            <span className="text-purple-400 font-bold text-[10px]">BOARDROOM</span>
+                                        </div>
+                                        <div className="w-full max-w-sm mx-auto h-2 bg-gradient-to-r from-transparent via-purple-400/50 to-transparent -mt-0.5" />
+                                        <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-1">
+                                            {otherSpeakers.length} Scheduled Speakers
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+                                        {otherSpeakers.map(renderSpeakerCard)}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-                            {filteredSpeakers.map((speaker) => {
-                                const isOnsite = speaker.isCurrentlyOnsite;
-                                const isCheckedOut = speaker.isCheckedOut;
-
-                                const borderCls = isOnsite
-                                    ? "border-emerald-400 dark:border-emerald-500/80 bg-gradient-to-b from-emerald-500/10 via-white to-emerald-50/60 dark:from-emerald-950/40 dark:via-slate-900 dark:to-emerald-950/20 shadow-md shadow-emerald-500/10 hover:border-emerald-500"
-                                    : isCheckedOut
-                                    ? "border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 opacity-60 hover:opacity-100"
-                                    : "border-rose-300 dark:border-rose-900/70 bg-gradient-to-b from-rose-500/10 via-white to-rose-50/60 dark:from-rose-950/40 dark:via-slate-900 dark:to-rose-950/20 shadow-sm hover:border-rose-500";
-
-                                const pillBadgeCls = isOnsite
-                                    ? "bg-emerald-500 text-white shadow-xs"
-                                    : isCheckedOut
-                                    ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
-                                    : "bg-rose-500 text-white shadow-xs";
-
-                                const glowHalo = isOnsite
-                                    ? "ring-2 ring-emerald-500/30"
-                                    : isCheckedOut
-                                    ? ""
-                                    : "ring-2 ring-rose-500/20";
-
-                                return (
-                                    <div
-                                        key={speaker.id}
-                                        onClick={() => setActiveSpeaker(speaker)}
-                                        className={`group relative rounded-2xl border-2 p-3.5 flex flex-col items-center text-center cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-xl ${borderCls} ${glowHalo}`}
-                                    >
-                                        <div className="w-full flex items-center justify-between mb-2">
-                                            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate max-w-[80px]">
-                                                {speaker.room}
-                                            </span>
-                                            <span className={`text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full ${pillBadgeCls}`}>
-                                                {isOnsite ? "Checked In" : isCheckedOut ? "Checked Out" : "Not In"}
-                                            </span>
-                                        </div>
-
-                                        <div className="relative my-1">
-                                            <div className={`p-1 rounded-full transition-transform group-hover:scale-105 ${
-                                                isOnsite 
-                                                    ? "ring-3 ring-emerald-500 bg-emerald-100 shadow-sm shadow-emerald-500/40" 
-                                                    : isCheckedOut 
-                                                    ? "ring-2 ring-slate-300 bg-slate-100" 
-                                                    : "ring-3 ring-rose-500 bg-rose-100 shadow-sm shadow-rose-500/30"
-                                            }`}>
-                                                <SpeakerAvatar src={speaker.photoUrl} size={58} />
-                                            </div>
-
-                                            <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center text-[10px] text-white font-black shadow-xs ${
-                                                isOnsite ? "bg-emerald-500" : isCheckedOut ? "bg-purple-500" : "bg-rose-500"
-                                            }`}>
-                                                {isOnsite ? "✓" : isCheckedOut ? "↳" : "✕"}
-                                            </div>
-                                        </div>
-
-                                        <div className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white mt-2 leading-tight line-clamp-1 group-hover:text-emerald-700 dark:group-hover:text-emerald-400">
-                                            {speaker.name}
-                                        </div>
-
-                                        <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-0.5 whitespace-nowrap">
-                                            {formatTimeAmPm(speaker.timeSlot) || "Time TBA"}
-                                        </div>
-
-                                        {speaker.sessionTitle && (
-                                            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 line-clamp-1 italic w-full">
-                                                "{speaker.sessionTitle}"
-                                            </p>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                            {filteredSpeakers.map(renderSpeakerCard)}
                         </div>
                     )}
                 </div>
