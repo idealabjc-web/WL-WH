@@ -4,7 +4,7 @@ import {
     Download, RefreshCw, Search, Filter, AlertTriangle, 
     LayoutList, Table as TableIcon, X, ChevronDown, ChevronUp,
     Calendar, Clock, MapPin, Sparkles, BadgeCheck,
-    Users, CheckCircle2, Utensils, Map, LogOut, RotateCcw, Link,
+    Users, User, CheckCircle2, Utensils, Map, LogOut, RotateCcw, Link,
     BookOpen, Upload, FileText, Trash2,
     Hotel, MessageSquare
 } from "lucide-react";
@@ -1595,6 +1595,9 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                 return concernSpeakers.map(s => {
                                     const roomText = s.conferenceRoom || (s.sessions && s.sessions[0]?.conference_room) || (s.sessions && s.sessions[0]?.conferenceRoom) || "";
                                     const dayText = s.day || (s.sessions && s.sessions[0]?.day) || "";
+                                    const whoseSpeakerText = s.whoseSpeaker 
+                                        ? (s.team ? `${s.whoseSpeaker} (${s.team})` : s.whoseSpeaker) 
+                                        : (s.whose_speaker || s.team || "");
 
                                     return (
                                         <div 
@@ -1612,11 +1615,19 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                                             {s.speakerTag || "Speaker"}
                                                         </span>
                                                     </div>
-                                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-2">
+                                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
                                                         {s.country && <span>{s.country}</span>}
                                                         {s.country && (dayText || roomText) && <span>&middot;</span>}
                                                         {dayText && <span>{dayText}</span>}
                                                         {roomText && <span>({roomText})</span>}
+                                                        {(s.country || dayText || roomText) && <span>&middot;</span>}
+                                                        <span className="inline-flex items-center gap-1 font-medium text-slate-600 dark:text-slate-300">
+                                                            <User size={12} className="text-slate-400 shrink-0" />
+                                                            <span>Whose Speaker:</span>
+                                                            <strong className={whoseSpeakerText ? "font-semibold text-slate-800 dark:text-slate-200" : "font-normal italic text-slate-400 dark:text-slate-500"}>
+                                                                {whoseSpeakerText || "Not assigned"}
+                                                            </strong>
+                                                        </span>
                                                     </div>
 
                                                     {/* Concern Note Box */}
@@ -1716,6 +1727,9 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                     const nights = s.nights ? `${s.nights} Nights` : null;
                                     const checkin = s.checkinDate || s.checkin_date;
                                     const checkout = s.checkoutDate || s.checkout_date;
+                                    const whoseSpeakerText = s.whoseSpeaker 
+                                        ? (s.team ? `${s.whoseSpeaker} (${s.team})` : s.whoseSpeaker) 
+                                        : (s.whose_speaker || s.team || "");
 
                                     return (
                                         <div 
@@ -1733,8 +1747,17 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                                             {s.speakerTag || "Speaker"}
                                                         </span>
                                                     </div>
-                                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                                        {s.country || "Speaker"}
+                                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-2">
+                                                        <span>{s.country || "Speaker"}</span>
+                                                        {whoseSpeakerText && (
+                                                            <>
+                                                                <span>&middot;</span>
+                                                                <span className="inline-flex items-center gap-1 font-medium text-slate-600 dark:text-slate-300">
+                                                                    <User size={12} className="text-slate-400 shrink-0" />
+                                                                    <span>Whose: <strong>{whoseSpeakerText}</strong></span>
+                                                                </span>
+                                                            </>
+                                                        )}
                                                     </div>
 
                                                     {/* Stay Badges */}
@@ -1842,6 +1865,9 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                     const allergyText = s.allergy && s.allergy.trim() ? s.allergy : null;
                                     const roomText = s.conferenceRoom || (s.sessions && s.sessions[0]?.conference_room) || (s.sessions && s.sessions[0]?.conferenceRoom) || "";
                                     const dayText = s.day || (s.sessions && s.sessions[0]?.day) || "";
+                                    const whoseSpeakerText = s.whoseSpeaker 
+                                        ? (s.team ? `${s.whoseSpeaker} (${s.team})` : s.whoseSpeaker) 
+                                        : (s.whose_speaker || s.team || "");
 
                                     return (
                                         <div 
@@ -1864,6 +1890,15 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                                         {s.country && (dayText || roomText) && <span>&middot;</span>}
                                                         {dayText && <span>{dayText}</span>}
                                                         {roomText && <span>({roomText})</span>}
+                                                        {whoseSpeakerText && (
+                                                            <>
+                                                                <span>&middot;</span>
+                                                                <span className="inline-flex items-center gap-1 font-medium text-slate-600 dark:text-slate-300">
+                                                                    <User size={12} className="text-slate-400 shrink-0" />
+                                                                    <span>Whose: <strong>{whoseSpeakerText}</strong></span>
+                                                                </span>
+                                                            </>
+                                                        )}
                                                     </div>
 
                                                     {/* Dietary & Allergy Badges */}
