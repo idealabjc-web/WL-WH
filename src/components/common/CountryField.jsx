@@ -95,6 +95,8 @@ export const WORLD_COUNTRIES = [
     { code: "uy", name: "Uruguay" },
     { code: "cm", name: "Southwest, Cameroon" },
     { code: "bs", name: "Bahamas" },
+    { code: "zm", name: "Zambia" },
+    { code: "zw", name: "Zimbabwe" },
 ];
 
 function FlagImg({ code }) {

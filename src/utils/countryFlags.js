@@ -73,7 +73,10 @@ const COUNTRY_ALIASES = {
     "israel": "il",
     "palestine": "ps",
     "bahamas": "bs",
-    "the bahamas": "bs"
+    "the bahamas": "bs",
+    "zambia": "zm",
+    "republic of zambia": "zm",
+    "zimbabwe": "zw"
 };
 
 /**
