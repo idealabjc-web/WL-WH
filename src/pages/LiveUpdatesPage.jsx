@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { 
-    Users, CheckCircle2, Clock, Search, Filter, 
+import {
+    Users, CheckCircle2, Clock, Search, Filter,
     RefreshCw, MapPin, Radio, Calendar, Sparkles,
     UserCheck, UserX, AlertTriangle, ChevronRight, X,
     Home, Tv, MonitorPlay, Activity, FileText, Phone, Volume2, ShieldAlert
@@ -111,7 +111,12 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
         };
 
         if (s.sessions && s.sessions.length > 0) {
-            return s.sessions.filter(sess => matchesDayStr(sess.day));
+            const matched = s.sessions.filter(sess => {
+                const dayVal = sess.day || s.day;
+                if (!matchesDayStr(dayVal)) return false;
+                return Boolean(sess.timeSlot || sess.time_slot || sess.conferenceRoom || sess.conference_room || sess.room || sess.sessionTitle || sess.session_title || s.timeSlot);
+            });
+            if (matched.length > 0) return matched;
         }
 
         if (matchesDayStr(s.day)) {
@@ -126,33 +131,38 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
         return [];
     };
 
-    // Filter speakers for the selected day who have checked in and not checked out
+    // Filter speakers and map all assigned sessions for the selected day (supports multiple slots per speaker)
     const daySpeakers = useMemo(() => {
-        return speakers.map(s => {
+        return speakers.flatMap(s => {
             const daySessions = getSpeakerSessionsForDay(s, selectedDay);
-            if (daySessions.length === 0) return null;
+            if (!daySessions || daySessions.length === 0) return [];
 
             const isCheckedIn = Boolean(s.checkedIn || s.checked_in);
             const isCheckedOut = Boolean(s.checkedOut || s.checked_out);
             const isCurrentlyOnsite = isCheckedIn && !isCheckedOut;
 
-            const primarySession = daySessions[0] || {};
-            const room = primarySession.conferenceRoom || primarySession.conference_room || primarySession.room || "Room TBA";
-            const timeSlot = primarySession.timeSlot || primarySession.time_slot || "";
-            const sessionTitle = primarySession.sessionTitle || primarySession.session_title || s.sessionTitle || "";
+            return daySessions.map((sess, idx) => {
+                const room = sess.conferenceRoom || sess.conference_room || sess.room || s.conferenceRoom || "Room TBA";
+                const timeSlot = sess.timeSlot || sess.time_slot || s.timeSlot || "";
+                const sessionTitle = sess.sessionTitle || sess.session_title || s.sessionTitle || "";
 
-            return {
-                ...s,
-                daySessions,
-                room,
-                timeSlot,
-                sessionTitle,
-                isCheckedIn,
-                isCheckedOut,
-                isCurrentlyOnsite,
-                seatStatus: isCurrentlyOnsite ? "onsite" : (isCheckedOut ? "checkedout" : "pending")
-            };
-        }).filter(Boolean);
+                return {
+                    ...s,
+                    slotId: `${s.id}_slot_${idx}_${sess.id || idx}`,
+                    sessionIndex: idx,
+                    totalDaySessions: daySessions.length,
+                    currentSession: sess,
+                    daySessions,
+                    room,
+                    timeSlot,
+                    sessionTitle,
+                    isCheckedIn,
+                    isCheckedOut,
+                    isCurrentlyOnsite,
+                    seatStatus: isCurrentlyOnsite ? "onsite" : (isCheckedOut ? "checkedout" : "pending")
+                };
+            });
+        });
     }, [speakers, selectedDay]);
 
     // Apply secondary filters and sort chronologically in order according to time
@@ -220,50 +230,60 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
         const borderCls = isOnsite
             ? "border-emerald-400 dark:border-emerald-500/80 bg-gradient-to-b from-emerald-500/10 via-white to-emerald-50/60 dark:from-emerald-950/40 dark:via-slate-900 dark:to-emerald-950/20 shadow-md shadow-emerald-500/10 hover:border-emerald-500"
             : isCheckedOut
-            ? "border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 opacity-60 hover:opacity-100"
-            : "border-rose-300 dark:border-rose-900/70 bg-gradient-to-b from-rose-500/10 via-white to-rose-50/60 dark:from-rose-950/40 dark:via-slate-900 dark:to-rose-950/20 shadow-sm hover:border-rose-500";
+                ? "border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 opacity-60 hover:opacity-100"
+                : "border-rose-300 dark:border-rose-900/70 bg-gradient-to-b from-rose-500/10 via-white to-rose-50/60 dark:from-rose-950/40 dark:via-slate-900 dark:to-rose-950/20 shadow-sm hover:border-rose-500";
 
         const pillBadgeCls = isOnsite
             ? "bg-emerald-500 text-white shadow-xs"
             : isCheckedOut
-            ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
-            : "bg-rose-500 text-white shadow-xs";
+                ? "bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300"
+                : "bg-rose-500 text-white shadow-xs";
 
         const glowHalo = isOnsite
             ? "ring-2 ring-emerald-500/30"
             : isCheckedOut
-            ? ""
-            : "ring-2 ring-rose-500/20";
+                ? ""
+                : "ring-2 ring-rose-500/20";
+
+        const hasMultipleSlots = speaker.totalDaySessions > 1;
 
         return (
             <div
-                key={speaker.id}
+                key={speaker.slotId || `${speaker.id}_${speaker.timeSlot}_${speaker.room}`}
                 onClick={() => setActiveSpeaker(speaker)}
                 className={`group relative rounded-2xl border-2 p-3.5 flex flex-col items-center text-center cursor-pointer transition-all duration-200 hover:-translate-y-1 hover:shadow-xl ${borderCls} ${glowHalo}`}
             >
-                <div className="w-full flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate max-w-[80px]">
-                        {speaker.room}
-                    </span>
-                    <span className={`text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full ${pillBadgeCls}`}>
+                <div className="w-full flex items-center justify-between mb-2 gap-1">
+                    <div className="flex items-center gap-1 min-w-0">
+                        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate max-w-[70px]">
+                            {speaker.room}
+                        </span>
+                        {hasMultipleSlots && (
+                            <span
+                                className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300/60 shrink-0"
+                                title={`Slot ${speaker.sessionIndex + 1} of ${speaker.totalDaySessions} scheduled today`}
+                            >
+                                Slot {speaker.sessionIndex + 1}/{speaker.totalDaySessions}
+                            </span>
+                        )}
+                    </div>
+                    <span className={`text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${pillBadgeCls}`}>
                         {isOnsite ? "Checked In" : isCheckedOut ? "Checked Out" : "Not In"}
                     </span>
                 </div>
 
                 <div className="relative my-1">
-                    <div className={`p-1 rounded-full transition-transform group-hover:scale-105 ${
-                        isOnsite 
-                            ? "ring-3 ring-emerald-500 bg-emerald-100 shadow-sm shadow-emerald-500/40" 
-                            : isCheckedOut 
-                            ? "ring-2 ring-slate-300 bg-slate-100" 
-                            : "ring-3 ring-rose-500 bg-rose-100 shadow-sm shadow-rose-500/30"
-                    }`}>
+                    <div className={`p-1 rounded-full transition-transform group-hover:scale-105 ${isOnsite
+                            ? "ring-3 ring-emerald-500 bg-emerald-100 shadow-sm shadow-emerald-500/40"
+                            : isCheckedOut
+                                ? "ring-2 ring-slate-300 bg-slate-100"
+                                : "ring-3 ring-rose-500 bg-rose-100 shadow-sm shadow-rose-500/30"
+                        }`}>
                         <SpeakerAvatar src={speaker.photoUrl} size={58} />
                     </div>
 
-                    <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center text-[10px] text-white font-black shadow-xs ${
-                        isOnsite ? "bg-emerald-500" : isCheckedOut ? "bg-purple-500" : "bg-rose-500"
-                    }`}>
+                    <div className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center text-[10px] text-white font-black shadow-xs ${isOnsite ? "bg-emerald-500" : isCheckedOut ? "bg-purple-500" : "bg-rose-500"
+                        }`}>
                         {isOnsite ? "✓" : isCheckedOut ? "↳" : "✕"}
                     </div>
                 </div>
@@ -308,18 +328,16 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                             <button
                                 key={item.id}
                                 onClick={() => setSubTab(item.id)}
-                                className={`px-3.5 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
-                                    isActive
+                                className={`px-3.5 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap ${isActive
                                         ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
                                         : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
-                                }`}
+                                    }`}
                             >
                                 <Icon size={16} />
                                 <span>{item.label}</span>
                                 {item.badge && (
-                                    <span className={`text-[10px] font-extrabold uppercase px-1.5 py-0.2 rounded-full ${
-                                        isActive ? "bg-white/20 text-white" : "bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
-                                    }`}>
+                                    <span className={`text-[10px] font-extrabold uppercase px-1.5 py-0.2 rounded-full ${isActive ? "bg-white/20 text-white" : "bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                                        }`}>
                                         {item.badge}
                                     </span>
                                 )}
@@ -354,7 +372,7 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                     </p>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mt-8">
-                        <div 
+                        <div
                             onClick={() => setSubTab("attendance")}
                             className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-emerald-400 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/20 cursor-pointer transition-all text-left group"
                         >
@@ -362,7 +380,7 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                             <h4 className="font-bold text-slate-900 dark:text-white text-sm">Attendance Grid</h4>
                             <p className="text-xs text-slate-400 mt-1">Theatre seating view with Green/Red arrival seats.</p>
                         </div>
-                        <div 
+                        <div
                             onClick={() => setSubTab("stage-monitor")}
                             className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-blue-400 hover:bg-blue-50/40 dark:hover:bg-blue-950/20 cursor-pointer transition-all text-left group"
                         >
@@ -370,7 +388,7 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                             <h4 className="font-bold text-slate-900 dark:text-white text-sm">Stage Monitor</h4>
                             <p className="text-xs text-slate-400 mt-1">Now on stage & Next Up countdown queue for hall chairs.</p>
                         </div>
-                        <div 
+                        <div
                             onClick={() => setSubTab("av-desk")}
                             className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-purple-400 hover:bg-purple-50/40 dark:hover:bg-purple-950/20 cursor-pointer transition-all text-left group"
                         >
@@ -418,19 +436,17 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                                         <button
                                             key={d.id}
                                             onClick={() => setSelectedDay(d.id)}
-                                            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 shrink-0 ${
-                                                isSelected
+                                            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 shrink-0 ${isSelected
                                                     ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/25 scale-[1.02]"
                                                     : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700"
-                                            }`}
+                                                }`}
                                         >
                                             <Calendar size={14} className={isSelected ? "text-white" : "text-slate-400"} />
                                             <span>{d.label}</span>
-                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                                                isSelected 
-                                                    ? "bg-white/25 text-white" 
+                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isSelected
+                                                    ? "bg-white/25 text-white"
                                                     : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
-                                            }`}>
+                                                }`}>
                                                 {d.fullDate.split(",")[0]}
                                             </span>
                                         </button>
@@ -451,11 +467,10 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                             <div className="text-[11px] text-slate-400 mt-0.5">Total scheduled speakers</div>
                         </div>
 
-                        <div 
+                        <div
                             onClick={() => setStatusFilter(statusFilter === "checkedin" ? "all" : "checkedin")}
-                            className={`bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 p-4 rounded-2xl shadow-xs cursor-pointer transition-all hover:border-emerald-400 ${
-                                statusFilter === "checkedin" ? "ring-2 ring-emerald-500 shadow-md" : ""
-                            }`}
+                            className={`bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 p-4 rounded-2xl shadow-xs cursor-pointer transition-all hover:border-emerald-400 ${statusFilter === "checkedin" ? "ring-2 ring-emerald-500 shadow-md" : ""
+                                }`}
                         >
                             <div className="flex items-center justify-between">
                                 <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Checked In (On Site)</span>
@@ -467,11 +482,10 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                             </div>
                         </div>
 
-                        <div 
+                        <div
                             onClick={() => setStatusFilter(statusFilter === "pending" ? "all" : "pending")}
-                            className={`bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 p-4 rounded-2xl shadow-xs cursor-pointer transition-all hover:border-rose-400 ${
-                                statusFilter === "pending" ? "ring-2 ring-rose-500 shadow-md" : ""
-                            }`}
+                            className={`bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60 p-4 rounded-2xl shadow-xs cursor-pointer transition-all hover:border-rose-400 ${statusFilter === "pending" ? "ring-2 ring-rose-500 shadow-md" : ""
+                                }`}
                         >
                             <div className="flex items-center justify-between">
                                 <span className="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-300">Not Checked In</span>
@@ -516,11 +530,10 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                                 <button
                                     key={rm}
                                     onClick={() => setSelectedRoom(rm)}
-                                    className={`px-3.5 py-1.5 rounded-lg transition-all ${
-                                        selectedRoom === rm
+                                    className={`px-3.5 py-1.5 rounded-lg transition-all ${selectedRoom === rm
                                             ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs font-extrabold"
                                             : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
-                                    }`}
+                                        }`}
                                 >
                                     {rm === "all" ? "All Halls" : rm}
                                 </button>
@@ -558,7 +571,9 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                                         </div>
                                         <div className="w-full max-w-sm mx-auto h-2 bg-gradient-to-r from-transparent via-emerald-400/50 to-transparent -mt-0.5" />
                                         <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-1">
-                                            {room1Speakers.length} Scheduled Speakers
+                                            {new Set(room1Speakers.map(s => s.id)).size === room1Speakers.length
+                                                ? `${room1Speakers.length} Scheduled Slots`
+                                                : `${room1Speakers.length} Scheduled Slots (${new Set(room1Speakers.map(s => s.id)).size} Speakers)`}
                                         </div>
                                     </div>
 
@@ -583,7 +598,9 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                                         </div>
                                         <div className="w-full max-w-sm mx-auto h-2 bg-gradient-to-r from-transparent via-teal-400/50 to-transparent -mt-0.5" />
                                         <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-1">
-                                            {room2Speakers.length} Scheduled Speakers
+                                            {new Set(room2Speakers.map(s => s.id)).size === room2Speakers.length
+                                                ? `${room2Speakers.length} Scheduled Slots`
+                                                : `${room2Speakers.length} Scheduled Slots (${new Set(room2Speakers.map(s => s.id)).size} Speakers)`}
                                         </div>
                                     </div>
 
@@ -610,7 +627,9 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                                         </div>
                                         <div className="w-full max-w-sm mx-auto h-2 bg-gradient-to-r from-transparent via-purple-400/50 to-transparent -mt-0.5" />
                                         <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-1">
-                                            {otherSpeakers.length} Scheduled Speakers
+                                            {new Set(otherSpeakers.map(s => s.id)).size === otherSpeakers.length
+                                                ? `${otherSpeakers.length} Scheduled Slots`
+                                                : `${otherSpeakers.length} Scheduled Slots (${new Set(otherSpeakers.map(s => s.id)).size} Speakers)`}
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
@@ -647,11 +666,10 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                                 <button
                                     key={rm}
                                     onClick={() => setStageRoom(rm)}
-                                    className={`px-5 py-2 rounded-xl transition-all ${
-                                        stageRoom === rm
+                                    className={`px-5 py-2 rounded-xl transition-all ${stageRoom === rm
                                             ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm font-extrabold"
                                             : "text-slate-500 hover:text-slate-900"
-                                    }`}
+                                        }`}
                                 >
                                     {rm}
                                 </button>
@@ -669,8 +687,8 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                             stageMonitorSpeakers.map((s, idx) => {
                                 const isOnsite = s.isCurrentlyOnsite;
                                 return (
-                                    <div 
-                                        key={s.id} 
+                                    <div
+                                        key={s.slotId || `${s.id}-${idx}`}
                                         className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
                                     >
                                         <div className="flex items-center gap-4 min-w-0">
@@ -679,13 +697,18 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                                             </div>
                                             <SpeakerAvatar src={s.photoUrl} size={44} />
                                             <div className="min-w-0">
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-2 flex-wrap">
                                                     <span className="font-extrabold text-slate-900 dark:text-white text-sm sm:text-base truncate">
                                                         {s.name}
                                                     </span>
                                                     <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-600">
                                                         {s.speakerTag || "Speaker"}
                                                     </span>
+                                                    {s.totalDaySessions > 1 && (
+                                                        <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">
+                                                            Slot {s.sessionIndex + 1}/{s.totalDaySessions}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className="text-xs text-slate-500 font-semibold mt-0.5 flex items-center gap-2">
                                                     <Clock size={12} className="text-slate-400" />
@@ -710,7 +733,7 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                                             )}
 
                                             {s.phone && (
-                                                <a 
+                                                <a
                                                     href={`tel:${s.phone}`}
                                                     className="p-2 rounded-xl bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-600 border border-slate-200 transition-colors"
                                                     title={`Call ${s.name}`}
@@ -741,16 +764,21 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {stageMonitorSpeakers.map(s => (
-                            <div 
-                                key={s.id} 
+                        {stageMonitorSpeakers.map((s, idx) => (
+                            <div
+                                key={s.slotId || `${s.id}-${idx}`}
                                 className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xs flex items-start gap-4"
                             >
                                 <SpeakerAvatar src={s.photoUrl} size={46} />
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between gap-2">
-                                        <div className="font-extrabold text-slate-900 dark:text-white truncate text-sm">
-                                            {s.name}
+                                        <div className="font-extrabold text-slate-900 dark:text-white truncate text-sm flex items-center gap-1.5">
+                                            <span>{s.name}</span>
+                                            {s.totalDaySessions > 1 && (
+                                                <span className="text-[9px] font-extrabold text-amber-800 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded shrink-0">
+                                                    Slot {s.sessionIndex + 1}
+                                                </span>
+                                            )}
                                         </div>
                                         <span className="text-xs font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-md shrink-0">
                                             {formatTimeAmPm(s.timeSlot)}
@@ -762,11 +790,10 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
 
                                     {/* AV Checklist Toggles */}
                                     <div className="mt-3.5 flex flex-wrap items-center gap-2">
-                                        <span className={`text-[10px] font-bold px-2 py-1 rounded-lg border ${
-                                            s.abstractUrl 
-                                                ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
+                                        <span className={`text-[10px] font-bold px-2 py-1 rounded-lg border ${s.abstractUrl
+                                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                                 : "bg-amber-50 text-amber-700 border-amber-200"
-                                        }`}>
+                                            }`}>
                                             {s.abstractUrl ? "✓ Abstract/Slides on File" : "⏳ Slides Pending"}
                                         </span>
                                         <span className="text-[10px] font-bold px-2 py-1 rounded-lg bg-slate-100 text-slate-600 border border-slate-200">
@@ -782,11 +809,11 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
 
             {/* Modal for Seat Inspection */}
             {activeSpeaker && (
-                <div 
+                <div
                     className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm p-4 flex items-center justify-center animate-in fade-in"
                     onClick={() => setActiveSpeaker(null)}
                 >
-                    <div 
+                    <div
                         className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800"
                         onClick={e => e.stopPropagation()}
                     >
@@ -802,7 +829,7 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                                     </p>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => setActiveSpeaker(null)}
                                 className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-700"
                             >
@@ -811,16 +838,14 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                         </div>
 
                         {/* Live Status Banner */}
-                        <div className={`p-3.5 rounded-2xl flex items-center gap-3 mb-4 ${
-                            activeSpeaker.isCurrentlyOnsite
+                        <div className={`p-3.5 rounded-2xl flex items-center gap-3 mb-4 ${activeSpeaker.isCurrentlyOnsite
                                 ? "bg-emerald-50 border border-emerald-200 text-emerald-800"
                                 : activeSpeaker.isCheckedOut
-                                ? "bg-purple-50 border border-purple-200 text-purple-800"
-                                : "bg-rose-50 border border-rose-200 text-rose-800"
-                        }`}>
-                            <div className={`w-3.5 h-3.5 rounded-full shrink-0 ${
-                                activeSpeaker.isCurrentlyOnsite ? "bg-emerald-500 animate-pulse" : activeSpeaker.isCheckedOut ? "bg-purple-500" : "bg-rose-500"
-                            }`} />
+                                    ? "bg-purple-50 border border-purple-200 text-purple-800"
+                                    : "bg-rose-50 border border-rose-200 text-rose-800"
+                            }`}>
+                            <div className={`w-3.5 h-3.5 rounded-full shrink-0 ${activeSpeaker.isCurrentlyOnsite ? "bg-emerald-500 animate-pulse" : activeSpeaker.isCheckedOut ? "bg-purple-500" : "bg-rose-500"
+                                }`} />
                             <div className="text-xs font-bold leading-tight">
                                 {activeSpeaker.isCurrentlyOnsite ? (
                                     <>Checked In and currently ON-SITE inside venue</>
@@ -840,9 +865,16 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                             </div>
                             <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
                                 <span className="text-slate-400 font-semibold">Hall & Time Slot:</span>
-                                <span className="font-bold text-slate-900 dark:text-white">
-                                    {activeSpeaker.room} &middot; {formatTimeAmPm(activeSpeaker.timeSlot)}
-                                </span>
+                                <div className="text-right">
+                                    <span className="font-bold text-slate-900 dark:text-white">
+                                        {activeSpeaker.room} &middot; {formatTimeAmPm(activeSpeaker.timeSlot)}
+                                    </span>
+                                    {activeSpeaker.totalDaySessions > 1 && (
+                                        <span className="block text-[10px] font-extrabold text-amber-600 dark:text-amber-400">
+                                            (Slot {activeSpeaker.sessionIndex + 1} of {activeSpeaker.totalDaySessions} scheduled today)
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                             {activeSpeaker.sessionTitle && (
                                 <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60">
@@ -850,6 +882,33 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                                     <span className="font-bold text-slate-800 dark:text-slate-100 italic">
                                         "{activeSpeaker.sessionTitle}"
                                     </span>
+                                </div>
+                            )}
+                            {/* All sessions for this speaker today if multiple slots */}
+                            {activeSpeaker.daySessions && activeSpeaker.daySessions.length > 1 && (
+                                <div className="p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/50">
+                                    <span className="text-[11px] font-bold text-amber-800 dark:text-amber-300 block mb-1.5 uppercase tracking-wide">
+                                        All Assigned Slots Today ({activeSpeaker.daySessions.length} total):
+                                    </span>
+                                    <div className="space-y-1.5">
+                                        {activeSpeaker.daySessions.map((sItem, sIdx) => {
+                                            const sRoom = sItem.conferenceRoom || sItem.conference_room || sItem.room || "Room TBA";
+                                            const sTime = sItem.timeSlot || sItem.time_slot || "Time TBA";
+                                            const isCurrent = sIdx === activeSpeaker.sessionIndex;
+                                            return (
+                                                <div key={sIdx} className={`p-2 rounded-lg text-[11px] flex items-center justify-between ${isCurrent
+                                                        ? "bg-amber-100 dark:bg-amber-900/50 text-amber-950 dark:text-amber-100 font-bold border border-amber-300 dark:border-amber-700"
+                                                        : "bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300"
+                                                    }`}>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className={`w-1.5 h-1.5 rounded-full ${isCurrent ? "bg-amber-600" : "bg-slate-400"}`} />
+                                                        <span>Slot {sIdx + 1}: {sRoom}</span>
+                                                    </div>
+                                                    <span className="font-mono">{formatTimeAmPm(sTime)}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             )}
                             {activeSpeaker.phone && (
