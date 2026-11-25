@@ -21,6 +21,7 @@ import SpeakerCheckoutPage from "./SpeakerCheckoutPage";
 import SpeakerAnnouncementsPage from "./SpeakerAnnouncementsPage";
 import SpeakerAbstractPage from "./SpeakerAbstractPage";
 import PeerCiteProceedingsPage from "./PeerCiteProceedingsPage";
+import SpeakerGalleryPage from "./SpeakerGalleryPage";
 import HangingBadgePull from "../../components/HangingBadgePull";
 import { getCountryFlagUrl, getCountryName } from "../../utils/countryFlags";
 import { getEventConfig, getEventTables } from "../../eventsConfig";
@@ -29,6 +30,7 @@ const TABS = [
     { id: "home", label: "Home", icon: BadgeCheck },
     { id: "abstract", label: "Abstract", icon: FileText },
     { id: "proceedings", label: "PeerCite Proceedings", icon: BookOpen, mobileLabel: "Proceedings" },
+    { id: "gallery", label: "Gallery", icon: ImageIcon },
     { id: "announcements", label: "Announcements", icon: Megaphone },
     { id: "feedback", label: "Feedback", icon: MessageSquare },
 ];
@@ -514,6 +516,18 @@ export default function SpeakerPortalPage({ speaker, onLogout, currentEvent }) {
                                         <FileText size={15} className={`${isActuallyLightMode ? 'text-indigo-600' : 'text-[#8B9BFF]'} group-hover:scale-110 transition-transform`} />
                                         <span>View Presentation Abstract</span>
                                         <span className={`${isActuallyLightMode ? 'text-indigo-600' : 'text-[#8B9BFF]'} group-hover:translate-x-0.5 transition-transform`}>→</span>
+                                    </button>
+                                    <button
+                                        onClick={() => handleTabChange("gallery")}
+                                        className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer active:scale-95 group shadow-sm ${
+                                            isActuallyLightMode
+                                                ? 'bg-amber-50/95 hover:bg-amber-100 text-amber-950 border-amber-200/90 shadow-amber-100/50'
+                                                : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 border-amber-400/30 backdrop-blur-md'
+                                        }`}
+                                    >
+                                        <Camera size={15} className={`${isActuallyLightMode ? 'text-amber-600' : 'text-amber-400'} group-hover:scale-110 transition-transform`} />
+                                        <span>Conference Gallery</span>
+                                        <span className={`${isActuallyLightMode ? 'text-amber-600' : 'text-amber-400'} group-hover:translate-x-0.5 transition-transform`}>→</span>
                                     </button>
                                 </div>
                             </div>
@@ -1047,6 +1061,13 @@ export default function SpeakerPortalPage({ speaker, onLogout, currentEvent }) {
                             onUpdateSpeaker={(updated) => {
                                 setSpeakers(prev => prev.map(s => s.id === updated.id ? { ...s, ...updated } : s));
                             }}
+                        />
+                    )}
+                    {tab === "gallery" && (
+                        <SpeakerGalleryPage
+                            eventSlug={eventConfig?.slug || "dubai"}
+                            eventName={eventConfig?.name || "Dubai"}
+                            isDarkMode={isDarkMode}
                         />
                     )}
                     {tab === "announcements" && <SpeakerAnnouncementsPage announcements={announcements} />}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Users, ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, Menu, BadgeCheck, LogOut, Settings, Megaphone, Activity, Calendar, BarChart2, Download, FileText, Radio } from "lucide-react";
+import { Users, ScanLine, LayoutDashboard, MessageSquare, AlertTriangle, Menu, BadgeCheck, LogOut, Settings, Megaphone, Activity, Calendar, BarChart2, Download, FileText, Radio, Image as ImageIcon } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./supabaseClient";
 import { fetchSpeakers, speakerToRow, createSpeakerRecord, updateSpeakerRecord } from "./api/speakersApi";
 import { fetchFeedback, feedbackToRow, insertFeedbackRecord } from "./api/feedbackApi";
@@ -24,9 +24,10 @@ import AdvancedSlotManagement from "./pages/AdvancedSlotManagement";
 import DataExportPage from "./pages/DataExportPage";
 import AbstractAnalysisPage from "./pages/AbstractAnalysisPage";
 import LiveUpdatesPage from "./pages/LiveUpdatesPage";
+import GalleryPage from "./pages/GalleryPage";
 import { getEventConfig, getEventTables, DEFAULT_EVENT_SLUG } from "./eventsConfig";
 
-const VALID_TABS = ["dashboard", "live-updates", "register", "checkin", "idcards", "feedback", "broadcasts", "agenda", "analysis", "advanced-slots", "abstract-analysis", "settings", "audit", "export"];
+const VALID_TABS = ["dashboard", "live-updates", "register", "checkin", "gallery", "idcards", "feedback", "broadcasts", "agenda", "analysis", "advanced-slots", "abstract-analysis", "settings", "audit", "export"];
 
 function getInitialTab() {
     const hash = window.location.hash.replace("#", "").toLowerCase();
@@ -297,6 +298,7 @@ export default function EventPortal({
         { id: "register", label: "Register", icon: Users },
         { id: "checkin", label: "Check-In", icon: ScanLine },
         { id: "live-updates", label: "Live Updates", icon: Radio },
+        { id: "gallery", label: "Gallery", icon: ImageIcon },
         { id: "broadcasts", label: "Broadcasts", icon: Megaphone },
         { id: "idcards", label: "ID Cards", icon: BadgeCheck },
         { id: "feedback", label: "Feedback", icon: MessageSquare },
@@ -472,6 +474,13 @@ export default function EventPortal({
                                     onRefresh={refresh}
                                     toast={toast}
                                     currentEvent={currentEvent}
+                                />
+                            )}
+                            {tab === "gallery" && (
+                                <GalleryPage
+                                    currentEvent={currentEvent}
+                                    userEmail={userEmail}
+                                    toast={toast}
                                 />
                             )}
                             {tab === "broadcasts" && <AnnouncementsPage userEmail={userEmail} toast={toast} currentEvent={currentEvent} />}

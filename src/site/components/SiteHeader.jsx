@@ -171,6 +171,14 @@ export default function SiteHeader({ activeSeries = null, activePage = null, onA
                             >
                                 Agenda
                             </Link>
+
+                            <a
+                                href="/dubai-series#conference-gallery"
+                                className="sc-nav-link"
+                                onClick={handleSectionNav("conference-gallery")}
+                            >
+                                Gallery
+                            </a>
                         </nav>
 
                         {/* Right Action: Aeroplane Animation */}
@@ -243,6 +251,9 @@ export default function SiteHeader({ activeSeries = null, activePage = null, onA
                         onClick={() => setMobileOpen(false)}
                     >
                         Agenda
+                    </Link>
+                    <Link to="/dubai-series#conference-gallery" className="sc-nav-link" onClick={handleSectionNav("conference-gallery")}>
+                        Conference Gallery
                     </Link>
                     <Link to="/dubai-series#gallery" className="sc-nav-link" onClick={handleSectionNav("gallery")}>
                         Experience Gallery

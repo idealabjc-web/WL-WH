@@ -327,3 +327,69 @@ alter table speakers add column if not exists accompanying_persons jsonb;
 alter table speakers add column if not exists abstract_status text;
 alter table speakers add column if not exists abstract_url text;
 alter table speakers add column if not exists photo_url text;
+
+-- ─────────────────────────────────────────────────────────────
+-- BUCKET 6: conference-gallery & GALLERY DATABASE TABLE
+-- ─────────────────────────────────────────────────────────────
+
+-- Bucket 6: conference-gallery (for photos and videos)
+insert into storage.buckets (id, name, public)
+values ('conference-gallery', 'conference-gallery', true)
+on conflict (id) do nothing;
+
+do $$ begin
+  create policy "public read conference gallery" on storage.objects for select using (bucket_id = 'conference-gallery');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "public upload conference gallery" on storage.objects for insert with check (bucket_id = 'conference-gallery');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "public overwrite conference gallery" on storage.objects for update using (bucket_id = 'conference-gallery');
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "public delete conference gallery" on storage.objects for delete using (bucket_id = 'conference-gallery');
+exception when duplicate_object then null; end $$;
+
+-- Table: gallery
+create table if not exists gallery (
+  id uuid primary key default gen_random_uuid(),
+  event_slug text not null default 'dubai',
+  category text not null default 'day1', -- 'day1', 'day2', 'day3_tour', 'other'
+  media_type text not null default 'photo', -- 'photo', 'video'
+  url text not null,
+  storage_path text not null,
+  filename text,
+  caption text,
+  file_size bigint default 0,
+  uploaded_by text,
+  created_at timestamptz default now()
+);
+
+-- Indexes for fast filtering
+create index if not exists idx_gallery_event_slug on gallery(event_slug);
+create index if not exists idx_gallery_category on gallery(category);
+create index if not exists idx_gallery_media_type on gallery(media_type);
+create index if not exists idx_gallery_created_at on gallery(created_at desc);
+
+-- RLS for gallery table
+alter table gallery enable row level security;
+
+do $$ begin
+  create policy "allow public read on gallery" on gallery for select using (true);
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "allow public insert on gallery" on gallery for insert with check (true);
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "allow public update on gallery" on gallery for update using (true);
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "allow public delete on gallery" on gallery for delete using (true);
+exception when duplicate_object then null; end $$;
+

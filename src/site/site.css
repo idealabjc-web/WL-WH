@@ -582,9 +582,21 @@ html {
 .sc-gallery figure:hover img { transform: scale(1.1); }
 .sc-gallery figcaption { position: absolute; inset: auto 0 0 0; padding: 40px 18px 16px; font-weight: 600; font-size: 15px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.75)); transform: translateY(8px); opacity: 0.85; transition: all 0.5s var(--sc-ease); }
 .sc-gallery figure:hover figcaption { transform: none; opacity: 1; }
-.sc-lightbox { position: fixed; inset: 0; z-index: 100; background: rgba(3, 5, 15, 0.92); backdrop-filter: blur(10px); display: grid; place-items: center; padding: 30px; animation: sc-fade 0.3s ease; }
-.sc-lightbox img { max-height: 82vh; border-radius: 18px; box-shadow: 0 40px 100px rgba(0, 0, 0, 0.8); animation: sc-zoom-in 0.5s var(--sc-ease); }
-.sc-lightbox button { position: absolute; top: 24px; right: 24px; }
+.sc-lightbox { position: fixed; inset: 0; z-index: 100; background: rgba(3, 5, 15, 0.94); backdrop-filter: blur(10px); display: grid; place-items: center; padding: 16px; animation: sc-fade 0.3s ease; }
+@media (min-width: 640px) { .sc-lightbox { padding: 30px; } }
+.sc-lightbox img,
+.sc-lightbox video { max-width: 94vw; max-height: 76vh; width: auto; height: auto; object-fit: contain; border-radius: 14px; box-shadow: 0 40px 100px rgba(0, 0, 0, 0.8); animation: sc-zoom-in 0.5s var(--sc-ease); margin: 0 auto; display: block; }
+.sc-lightbox button { position: absolute; top: 16px; right: 16px; z-index: 10; }
+
+/* ─── Conference Gallery (Adaptive Masonry for any image size) ─ */
+.sc-conf-gallery { column-count: 1; column-gap: 14px; }
+@media (min-width: 520px) { .sc-conf-gallery { column-count: 2; } }
+@media (min-width: 900px) { .sc-conf-gallery { column-count: 3; } }
+@media (min-width: 1200px) { .sc-conf-gallery { column-count: 4; } }
+.sc-conf-gallery figure { break-inside: avoid; margin: 0 0 14px; position: relative; border-radius: 18px; overflow: hidden; cursor: zoom-in; border: 1px solid var(--sc-border); background: #050816; }
+.sc-conf-gallery img { width: 100%; height: auto; max-height: 460px; object-fit: contain; display: block; background: #050816; transition: transform 0.6s var(--sc-ease); }
+.sc-conf-gallery figure:hover img { transform: scale(1.03); }
+.sc-conf-gallery figcaption { padding: 10px 14px; font-weight: 600; font-size: 13px; color: #e2e8f0; background: rgba(11, 16, 48, 0.92); border-top: 1px solid rgba(255, 255, 255, 0.08); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @keyframes sc-fade { from { opacity: 0; } }
 @keyframes sc-zoom-in { from { transform: scale(0.9); opacity: 0; } }
 

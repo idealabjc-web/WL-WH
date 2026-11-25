@@ -5,6 +5,7 @@ import SiteFooter from "../components/SiteFooter";
 import DubaiFlagAnimation from "../components/DubaiFlagAnimation";
 import { DUBAI_EVENT, BRAND } from "../seriesData";
 import { fetchPublicSpeakers, speakerSlug } from "../publicApi";
+import { fetchGalleryItems } from "../../api/galleryApi";
 import { getCountryFlagUrl, getCountryName } from "../../utils/countryFlags";
 import {
     Calendar,
@@ -28,6 +29,11 @@ import {
     Layers,
     Share2,
     Phone,
+    Video,
+    Play,
+    Image as ImageIcon,
+    Film,
+    RefreshCw,
 } from "lucide-react";
 
 // Icon lookup for the "What is Provided" cards
@@ -47,6 +53,12 @@ export default function DubaiSeriesPage({ onAdminClick }) {
     const [loadingSpeakers, setLoadingSpeakers] = useState(true);
     const [search, setSearch] = useState("");
     const [lightboxImage, setLightboxImage] = useState(null);
+
+    // Conference Gallery state
+    const [galleryItems, setGalleryItems] = useState([]);
+    const [loadingGallery, setLoadingGallery] = useState(true);
+    const [galleryCategory, setGalleryCategory] = useState("all");
+    const [galleryMediaType, setGalleryMediaType] = useState("all");
 
     // Event countdown timer to Nov 25, 2026
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
@@ -85,6 +97,25 @@ export default function DubaiSeriesPage({ onAdminClick }) {
         return () => {
             mounted = false;
         };
+    }, []);
+
+    // Load conference gallery media from Supabase
+    const loadConferenceGallery = () => {
+        setLoadingGallery(true);
+        return fetchGalleryItems("dubai")
+            .then((res) => {
+                if (res.success) {
+                    setGalleryItems(res.data || []);
+                }
+            })
+            .catch((err) => console.error("Failed to load conference gallery:", err))
+            .finally(() => {
+                setLoadingGallery(false);
+            });
+    };
+
+    useEffect(() => {
+        loadConferenceGallery();
     }, []);
 
     // Smooth scroll to anchor section if hash present in URL (e.g. #speakers)
@@ -647,6 +678,231 @@ export default function DubaiSeriesPage({ onAdminClick }) {
                 </div>
             </section>
 
+            {/* ─── CONFERENCE MEDIA GALLERY (UPLOADED BY STAFF) ─── */}
+            <section id="conference-gallery" className="sc-section" style={{ background: "rgba(11, 16, 48, 0.45)" }}>
+                <div className="sc-container">
+                    <div style={{ textAlign: "center", marginBottom: "32px" }} className="sc-reveal">
+                        <span className="sc-eyebrow">CONFERENCE HIGHLIGHTS</span>
+                        <h2 className="sc-section-title sc-display">
+                            Dubai Series <span className="sc-gold-text">Conference Gallery</span>
+                        </h2>
+                        <p className="sc-section-lead" style={{ margin: "0 auto" }}>
+                            Relive keynotes, panel discussions, networking moments, and the Day 3 Tour. Filter by day or media type below.
+                        </p>
+                    </div>
+
+                    {/* Category & Media Type Filter Buttons */}
+                    {(() => {
+                        const GALLERY_TABS = [
+                            { id: "all", label: "All" },
+                            { id: "day1", label: "Day 1" },
+                            { id: "day2", label: "Day 2" },
+                            { id: "day3_tour", label: "Day 3 Tour" },
+                            { id: "other", label: "Other / All Categories" },
+                        ];
+
+                        const matchCat = (cat, target) => {
+                            if (target === "all") return true;
+                            if (target === "day3_tour") return cat === "day3_tour" || cat === "day3" || cat === "tour";
+                            return cat === target;
+                        };
+
+                        const filteredGallery = galleryItems.filter((item) => {
+                            const catMatch = matchCat(item.category, galleryCategory);
+                            const typeMatch = galleryMediaType === "all" || item.media_type === galleryMediaType;
+                            return catMatch && typeMatch;
+                        });
+
+                        return (
+                            <>
+                                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "28px" }}>
+                                    {/* Day / Category Buttons */}
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                                        {GALLERY_TABS.map((t) => {
+                                            const count = t.id === "all"
+                                                ? galleryItems.length
+                                                : galleryItems.filter((i) => matchCat(i.category, t.id)).length;
+                                            const isActive = galleryCategory === t.id;
+                                            return (
+                                                <button
+                                                    key={t.id}
+                                                    type="button"
+                                                    onClick={() => setGalleryCategory(t.id)}
+                                                    style={{
+                                                        padding: "8px 16px",
+                                                        borderRadius: "999px",
+                                                        fontSize: "13px",
+                                                        fontWeight: 600,
+                                                        cursor: "pointer",
+                                                        transition: "all 0.2s",
+                                                        border: isActive ? "1px solid var(--sc-gold)" : "1px solid rgba(255,255,255,0.16)",
+                                                        background: isActive ? "var(--sc-gold)" : "rgba(255,255,255,0.06)",
+                                                        color: isActive ? "#0b1030" : "#e2e8f0",
+                                                    }}
+                                                >
+                                                    {t.label} ({count})
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Photo / Video Filter Buttons + Refresh */}
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                        <div style={{ display: "flex", gap: "6px", background: "rgba(255,255,255,0.06)", padding: "4px", borderRadius: "999px", border: "1px solid rgba(255,255,255,0.12)" }}>
+                                            {[
+                                                { id: "all", label: "All Media" },
+                                                { id: "photo", label: "Photos" },
+                                                { id: "video", label: "Videos" },
+                                            ].map((mt) => {
+                                                const active = galleryMediaType === mt.id;
+                                                return (
+                                                    <button
+                                                        key={mt.id}
+                                                        type="button"
+                                                        onClick={() => setGalleryMediaType(mt.id)}
+                                                        style={{
+                                                            padding: "6px 14px",
+                                                            borderRadius: "999px",
+                                                            fontSize: "12px",
+                                                            fontWeight: 600,
+                                                            cursor: "pointer",
+                                                            border: "none",
+                                                            background: active ? "rgba(255,255,255,0.18)" : "transparent",
+                                                            color: active ? "#fff" : "#94a3b8",
+                                                        }}
+                                                    >
+                                                        {mt.label}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={loadConferenceGallery}
+                                            disabled={loadingGallery}
+                                            title="Refresh gallery"
+                                            style={{
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                width: "34px",
+                                                height: "34px",
+                                                borderRadius: "999px",
+                                                border: "1px solid rgba(255,255,255,0.16)",
+                                                background: "rgba(255,255,255,0.06)",
+                                                color: "#e2e8f0",
+                                                cursor: "pointer",
+                                                transition: "all 0.2s",
+                                            }}
+                                        >
+                                            <RefreshCw size={15} className={loadingGallery ? "animate-spin" : ""} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {loadingGallery ? (
+                                    <div style={{ textAlign: "center", padding: "48px 20px", color: "#94a3b8", fontSize: "14px" }}>
+                                        Loading conference gallery...
+                                    </div>
+                                ) : filteredGallery.length === 0 ? (
+                                    <div style={{
+                                        textAlign: "center",
+                                        padding: "48px 20px",
+                                        borderRadius: "20px",
+                                        border: "1px dashed rgba(255,255,255,0.18)",
+                                        background: "rgba(255,255,255,0.03)",
+                                        color: "#cbd5e1",
+                                    }}>
+                                        <Camera size={32} style={{ color: "var(--sc-gold)", margin: "0 auto 12px" }} />
+                                        <p style={{ fontSize: "16px", fontWeight: 600, color: "#fff", marginBottom: "6px" }}>
+                                            No conference media uploaded in this category yet
+                                        </p>
+                                        <p style={{ fontSize: "13px", color: "#94a3b8", maxWidth: "460px", margin: "0 auto" }}>
+                                            Photos and videos uploaded by our team for Day 1, Day 2, Day 3 Tour, and other moments will appear right here.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="sc-conf-gallery">
+                                        {filteredGallery.map((item) => {
+                                            const isVideo = item.media_type === "video";
+                                            const catLabel =
+                                                item.category === "day1" ? "Day 1" :
+                                                item.category === "day2" ? "Day 2" :
+                                                (item.category === "day3_tour" || item.category === "day3" || item.category === "tour") ? "Day 3 Tour" :
+                                                "Other";
+                                            return (
+                                                <figure
+                                                    key={item.id}
+                                                    onClick={() => setLightboxImage({
+                                                        src: item.url,
+                                                        title: item.caption || item.filename || catLabel,
+                                                        mediaType: item.media_type,
+                                                        category: catLabel,
+                                                    })}
+                                                    style={{ position: "relative" }}
+                                                >
+                                                    {isVideo ? (
+                                                        <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 10", background: "#050816" }}>
+                                                            <video
+                                                                src={item.url}
+                                                                preload="metadata"
+                                                                style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.82 }}
+                                                            />
+                                                            <div style={{
+                                                                position: "absolute",
+                                                                inset: 0,
+                                                                display: "flex",
+                                                                alignItems: "center",
+                                                                justifyContent: "center",
+                                                                background: "rgba(0,0,0,0.28)",
+                                                            }}>
+                                                                <div style={{
+                                                                    width: "48px",
+                                                                    height: "48px",
+                                                                    borderRadius: "50%",
+                                                                    background: "var(--sc-gold)",
+                                                                    color: "#0b1030",
+                                                                    display: "flex",
+                                                                    alignItems: "center",
+                                                                    justifyContent: "center",
+                                                                    boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+                                                                }}>
+                                                                    <Play size={20} fill="#0b1030" />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <img src={item.url} alt={item.caption || item.filename || "Conference Photo"} loading="lazy" />
+                                                    )}
+                                                    <span style={{
+                                                        position: "absolute",
+                                                        top: "10px",
+                                                        right: "10px",
+                                                        padding: "3px 10px",
+                                                        borderRadius: "999px",
+                                                        fontSize: "11px",
+                                                        fontWeight: 700,
+                                                        background: "rgba(11,16,48,0.85)",
+                                                        color: "var(--sc-gold)",
+                                                        border: "1px solid rgba(255,255,255,0.15)",
+                                                    }}>
+                                                        {catLabel}
+                                                    </span>
+                                                    <figcaption>
+                                                        <span>{item.caption || item.filename || catLabel}</span>
+                                                    </figcaption>
+                                                </figure>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
+                </div>
+            </section>
+
             {/* ─── DUBAI PLACES GALLERY ────────────────────────── */}
             <section id="gallery" className="sc-section" style={{ background: "rgba(11, 16, 48, 0.25)" }}>
                 <div className="sc-container">
@@ -685,8 +941,17 @@ export default function DubaiSeriesPage({ onAdminClick }) {
                     >
                         <X size={22} />
                     </button>
-                    <div onClick={(e) => e.stopPropagation()} style={{ textAlign: "center" }}>
-                        <img src={lightboxImage.src} alt={lightboxImage.title} />
+                    <div onClick={(e) => e.stopPropagation()} style={{ textAlign: "center", maxWidth: "92vw", maxHeight: "86vh" }}>
+                        {lightboxImage.mediaType === "video" ? (
+                            <video
+                                src={lightboxImage.src}
+                                controls
+                                autoPlay
+                                style={{ maxWidth: "100%", maxHeight: "76vh", borderRadius: "12px", background: "#000" }}
+                            />
+                        ) : (
+                            <img src={lightboxImage.src} alt={lightboxImage.title} />
+                        )}
                         <h4 style={{ color: "#fff", marginTop: "16px", fontFamily: "var(--sc-display)", fontSize: "22px" }}>
                             {lightboxImage.title}
                         </h4>
