@@ -190,11 +190,11 @@ export default function EventPortal({
     const confirmCheckin = async (id, notes) => {
         const checkedInAt = Date.now();
         setSpeakers((prev) =>
-            prev.map((s) => (s.id === id ? { ...s, checkedIn: true, checkedInAt, concerns: notes } : s))
+            prev.map((s) => (s.id === id ? { ...s, checkedIn: true, checkedInAt, concerns: notes !== undefined ? notes : (s.concerns || "") } : s))
         );
         const s = speakers.find((x) => x.id === id);
         if (!s) return;
-        const merged = { ...s, checkedIn: true, checkedInAt, concerns: notes };
+        const merged = { ...s, checkedIn: true, checkedInAt, concerns: notes !== undefined ? notes : (s.concerns || "") };
         try {
             await updateSpeakerRecord(id, merged);
             logAction(userEmail, 'CHECK_IN', id);
@@ -246,6 +246,23 @@ export default function EventPortal({
         } catch (error) {
             console.error(error);
             toast("Undo checkout saved locally but failed to sync.");
+        }
+    };
+
+    const undoCheckin = async (id) => {
+        setSpeakers((prev) =>
+            prev.map((s) => (s.id === id ? { ...s, checkedIn: false, checkedInAt: null, checkedOut: false, checkedOutAt: null } : s))
+        );
+        const s = speakers.find((x) => x.id === id);
+        if (!s) return;
+        const merged = { ...s, checkedIn: false, checkedInAt: null, checkedOut: false, checkedOutAt: null };
+        try {
+            await updateSpeakerRecord(id, merged);
+            logAction(userEmail, 'UNDO_CHECKIN', id);
+            toast((s.name || "Speaker") + " status reset to Not In");
+        } catch (error) {
+            console.error(error);
+            toast("Reset check-in saved locally but failed to sync.");
         }
     };
 
@@ -474,6 +491,10 @@ export default function EventPortal({
                                     onRefresh={refresh}
                                     toast={toast}
                                     currentEvent={currentEvent}
+                                    onConfirm={confirmCheckin}
+                                    onCheckout={confirmCheckout}
+                                    onUndoCheckout={undoCheckout}
+                                    onUndoCheckin={undoCheckin}
                                 />
                             )}
                             {tab === "gallery" && (

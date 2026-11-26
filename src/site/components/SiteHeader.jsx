@@ -55,15 +55,27 @@ export default function SiteHeader({ activeSeries = null, activePage = null, onA
         e.preventDefault();
         setMobileOpen(false);
         const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
-        if (currentPath === "/dubai-series") {
+        const basePath = activeSeries === "paris-series" ? "/paris-series" : "/dubai-series";
+        if (currentPath === basePath) {
             const el = document.getElementById(hash);
             if (el) {
                 el.scrollIntoView({ behavior: "smooth", block: "start" });
-                window.history.pushState({}, "", `/dubai-series#${hash}`);
+                window.history.pushState({}, "", `${basePath}#${hash}`);
                 return;
             }
         }
-        navigate(`/dubai-series#${hash}`);
+        navigate(`${basePath}#${hash}`);
+    };
+
+    const handleGalleryNav = (e) => {
+        e.preventDefault();
+        setMobileOpen(false);
+        if (!activeSeries) {
+            navigate("/gallery");
+            return;
+        }
+        // Always open the dedicated gallery page for any series
+        navigate(`/gallery?series=${encodeURIComponent(activeSeries)}`);
     };
 
     const handlePartnersNav = (e) => {
@@ -173,9 +185,9 @@ export default function SiteHeader({ activeSeries = null, activePage = null, onA
                             </Link>
 
                             <a
-                                href="/dubai-series#conference-gallery"
-                                className="sc-nav-link"
-                                onClick={handleSectionNav("conference-gallery")}
+                                href={!activeSeries ? "/gallery" : `/gallery?series=${activeSeries}`}
+                                className={`sc-nav-link ${activePage === "gallery" ? "is-active" : ""}`}
+                                onClick={handleGalleryNav}
                             >
                                 Gallery
                             </a>
@@ -252,12 +264,13 @@ export default function SiteHeader({ activeSeries = null, activePage = null, onA
                     >
                         Agenda
                     </Link>
-                    <Link to="/dubai-series#conference-gallery" className="sc-nav-link" onClick={handleSectionNav("conference-gallery")}>
-                        Conference Gallery
-                    </Link>
-                    <Link to="/dubai-series#gallery" className="sc-nav-link" onClick={handleSectionNav("gallery")}>
-                        Experience Gallery
-                    </Link>
+                    <a
+                        href={!activeSeries ? "/gallery" : `/gallery?series=${activeSeries}`}
+                        className="sc-nav-link"
+                        onClick={handleGalleryNav}
+                    >
+                        Gallery
+                    </a>
                     <a href="#partners" className="sc-nav-link" onClick={handlePartnersNav}>
                         Supporting Partners
                     </a>

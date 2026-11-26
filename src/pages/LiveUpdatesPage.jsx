@@ -3,7 +3,8 @@ import {
     Users, CheckCircle2, Clock, Search, Filter,
     RefreshCw, MapPin, Radio, Calendar, Sparkles,
     UserCheck, UserX, AlertTriangle, ChevronRight, X,
-    Home, Tv, MonitorPlay, Activity, FileText, Phone, Volume2, ShieldAlert
+    Home, Tv, MonitorPlay, Activity, FileText, Phone, Volume2, ShieldAlert,
+    LogOut, RotateCcw, Check
 } from "lucide-react";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
 import { formatTimeAmPm } from "./CheckinPage";
@@ -40,7 +41,17 @@ export function parseStartTimeToMinutes(timeStr) {
     return hours * 60 + minutes;
 }
 
-export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefresh, currentEvent = null }) {
+export default function LiveUpdatesPage({ 
+    speakers = [], 
+    onUpdate, 
+    toast, 
+    onRefresh, 
+    currentEvent = null,
+    onConfirm,
+    onCheckout,
+    onUndoCheckout,
+    onUndoCheckin
+}) {
     // Top Sub-navbar Tab: "home" | "attendance" | "stage-monitor" | "av-desk"
     const [subTab, setSubTab] = useState("attendance");
 
@@ -83,6 +94,88 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
     const [statusFilter, setStatusFilter] = useState("all"); // "all" | "checkedin" | "pending"
     const [searchQuery, setSearchQuery] = useState("");
     const [activeSpeaker, setActiveSpeaker] = useState(null);
+    const [modalNotes, setModalNotes] = useState("");
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    // Sync notes input when modal opens for a speaker
+    useEffect(() => {
+        if (activeSpeaker) {
+            setModalNotes(activeSpeaker.concerns || "");
+        } else {
+            setModalNotes("");
+        }
+    }, [activeSpeaker?.id]);
+
+    // Live speaker data mapped from parent `speakers` array so modal updates reactively
+    const currentActiveSpeaker = useMemo(() => {
+        if (!activeSpeaker) return null;
+        const found = speakers.find(s => s.id === activeSpeaker.id);
+        if (!found) return activeSpeaker;
+        const isCheckedIn = Boolean(found.checkedIn || found.checked_in);
+        const isCheckedOut = Boolean(found.checkedOut || found.checked_out);
+        return {
+            ...activeSpeaker,
+            ...found,
+            isCheckedIn,
+            isCheckedOut,
+            isCurrentlyOnsite: isCheckedIn && !isCheckedOut,
+        };
+    }, [speakers, activeSpeaker]);
+
+    const handleCheckIn = async (speakerId = currentActiveSpeaker?.id) => {
+        if (!speakerId || !onConfirm) return;
+        setIsProcessing(true);
+        try {
+            await onConfirm(speakerId, modalNotes.trim() ? modalNotes.trim() : undefined);
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleCheckOut = async (speakerId = currentActiveSpeaker?.id) => {
+        if (!speakerId || !onCheckout) return;
+        setIsProcessing(true);
+        try {
+            await onCheckout(speakerId, modalNotes.trim() ? modalNotes.trim() : undefined);
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleUndoCheckout = async (speakerId = currentActiveSpeaker?.id) => {
+        if (!speakerId || !onUndoCheckout) return;
+        setIsProcessing(true);
+        try {
+            await onUndoCheckout(speakerId);
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleUndoCheckIn = async (speakerId = currentActiveSpeaker?.id) => {
+        if (!speakerId || !onUndoCheckin) return;
+        setIsProcessing(true);
+        try {
+            await onUndoCheckin(speakerId);
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleQuickCheckin = async (s) => {
+        if (!s?.id || !onConfirm) return;
+        await onConfirm(s.id);
+    };
+
+    const handleQuickCheckout = async (s) => {
+        if (!s?.id || !onCheckout) return;
+        await onCheckout(s.id);
+    };
+
+    const handleQuickUndoCheckout = async (s) => {
+        if (!s?.id || !onUndoCheckout) return;
+        await onUndoCheckout(s.id);
+    };
 
     // Stage Monitor Room Selector
     const [stageRoom, setStageRoom] = useState(() => rooms[0] || "Room 1");
@@ -301,6 +394,50 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                         "{speaker.sessionTitle}"
                     </p>
                 )}
+
+                {/* Quick Check-in / Check-out button on the card */}
+                <div className="mt-2.5 w-full pt-2 border-t border-slate-100/80 dark:border-slate-800/80">
+                    {!isOnsite && !isCheckedOut ? (
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleQuickCheckin(speaker);
+                            }}
+                            className="w-full py-1.5 px-2 rounded-xl text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-100/90 hover:bg-emerald-200 dark:bg-emerald-950/70 dark:hover:bg-emerald-900 border border-emerald-300/80 dark:border-emerald-700 flex items-center justify-center gap-1 transition-all shadow-2xs active:scale-95 cursor-pointer"
+                            title={`Check in ${speaker.name}`}
+                        >
+                            <UserCheck size={12} />
+                            <span>Check In</span>
+                        </button>
+                    ) : isOnsite ? (
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleQuickCheckout(speaker);
+                            }}
+                            className="w-full py-1.5 px-2 rounded-xl text-[10px] font-extrabold text-purple-700 dark:text-purple-300 bg-purple-100/90 hover:bg-purple-200 dark:bg-purple-950/70 dark:hover:bg-purple-900 border border-purple-300/80 dark:border-purple-700 flex items-center justify-center gap-1 transition-all shadow-2xs active:scale-95 cursor-pointer"
+                            title={`Check out ${speaker.name}`}
+                        >
+                            <LogOut size={12} />
+                            <span>Check Out</span>
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleQuickUndoCheckout(speaker);
+                            }}
+                            className="w-full py-1.5 px-2 rounded-xl text-[10px] font-extrabold text-slate-700 dark:text-slate-300 bg-slate-200/90 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 flex items-center justify-center gap-1 transition-all shadow-2xs active:scale-95 cursor-pointer"
+                            title={`Restore ${speaker.name} to On-Site`}
+                        >
+                            <RotateCcw size={12} />
+                            <span>Re-check In</span>
+                        </button>
+                    )}
+                </div>
             </div>
         );
     };
@@ -921,11 +1058,83 @@ export default function LiveUpdatesPage({ speakers = [], onUpdate, toast, onRefr
                             )}
                         </div>
 
-                        <div className="mt-5 flex justify-end">
+                        {/* Notes input for modal check-in/out */}
+                        <div className="mt-4">
+                            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1.5">
+                                Notes (optional)
+                            </label>
+                            <input
+                                type="text"
+                                value={modalNotes}
+                                onChange={(e) => setModalNotes(e.target.value)}
+                                placeholder="Add a note (e.g., arrived late, luggage issue)..."
+                                className="w-full px-3 py-2 text-xs font-medium bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 text-slate-900 dark:text-white placeholder-slate-400"
+                            />
+                        </div>
+
+                        {/* Modal Action Buttons */}
+                        <div className="mt-5 flex items-center gap-2 flex-wrap">
+                            {currentActiveSpeaker && !currentActiveSpeaker.isCheckedIn && !currentActiveSpeaker.isCheckedOut && (
+                                <button
+                                    type="button"
+                                    onClick={() => handleCheckIn()}
+                                    disabled={isProcessing}
+                                    className="flex-1 py-2.5 px-4 rounded-xl text-xs font-extrabold text-white bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 flex items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-500/20 active:scale-95 cursor-pointer"
+                                >
+                                    <UserCheck size={14} />
+                                    <span>{isProcessing ? "Processing..." : "Check In"}</span>
+                                </button>
+                            )}
+                            {currentActiveSpeaker?.isCurrentlyOnsite && (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleCheckOut()}
+                                        disabled={isProcessing}
+                                        className="flex-1 py-2.5 px-4 rounded-xl text-xs font-extrabold text-white bg-purple-500 hover:bg-purple-600 disabled:opacity-50 flex items-center justify-center gap-1.5 transition-all shadow-md shadow-purple-500/20 active:scale-95 cursor-pointer"
+                                    >
+                                        <LogOut size={14} />
+                                        <span>{isProcessing ? "Processing..." : "Check Out"}</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleUndoCheckIn()}
+                                        disabled={isProcessing}
+                                        className="py-2.5 px-3 rounded-xl text-xs font-extrabold text-amber-700 dark:text-amber-300 bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/70 dark:hover:bg-amber-900 border border-amber-300 dark:border-amber-700 disabled:opacity-50 flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer"
+                                        title="Undo check-in"
+                                    >
+                                        <RotateCcw size={13} />
+                                        <span>Undo</span>
+                                    </button>
+                                </>
+                            )}
+                            {currentActiveSpeaker?.isCheckedOut && (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleUndoCheckout()}
+                                        disabled={isProcessing}
+                                        className="flex-1 py-2.5 px-4 rounded-xl text-xs font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/70 dark:hover:bg-emerald-900 border border-emerald-300 dark:border-emerald-700 disabled:opacity-50 flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                                    >
+                                        <RotateCcw size={14} />
+                                        <span>{isProcessing ? "Processing..." : "Re-check In (Undo Checkout)"}</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleUndoCheckIn()}
+                                        disabled={isProcessing}
+                                        className="py-2.5 px-3 rounded-xl text-xs font-extrabold text-rose-700 dark:text-rose-300 bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/70 dark:hover:bg-rose-900 border border-rose-300 dark:border-rose-700 disabled:opacity-50 flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer"
+                                        title="Fully undo check-in (back to Not In)"
+                                    >
+                                        <RotateCcw size={13} />
+                                        <span>Reset</span>
+                                    </button>
+                                </>
+                            )}
                             <button
                                 type="button"
                                 onClick={() => setActiveSpeaker(null)}
-                                className="px-5 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
+                                className="px-5 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors ml-auto cursor-pointer"
                             >
                                 Close
                             </button>

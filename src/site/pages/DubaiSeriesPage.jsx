@@ -846,31 +846,13 @@ export default function DubaiSeriesPage({ onAdminClick }) {
                                                         <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 10", background: "#050816" }}>
                                                             <video
                                                                 src={item.url}
-                                                                preload="metadata"
-                                                                style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.82 }}
+                                                                autoPlay
+                                                                muted
+                                                                loop
+                                                                playsInline
+                                                                preload="auto"
+                                                                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                                                             />
-                                                            <div style={{
-                                                                position: "absolute",
-                                                                inset: 0,
-                                                                display: "flex",
-                                                                alignItems: "center",
-                                                                justifyContent: "center",
-                                                                background: "rgba(0,0,0,0.28)",
-                                                            }}>
-                                                                <div style={{
-                                                                    width: "48px",
-                                                                    height: "48px",
-                                                                    borderRadius: "50%",
-                                                                    background: "var(--sc-gold)",
-                                                                    color: "#0b1030",
-                                                                    display: "flex",
-                                                                    alignItems: "center",
-                                                                    justifyContent: "center",
-                                                                    boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
-                                                                }}>
-                                                                    <Play size={20} fill="#0b1030" />
-                                                                </div>
-                                                            </div>
                                                         </div>
                                                     ) : (
                                                         <img src={item.url} alt={item.caption || item.filename || "Conference Photo"} loading="lazy" />

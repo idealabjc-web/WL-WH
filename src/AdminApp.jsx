@@ -7,6 +7,7 @@ import { SERIES } from "./site/seriesData";
 
 // Pages
 import HomePage from "./site/pages/HomePage";
+import HomeGalleryPage from "./site/pages/HomeGalleryPage";
 import DubaiSeriesPage from "./site/pages/DubaiSeriesPage";
 import ParisSeriesPage from "./site/pages/ParisSeriesPage";
 import PublicAgendaPage from "./site/pages/PublicAgendaPage";
@@ -237,6 +238,15 @@ export default function AdminApp() {
                     onLogout={handleLogout}
                 />
             </div>
+        );
+    }
+
+    // 2. Public Home Gallery Page: `/gallery`
+    if (path === "/gallery") {
+        return (
+            <HomeGalleryPage
+                onAdminClick={() => navigate("/admin")}
+            />
         );
     }
 
