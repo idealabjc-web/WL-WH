@@ -1,8 +1,23 @@
-import React, { useState, useRef, useCallback } from "react";
-import { Sparkles, Sun, Moon, Award } from "lucide-react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
+import { Sparkles, Sun, Moon, Award, X, BadgeCheck } from "lucide-react";
 import { getCountryFlagUrl, getCountryName } from "../utils/countryFlags";
 
 export default function HangingBadgePull({ isDarkMode, onToggle, currentSpeaker, className = "" }) {
+    const [isVisible, setIsVisible] = useState(() => {
+        try {
+            const saved = localStorage.getItem("speaker_hanging_badge_visible");
+            return saved === null ? true : saved === "true";
+        } catch {
+            return true;
+        }
+    });
+
+    useEffect(() => {
+        try {
+            localStorage.setItem("speaker_hanging_badge_visible", String(isVisible));
+        } catch {}
+    }, [isVisible]);
+
     const [pullY, setPullY] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
     const [isAnimating, setIsAnimating] = useState(false);
@@ -141,6 +156,25 @@ export default function HangingBadgePull({ isDarkMode, onToggle, currentSpeaker,
     const baseCordHeight = 44;
     const currentCordHeight = baseCordHeight + pullY;
 
+    if (!isVisible) {
+        return (
+            <button
+                type="button"
+                onClick={() => setIsVisible(true)}
+                aria-label="Show VIP ID Card"
+                title="Show VIP ID Card"
+                className={`fixed top-[104px] md:top-[72px] lg:top-[80px] right-0 z-40 flex items-center gap-2 pl-3 pr-3.5 py-2 rounded-l-2xl border-y border-l shadow-lg backdrop-blur-md transition-all duration-300 hover:pr-5 cursor-pointer group ${
+                    isDarkMode
+                        ? "bg-[#0F1742]/95 border-[#4457F5]/50 text-white hover:bg-[#182461]"
+                        : "bg-white/95 border-slate-300 text-slate-800 hover:bg-slate-50"
+                } ${className}`}
+            >
+                <BadgeCheck className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${isDarkMode ? "text-[#8B9BFF]" : "text-blue-600"}`} />
+                <span className="text-[11px] font-bold tracking-wide uppercase">ID Card</span>
+            </button>
+        );
+    }
+
     return (
         <aside 
             aria-label="Interactive Hanging VIP ID Badge Light & Dark Mode Switch"
@@ -238,6 +272,25 @@ export default function HangingBadgePull({ isDarkMode, onToggle, currentSpeaker,
                             75% { transform: translateY(0px) rotate(-1.2deg); }
                         }
                     `}</style>
+
+                    {/* Close / Minimize Button */}
+                    <button
+                        type="button"
+                        aria-label="Hide VIP ID Card"
+                        title="Hide ID Card"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setIsVisible(false);
+                        }}
+                        className={`absolute -top-2.5 -right-2.5 z-30 w-6 h-6 rounded-full border shadow-md flex items-center justify-center transition-all duration-200 hover:scale-110 cursor-pointer ${
+                            isDarkMode
+                                ? "bg-slate-900/95 border-slate-600 text-slate-300 hover:bg-red-600 hover:border-red-500 hover:text-white"
+                                : "bg-white border-slate-300 text-slate-600 hover:bg-red-600 hover:border-red-500 hover:text-white"
+                        }`}
+                    >
+                        <X className="w-3.5 h-3.5" />
+                    </button>
 
                     {/* Acrylic Badge Holder Casing */}
                     <div 
