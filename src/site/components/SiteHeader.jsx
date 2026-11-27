@@ -102,7 +102,7 @@ export default function SiteHeader({ activeSeries = null, activePage = null, onA
                 <div className="sc-container">
                     <div className="sc-header-inner">
                         {/* Brand Logo */}
-                        <Link to="/" className="sc-logo" aria-label="Speaker Chapters Home">
+                        <Link to="/" className="sc-logo" aria-label="Speaker Chapters Home" style={{ touchAction: "manipulation" }}>
                             <img
                                 src="/Speaker%20Chapters%20Global%20Series%20Logo%20(2).png"
                                 alt="Speaker Chapters Global Series"

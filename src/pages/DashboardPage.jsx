@@ -6,7 +6,7 @@ import {
     Calendar, Clock, MapPin, Sparkles, BadgeCheck,
     Users, User, CheckCircle2, Utensils, Map, LogOut, RotateCcw, Link,
     BookOpen, Upload, FileText, Trash2,
-    Hotel, MessageSquare
+    Hotel, MessageSquare, ZoomIn, ExternalLink
 } from "lucide-react";
 import { StatCard, StatusBadge, inputCls } from "../components/common/UIAtoms";
 import SpeakerAvatar from "../components/common/SpeakerAvatar";
@@ -21,7 +21,7 @@ import { getEventTables, getEventConfig } from "../eventsConfig";
 import PhoneField from "../components/common/PhoneField";
 import CountryField from "../components/common/CountryField";
 
-function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, onRefresh, allSpeakers, isSpeaker = false, currentSpeaker = null, currentEvent = null }) {
+function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, onRefresh, onPreviewPhoto, allSpeakers, isSpeaker = false, currentSpeaker = null, currentEvent = null }) {
     const [isEditing, setIsEditing] = useState(false);
     const [form, setForm] = useState(speaker);
     const [saving, setSaving] = useState(false);
@@ -806,11 +806,42 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
     return (
         <div className="bg-white border border-amber-300/80 rounded-xl p-4 sm:p-5 shadow-xs animate-in fade-in duration-200">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-3 min-w-0">
-                    <SpeakerAvatar src={speaker.photoUrl} size={48} />
+                <div className="flex items-center gap-3.5 min-w-0">
+                    {speaker.photoUrl ? (
+                        <button
+                            type="button"
+                            onClick={() => onPreviewPhoto?.(speaker)}
+                            className="group/photo relative w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-slate-100 border border-slate-200 hover:border-amber-400 overflow-hidden shrink-0 shadow-xs transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-400"
+                            title="Click to view full-size photo"
+                        >
+                            <img
+                                src={speaker.photoUrl}
+                                alt={speaker.name}
+                                className="w-full h-full object-contain bg-slate-50 transition-transform duration-200 group-hover/photo:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-slate-900/0 group-hover/photo:bg-slate-900/35 transition-colors flex items-center justify-center">
+                                <span className="opacity-0 group-hover/photo:opacity-100 transition-opacity inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/95 text-slate-900 text-[10px] font-bold shadow">
+                                    <ZoomIn size={11} />
+                                    Full
+                                </span>
+                            </div>
+                        </button>
+                    ) : (
+                        <SpeakerAvatar src={speaker.photoUrl} size={64} />
+                    )}
                     <div className="min-w-0">
                         <div className="font-bold text-base sm:text-lg text-slate-900 truncate">{speaker.name}</div>
                         <div className="text-xs text-slate-500 font-mono">ID: {speaker.id}</div>
+                        {speaker.photoUrl && (
+                            <button
+                                type="button"
+                                onClick={() => onPreviewPhoto?.(speaker)}
+                                className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 hover:text-amber-800 hover:underline cursor-pointer"
+                            >
+                                <ZoomIn size={12} />
+                                <span>View full photo</span>
+                            </button>
+                        )}
                     </div>
                 </div>
                 <div className="flex gap-2 items-center self-end sm:self-auto shrink-0">
@@ -1124,11 +1155,43 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
     const [showDietaryModal, setShowDietaryModal] = useState(false);
     const [showConcernsModal, setShowConcernsModal] = useState(false);
     const [showHotelModal, setShowHotelModal] = useState(false);
+    const [photoPreviewSpeaker, setPhotoPreviewSpeaker] = useState(null);
+    const [hoverPhotoPreview, setHoverPhotoPreview] = useState(null); // { speaker, top, left }
 
-    // Close open dropdown on Escape key
+    // Clear hover preview on scroll so floating card never drifts
+    useEffect(() => {
+        if (!hoverPhotoPreview) return;
+        const clearHover = () => setHoverPhotoPreview(null);
+        window.addEventListener("scroll", clearHover, true);
+        return () => window.removeEventListener("scroll", clearHover, true);
+    }, [hoverPhotoPreview]);
+
+    const handleAvatarMouseEnter = (e, speaker) => {
+        if (!speaker?.photoUrl) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const cardWidth = 236;
+        const cardHeight = 280;
+        const left = Math.min(rect.right + 12, window.innerWidth - cardWidth - 16);
+        const top = Math.max(16, Math.min(rect.top - 40, window.innerHeight - cardHeight - 16));
+        setHoverPhotoPreview({ speaker, top, left });
+    };
+
+    const handleAvatarClick = (e, speaker) => {
+        if (!speaker?.photoUrl) return;
+        e.stopPropagation();
+        setHoverPhotoPreview(null);
+        setPhotoPreviewSpeaker(speaker);
+    };
+
+    // Close open dropdown/modal on Escape key (photo lightbox closes first)
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if (e.key === "Escape" && (selectedId || showHeroProfile || showDietaryModal || showConcernsModal || showHotelModal)) {
+            if (e.key !== "Escape") return;
+            if (photoPreviewSpeaker) {
+                setPhotoPreviewSpeaker(null);
+                return;
+            }
+            if (selectedId || showHeroProfile || showDietaryModal || showConcernsModal || showHotelModal) {
                 setShowConcernsModal(false);
                 setShowHotelModal(false);
                 setShowDietaryModal(false);
@@ -1138,7 +1201,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
         };
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [selectedId, showHeroProfile]);
+    }, [photoPreviewSpeaker, selectedId, showHeroProfile, showDietaryModal, showConcernsModal, showHotelModal]);
 
     const mySpeaker = isSpeaker && currentSpeaker
         ? speakers.find(s => s.id === currentSpeaker.id || (s.email && currentSpeaker.email && s.email.toLowerCase() === currentSpeaker.email.toLowerCase())) || currentSpeaker
@@ -1239,6 +1302,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                 onClose={() => setShowHeroProfile(false)} 
                                 onUpdate={onUpdate} 
                                 onDelete={onDelete}
+                                onPreviewPhoto={(spk) => setPhotoPreviewSpeaker(spk)}
                                 allSpeakers={speakers}
                                 isSpeaker={isSpeaker}
                                 currentSpeaker={currentSpeaker}
@@ -1374,7 +1438,19 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                     >
                                         <div className="flex justify-between items-start gap-2 mb-2">
                                             <div className="flex items-center gap-2.5 min-w-0">
-                                                <SpeakerAvatar src={s.photoUrl} size={36} />
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => handleAvatarClick(e, s)}
+                                                    className={`relative rounded-full shrink-0 focus:outline-none ${s.photoUrl ? "cursor-pointer group/avatar hover:ring-2 hover:ring-amber-400 transition-all" : "cursor-default"}`}
+                                                    title={s.photoUrl ? "Tap to view full photo" : undefined}
+                                                >
+                                                    <SpeakerAvatar src={s.photoUrl} size={36} />
+                                                    {s.photoUrl && (
+                                                        <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-xs opacity-0 group-hover/avatar:opacity-100 transition-opacity">
+                                                            <ZoomIn size={9} />
+                                                        </span>
+                                                    )}
+                                                </button>
                                                 <div className="min-w-0">
                                                     <div className="font-bold text-slate-900 text-sm text-amber-700 flex items-center gap-1.5">
                                                         <span className="truncate">{s.name}</span>
@@ -1428,6 +1504,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                                 onDelete={onDelete}
                                                 onUndoCheckout={onUndoCheckout}
                                                 onRefresh={onRefresh}
+                                                onPreviewPhoto={(spk) => setPhotoPreviewSpeaker(spk)}
                                                 allSpeakers={speakers}
                                                 isSpeaker={isSpeaker}
                                                 currentSpeaker={currentSpeaker}
@@ -1475,7 +1552,21 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                                     isSelected ? "bg-amber-50/90" : "bg-white/95 dark:bg-slate-950/95 group-hover:bg-slate-50/95 dark:bg-slate-900/95"
                                                 }`}>
                                                     <div className="flex items-start gap-3 min-w-[200px]">
-                                                        <SpeakerAvatar src={s.photoUrl} size={36} />
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => handleAvatarClick(e, s)}
+                                                            onMouseEnter={(e) => handleAvatarMouseEnter(e, s)}
+                                                            onMouseLeave={() => setHoverPhotoPreview(null)}
+                                                            className={`relative rounded-full shrink-0 focus:outline-none ${s.photoUrl ? "cursor-pointer group/avatar hover:ring-2 hover:ring-amber-400 hover:scale-105 transition-all" : "cursor-default"}`}
+                                                            title={s.photoUrl ? "Click to view full photo" : undefined}
+                                                        >
+                                                            <SpeakerAvatar src={s.photoUrl} size={36} />
+                                                            {s.photoUrl && (
+                                                                <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-xs opacity-0 group-hover/avatar:opacity-100 transition-opacity">
+                                                                    <ZoomIn size={9} />
+                                                                </span>
+                                                            )}
+                                                        </button>
                                                         <div className="min-w-0 flex-1 mt-0.5">
                                                             <div className="flex items-center gap-1.5">
                                                                 <span className="font-bold text-slate-900 group-hover:text-amber-700 transition-colors truncate">{s.name}</span>
@@ -1530,6 +1621,7 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                                                                 onDelete={onDelete}
                                                                 onUndoCheckout={onUndoCheckout}
                                                                 onRefresh={onRefresh}
+                                                                onPreviewPhoto={(spk) => setPhotoPreviewSpeaker(spk)}
                                                                 allSpeakers={speakers}
                                                                 isSpeaker={isSpeaker}
                                                                 currentSpeaker={currentSpeaker}
@@ -1950,6 +2042,100 @@ export default function DashboardPage({ speakers, onRefresh, onUpdate, onDelete,
                             >
                                 Done
                             </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Hover Full-Photo Quick Preview (Dashboard Table Avatars) */}
+            {typeof document !== "undefined" && hoverPhotoPreview?.speaker?.photoUrl && !photoPreviewSpeaker && createPortal(
+                <div
+                    className="fixed z-[9998] pointer-events-none animate-in fade-in zoom-in-95 duration-150"
+                    style={{ top: hoverPhotoPreview.top, left: hoverPhotoPreview.left }}
+                >
+                    <div className="w-[236px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-2.5 overflow-hidden">
+                        <div className="w-full h-[220px] rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
+                            <img
+                                src={hoverPhotoPreview.speaker.photoUrl}
+                                alt={hoverPhotoPreview.speaker.name}
+                                className="w-full h-full object-contain"
+                            />
+                        </div>
+                        <div className="pt-2 px-1">
+                            <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                                {hoverPhotoPreview.speaker.name}
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-medium">
+                                Click avatar to view full screen
+                            </div>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Full-Screen Speaker Photo Lightbox */}
+            {typeof document !== "undefined" && photoPreviewSpeaker?.photoUrl && createPortal(
+                <div
+                    className="fixed inset-0 z-[10000] bg-slate-950/85 backdrop-blur-sm p-4 sm:p-6 flex items-center justify-center animate-in fade-in duration-150"
+                    onClick={() => setPhotoPreviewSpeaker(null)}
+                >
+                    <div
+                        className="relative bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh]"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="px-5 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/80 dark:bg-slate-900">
+                            <div className="min-w-0">
+                                <h3 className="font-bold text-base text-slate-900 dark:text-white truncate">
+                                    {photoPreviewSpeaker.name}
+                                </h3>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                    ID: {photoPreviewSpeaker.id}
+                                    {photoPreviewSpeaker.country ? ` · ${photoPreviewSpeaker.country}` : ""}
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                                <a
+                                    href={photoPreviewSpeaker.photoUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition-colors"
+                                    title="Open original image in new tab"
+                                >
+                                    <ExternalLink size={13} />
+                                    <span className="hidden sm:inline">Original</span>
+                                </a>
+                                <a
+                                    href={photoPreviewSpeaker.photoUrl}
+                                    download={`${(photoPreviewSpeaker.name || "speaker").replace(/\s+/g, "_")}_photo`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition-colors shadow-xs"
+                                    title="Download photo"
+                                >
+                                    <Download size={13} />
+                                    <span className="hidden sm:inline">Download</span>
+                                </a>
+                                <button
+                                    type="button"
+                                    onClick={() => setPhotoPreviewSpeaker(null)}
+                                    className="p-1.5 rounded-lg hover:bg-slate-200/70 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
+                                    title="Close"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Full Uncropped Photo */}
+                        <div className="p-4 sm:p-6 bg-slate-950 flex items-center justify-center overflow-auto flex-1 min-h-[260px]">
+                            <img
+                                src={photoPreviewSpeaker.photoUrl}
+                                alt={photoPreviewSpeaker.name}
+                                className="max-h-[75vh] max-w-full w-auto h-auto object-contain rounded-lg shadow-xl"
+                            />
                         </div>
                     </div>
                 </div>,

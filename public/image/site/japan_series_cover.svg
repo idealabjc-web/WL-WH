@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" width="1200" height="720">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#050819"/>
+      <stop offset="45%" stop-color="#141132"/>
+      <stop offset="78%" stop-color="#4c1130"/>
+      <stop offset="100%" stop-color="#070a1b"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="62%" cy="46%" r="30%">
+      <stop offset="0%" stop-color="#fb7185" stop-opacity="0.95"/>
+      <stop offset="35%" stop-color="#e11d48" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#e11d48" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="fuji" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#090b1d"/>
+    </linearGradient>
+    <linearGradient id="snow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff1f2" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#fda4af" stop-opacity="0.45"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1f1135"/>
+      <stop offset="100%" stop-color="#050714"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="720" fill="url(#sky)"/>
+  <circle cx="740" cy="330" r="260" fill="url(#sun)"/>
+  <circle cx="740" cy="315" r="78" fill="#e11d48" opacity="0.9"/>
+  <!-- Stars -->
+  <g fill="#fde68a" opacity="0.7">
+    <circle cx="120" cy="95" r="1.5"/><circle cx="240" cy="60" r="2"/><circle cx="380" cy="120" r="1.2"/>
+    <circle cx="520" cy="70" r="1.8"/><circle cx="940" cy="85" r="2"/><circle cx="1080" cy="130" r="1.5"/>
+    <circle cx="860" cy="150" r="1.2"/><circle cx="180" cy="180" r="1.2"/><circle cx="1010" cy="210" r="1.4"/>
+  </g>
+  <!-- Mount Fuji -->
+  <path d="M 300 480 L 660 220 L 735 205 L 810 220 L 1160 480 Z" fill="url(#fuji)"/>
+  <path d="M 622 248 L 660 220 L 735 205 L 810 220 L 848 248 Q 805 266 780 250 Q 745 278 720 255 Q 690 274 662 252 Z" fill="url(#snow)"/>
+  <!-- Tokyo Skyline Silhouette -->
+  <g fill="#080b1e">
+    <rect x="0" y="455" width="1200" height="55"/>
+    <rect x="45" y="395" width="52" height="90"/><rect x="115" y="360" width="44" height="125"/>
+    <rect x="175" y="410" width="60" height="75"/><rect x="255" y="375" width="38" height="110"/>
+    <rect x="330" y="390" width="50" height="95"/><rect x="400" y="340" width="45" height="145"/>
+    <rect x="850" y="385" width="55" height="100"/><rect x="920" y="350" width="48" height="135"/>
+    <rect x="985" y="405" width="65" height="80"/><rect x="1070" y="370" width="50" height="115"/>
+  </g>
+  <!-- Tokyo Tower glowing lattice -->
+  <g transform="translate(505,155)">
+    <polygon points="45,0 60,150 92,310 68,310 52,210 38,210 22,310 -2,310 30,150" fill="#be123c" opacity="0.9"/>
+    <rect x="31" y="135" width="28" height="12" fill="#fda4af"/>
+    <rect x="20" y="215" width="50" height="14" fill="#fb7185"/>
+    <line x1="45" y1="-26" x2="45" y2="5" stroke="#fecdd3" stroke-width="3"/>
+    <circle cx="45" cy="-28" r="4" fill="#fff1f2"/>
+  </g>
+  <!-- Illuminated skyscraper windows -->
+  <g fill="#fda4af" opacity="0.45">
+    <rect x="125" y="375" width="6" height="6"/><rect x="139" y="375" width="6" height="6"/>
+    <rect x="125" y="392" width="6" height="6"/><rect x="139" y="392" width="6" height="6"/>
+    <rect x="410" y="358" width="7" height="7"/><rect x="425" y="358" width="7" height="7"/>
+    <rect x="410" y="376" width="7" height="7"/><rect x="425" y="376" width="7" height="7"/>
+    <rect x="932" y="366" width="6" height="6"/><rect x="946" y="366" width="6" height="6"/>
+    <rect x="932" y="384" width="6" height="6"/><rect x="946" y="384" width="6" height="6"/>
+  </g>
+  <!-- Sumida River Reflection -->
+  <rect x="0" y="490" width="1200" height="230" fill="url(#water)"/>
+  <ellipse cx="740" cy="545" rx="95" ry="18" fill="#e11d48" opacity="0.28"/>
+  <rect x="536" y="505" width="28" height="160" fill="#e11d48" opacity="0.16"/>
+  <!-- Foreground Sakura branch silhouette -->
+  <path d="M 0 110 Q 120 140 245 108 T 390 128" fill="none" stroke="#180b18" stroke-width="6"/>
+  <g fill="#fda4af" opacity="0.88">
+    <circle cx="85" cy="116" r="10"/><circle cx="110" cy="108" r="13"/><circle cx="145" cy="122" r="9"/>
+    <circle cx="210" cy="112" r="11"/><circle cx="260" cy="105" r="14"/><circle cx="315" cy="118" r="10"/>
+    <circle cx="375" cy="126" r="9"/>
+  </g>
+  <!-- Floating sakura petals -->
+  <g fill="#fecdd3" opacity="0.72">
+    <ellipse cx="320" cy="240" rx="5" ry="2.5" transform="rotate(28 320 240)"/>
+    <ellipse cx="440" cy="195" rx="4.5" ry="2" transform="rotate(-15 440 195)"/>
+    <ellipse cx="610" cy="275" rx="5" ry="2.5" transform="rotate(42 610 275)"/>
+    <ellipse cx="890" cy="230" rx="4.5" ry="2" transform="rotate(-30 890 230)"/>
+  </g>
+</svg>
+

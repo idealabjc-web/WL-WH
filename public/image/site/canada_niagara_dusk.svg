@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" width="1200" height="720">
+  <defs>
+    <linearGradient id="niagaraSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#060c1d"/>
+      <stop offset="60%" stop-color="#132245"/>
+      <stop offset="100%" stop-color="#2c1022"/>
+    </linearGradient>
+    <linearGradient id="falls" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.7"/>
+      <stop offset="50%" stop-color="#e0f2fe" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#e5484d" stop-opacity="0.35"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="720" fill="url(#niagaraSky)"/>
+  <path d="M 150 380 Q 600 280 1050 380 L 1050 610 Q 600 540 150 610 Z" fill="url(#falls)"/>
+  <ellipse cx="600" cy="605" rx="460" ry="42" fill="#e0f2fe" opacity="0.24"/>
+  <path d="M 0 380 L 190 365 L 190 720 L 0 720 Z" fill="#060917"/>
+  <path d="M 1010 365 L 1200 380 L 1200 720 L 1010 720 Z" fill="#060917"/>
+</svg>
+

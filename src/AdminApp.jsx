@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabaseClient";
 import { rowToSpeaker } from "./api/speakersApi";
 import { usePath, navigate } from "./site/router";
@@ -45,6 +45,77 @@ export default function AdminApp() {
 
     const [loadingMagicLink, setLoadingMagicLink] = useState(false);
     const [adminModalOpen, setAdminModalOpen] = useState(false);
+    const secretTapRef = useRef({ count: 0, lastTime: 0, targetPath: "/admin" });
+
+    // Secret Admin Navigation from any public page:
+    // 1) 5 rapid clicks/taps on the top-left Speaker Chapters logo
+    // 2) Keyboard shortcut: Ctrl + Shift + A (or Cmd + Shift + A on Mac)
+    useEffect(() => {
+        const resolveAdminTarget = () => {
+            const p = window.location.pathname.toLowerCase();
+            const matched = getAllEvents().find(
+                (ev) => p === ev.publicPath || p.startsWith(`${ev.publicPath}/`)
+            );
+            return matched ? matched.adminPath : "/admin";
+        };
+
+        const isAlreadyAdmin = () => {
+            const p = window.location.pathname.toLowerCase();
+            return p === "/admin" || p.startsWith("/admin/") || p === "/staff" || p === "/portal-admin";
+        };
+
+        const handleSecretLogoClick = (e) => {
+            if (isAlreadyAdmin()) return;
+            const logoEl = e.target?.closest?.(".sc-logo");
+            if (!logoEl) {
+                secretTapRef.current.count = 0;
+                return;
+            }
+
+            const now = Date.now();
+            const state = secretTapRef.current;
+
+            if (now - state.lastTime < 1000) {
+                state.count += 1;
+            } else {
+                state.count = 1;
+                state.targetPath = resolveAdminTarget();
+            }
+            state.lastTime = now;
+
+            if (state.count >= 2 && state.count < 5) {
+                // Prevent intermediate taps from triggering home navigation while tapping to 5
+                e.preventDefault();
+                e.stopPropagation();
+            } else if (state.count >= 5) {
+                e.preventDefault();
+                e.stopPropagation();
+                const dest = state.targetPath || "/admin";
+                state.count = 0;
+                state.lastTime = 0;
+                navigate(dest);
+            }
+        };
+
+        const handleSecretShortcut = (e) => {
+            if (isAlreadyAdmin()) return;
+            const tag = (e.target?.tagName || "").toLowerCase();
+            if (tag === "input" || tag === "textarea" || tag === "select" || e.target?.isContentEditable) {
+                return;
+            }
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "a") {
+                e.preventDefault();
+                navigate(resolveAdminTarget());
+            }
+        };
+
+        document.addEventListener("click", handleSecretLogoClick, true);
+        window.addEventListener("keydown", handleSecretShortcut);
+        return () => {
+            document.removeEventListener("click", handleSecretLogoClick, true);
+            window.removeEventListener("keydown", handleSecretShortcut);
+        };
+    }, []);
 
     // Magic link auto-detection from search params (?s=SPEAKER_ID&t=TOKEN)
     useEffect(() => {

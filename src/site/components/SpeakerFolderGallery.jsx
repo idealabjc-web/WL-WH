@@ -16,7 +16,9 @@ import {
     Layers,
     LayoutGrid,
     Calendar,
-    Compass
+    Compass,
+    Images,
+    RefreshCw
 } from "lucide-react";
 
 /**
@@ -39,10 +41,12 @@ export default function SpeakerFolderGallery({
     loading = false,
     onRefresh
 }) {
+    const [displayMode, setDisplayMode] = useState("folders"); // "folders" | "all_media"
     const [selectedSpeakerId, setSelectedSpeakerId] = useState(null); // null = Folder Grid View; string = Speaker Detail View
     const [searchSpeaker, setSearchSpeaker] = useState("");
     const [lightboxIndex, setLightboxIndex] = useState(null);
     const [activeCategory, setActiveCategory] = useState("all"); // "all" | "day1" | "day2" | "day3_tour" | "other"
+    const [mediaTypeFilter, setMediaTypeFilter] = useState("all"); // "all" | "photo" | "video"
     const [folderViewMode, setFolderViewMode] = useState("masonry"); // "masonry" | "contain"
 
     const galleryTopRef = useRef(null);
@@ -161,14 +165,41 @@ export default function SpeakerFolderGallery({
         return speakerFolders.find((f) => f.speaker.id === selectedSpeakerId) || null;
     }, [selectedSpeakerId, speakerFolders, generalHighlights]);
 
-    // Items to display in lightbox
-    const currentFolderItems = activeFolder?.items || [];
+    // Filter all media items directly (used in "all_media" flat view)
+    const filteredAllMedia = useMemo(() => {
+        const q = searchSpeaker.toLowerCase().trim();
+        return galleryItems.filter((item) => {
+            if (activeCategory !== "all") {
+                const cat = item.category || "other";
+                if (activeCategory === "day3_tour") {
+                    if (cat !== "day3_tour" && cat !== "day3" && cat !== "tour") return false;
+                } else if (cat !== activeCategory) {
+                    return false;
+                }
+            }
+            if (mediaTypeFilter !== "all") {
+                const mType = item.media_type || "photo";
+                if (mType !== mediaTypeFilter) return false;
+            }
+            if (q) {
+                const text = `${item.caption || ""} ${item.filename || ""}`.toLowerCase();
+                if (!text.includes(q)) return false;
+            }
+            return true;
+        });
+    }, [galleryItems, activeCategory, mediaTypeFilter, searchSpeaker]);
+
+    // Items to display in lightbox (works in both Speaker Folder view and All Media flat view)
+    const currentFolderItems =
+        displayMode === "all_media" && !selectedSpeakerId
+            ? filteredAllMedia
+            : activeFolder?.items || [];
     const activeLightboxItem = lightboxIndex !== null ? currentFolderItems[lightboxIndex] : null;
 
     // Keyboard support for Lightbox
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if (lightboxIndex === null) return;
+            if (lightboxIndex === null || currentFolderItems.length === 0) return;
             if (e.key === "Escape") setLightboxIndex(null);
             if (e.key === "ArrowRight") setLightboxIndex((prev) => (prev + 1) % currentFolderItems.length);
             if (e.key === "ArrowLeft") setLightboxIndex((prev) => (prev - 1 + currentFolderItems.length) % currentFolderItems.length);
@@ -176,6 +207,14 @@ export default function SpeakerFolderGallery({
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [lightboxIndex, currentFolderItems.length]);
+
+    const ALL_MEDIA_CATEGORIES = [
+        { id: "all", label: "All" },
+        { id: "day1", label: "Day 1" },
+        { id: "day2", label: "Day 2" },
+        { id: "day3_tour", label: "Day 3 Tour" },
+        { id: "other", label: "Other" },
+    ];
 
     return (
         <div ref={galleryTopRef} id="speaker-gallery-container" className="sc-speaker-gallery-wrap">
@@ -190,7 +229,7 @@ export default function SpeakerFolderGallery({
                                 type="text"
                                 value={searchSpeaker}
                                 onChange={(e) => setSearchSpeaker(e.target.value)}
-                                placeholder="Search speaker folder..."
+                                placeholder={displayMode === "all_media" ? "Search photos & videos..." : "Search speaker folder..."}
                                 className="w-full pl-10 pr-4 py-2.5 bg-black/40 border border-white/10 rounded-xl text-xs font-semibold text-white placeholder-slate-400 focus:outline-none focus:border-amber-400 transition-colors"
                             />
                             {searchSpeaker && (
@@ -203,17 +242,216 @@ export default function SpeakerFolderGallery({
                             )}
                         </div>
 
-                        <div className="flex items-center gap-3 text-xs text-slate-300 font-semibold w-full sm:w-auto justify-between sm:justify-end">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/10 text-amber-300 border border-amber-400/20">
-                                <Folder size={13} />
-                                <span>{speakerFolders.length} Speaker Albums</span>
-                            </span>
+                        <div className="flex flex-wrap items-center gap-2.5 text-xs text-slate-300 font-semibold w-full sm:w-auto justify-between sm:justify-end">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setDisplayMode("folders");
+                                        setLightboxIndex(null);
+                                    }}
+                                    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border transition-all cursor-pointer ${
+                                        displayMode === "folders"
+                                            ? "bg-amber-400 text-black border-amber-400 shadow-md shadow-amber-500/20 font-bold"
+                                            : "bg-amber-400/10 text-amber-300 border-amber-400/25 hover:bg-amber-400/20"
+                                    }`}
+                                >
+                                    <Folder size={13} />
+                                    <span>{speakerFolders.length} Speaker Albums</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setDisplayMode("all_media");
+                                        setSelectedSpeakerId(null);
+                                        setLightboxIndex(null);
+                                    }}
+                                    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border transition-all cursor-pointer ${
+                                        displayMode === "all_media"
+                                            ? "bg-amber-400 text-black border-amber-400 shadow-md shadow-amber-500/20 font-bold"
+                                            : "bg-white/10 text-white border-white/15 hover:border-amber-400/50 hover:text-amber-300"
+                                    }`}
+                                >
+                                    <Images size={13} />
+                                    <span>All Media</span>
+                                </button>
+                            </div>
                             <span className="text-slate-400">
                                 {galleryItems.length} Total Photos & Videos
                             </span>
                         </div>
                     </div>
 
+                    {/* ALL MEDIA DIRECT VIEW (No Folders — Classic Flat Gallery) */}
+                    {displayMode === "all_media" ? (
+                        <div className="space-y-6 animate-fadeIn">
+                            {/* Category & Media Type Filter Bar */}
+                            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                                    {ALL_MEDIA_CATEGORIES.map((t) => {
+                                        const count =
+                                            t.id === "all"
+                                                ? galleryItems.length
+                                                : galleryItems.filter((item) => {
+                                                      const cat = item.category || "other";
+                                                      if (t.id === "day3_tour") return cat === "day3_tour" || cat === "day3" || cat === "tour";
+                                                      return cat === t.id;
+                                                  }).length;
+                                        const isActive = activeCategory === t.id;
+                                        return (
+                                            <button
+                                                key={t.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setActiveCategory(t.id);
+                                                    setLightboxIndex(null);
+                                                }}
+                                                style={{
+                                                    padding: "8px 16px",
+                                                    borderRadius: "999px",
+                                                    fontSize: "13px",
+                                                    fontWeight: 600,
+                                                    cursor: "pointer",
+                                                    transition: "all 0.2s",
+                                                    border: isActive ? "1px solid var(--sc-gold)" : "1px solid rgba(255,255,255,0.16)",
+                                                    background: isActive ? "var(--sc-gold)" : "rgba(255,255,255,0.06)",
+                                                    color: isActive ? "#0b1030" : "#e2e8f0",
+                                                }}
+                                            >
+                                                {t.label} ({count})
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                    <div style={{ display: "flex", gap: "6px", background: "rgba(255,255,255,0.06)", padding: "4px", borderRadius: "999px", border: "1px solid rgba(255,255,255,0.12)" }}>
+                                        {[
+                                            { id: "all", label: "All Media" },
+                                            { id: "photo", label: "Photos" },
+                                            { id: "video", label: "Videos" },
+                                        ].map((mt) => {
+                                            const active = mediaTypeFilter === mt.id;
+                                            return (
+                                                <button
+                                                    key={mt.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setMediaTypeFilter(mt.id);
+                                                        setLightboxIndex(null);
+                                                    }}
+                                                    style={{
+                                                        padding: "6px 14px",
+                                                        borderRadius: "999px",
+                                                        fontSize: "12px",
+                                                        fontWeight: 600,
+                                                        cursor: "pointer",
+                                                        border: "none",
+                                                        background: active ? "rgba(255,255,255,0.18)" : "transparent",
+                                                        color: active ? "#fff" : "#94a3b8",
+                                                    }}
+                                                >
+                                                    {mt.label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {onRefresh && (
+                                        <button
+                                            type="button"
+                                            onClick={onRefresh}
+                                            disabled={loading}
+                                            title="Refresh gallery"
+                                            style={{
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                width: "34px",
+                                                height: "34px",
+                                                borderRadius: "999px",
+                                                border: "1px solid rgba(255,255,255,0.16)",
+                                                background: "rgba(255,255,255,0.06)",
+                                                color: "#e2e8f0",
+                                                cursor: "pointer",
+                                            }}
+                                        >
+                                            <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {filteredAllMedia.length === 0 ? (
+                                <div className="p-16 text-center text-slate-400 bg-white/5 rounded-3xl border border-white/10">
+                                    <Camera size={40} className="mx-auto mb-3 text-amber-400 opacity-60" />
+                                    <h4 className="font-bold text-white text-base">No media matches your current filter</h4>
+                                    <p className="text-xs text-slate-400 mt-1">Try switching the day, media type, or clearing your search.</p>
+                                </div>
+                            ) : (
+                                <div className="sc-conf-gallery">
+                                    {filteredAllMedia.map((item, idx) => {
+                                        const isVideo = item.media_type === "video";
+                                        const catLabel =
+                                            item.category === "day1"
+                                                ? "Day 1"
+                                                : item.category === "day2"
+                                                ? "Day 2"
+                                                : item.category === "day3_tour" || item.category === "day3" || item.category === "tour"
+                                                ? "Day 3 Tour"
+                                                : "Other";
+                                        return (
+                                            <figure
+                                                key={item.id}
+                                                onClick={() => setLightboxIndex(idx)}
+                                                style={{ position: "relative" }}
+                                            >
+                                                {isVideo ? (
+                                                    <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 10", background: "#050816" }}>
+                                                        <video
+                                                            src={item.url}
+                                                            autoPlay
+                                                            muted
+                                                            loop
+                                                            playsInline
+                                                            preload="auto"
+                                                            style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <img
+                                                        src={item.url}
+                                                        alt={item.caption || item.filename || "Conference Photo"}
+                                                        loading="lazy"
+                                                    />
+                                                )}
+                                                <span
+                                                    style={{
+                                                        position: "absolute",
+                                                        top: "10px",
+                                                        right: "10px",
+                                                        padding: "3px 10px",
+                                                        borderRadius: "999px",
+                                                        fontSize: "11px",
+                                                        fontWeight: 700,
+                                                        background: "rgba(11,16,48,0.85)",
+                                                        color: "var(--sc-gold)",
+                                                        border: "1px solid rgba(255,255,255,0.15)",
+                                                    }}
+                                                >
+                                                    {catLabel}
+                                                </span>
+                                                <figcaption>
+                                                    <span>{item.caption || item.filename || catLabel}</span>
+                                                </figcaption>
+                                            </figure>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                    <>
                     {/* Folders Stack Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                         {/* 1. General Summit Highlights Album Card */}
@@ -372,6 +610,8 @@ export default function SpeakerFolderGallery({
                             <h4 className="font-bold text-white text-base">No speaker photo albums match your search</h4>
                             <p className="text-xs text-slate-400 mt-1">Try searching with a different name.</p>
                         </div>
+                    )}
+                    </>
                     )}
                 </div>
             )}
@@ -585,7 +825,7 @@ export default function SpeakerFolderGallery({
                     >
                         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                             <span style={{ fontSize: "15px", fontWeight: 800, color: "var(--sc-gold)" }}>
-                                {activeFolder?.speaker?.name}
+                                {activeFolder?.speaker?.name || activeLightboxItem.caption || "Conference Media"}
                             </span>
                             <span style={{ fontSize: "12px", color: "var(--sc-muted)" }}>
                                 ({lightboxIndex + 1} of {currentFolderItems.length})
