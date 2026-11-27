@@ -22,8 +22,8 @@ export async function fetchAnnouncements(eventSlug = null) {
             .order("created_at", { ascending: false });
         if (!fallback.error) {
             data = fallback.data || [];
-            if (eventSlug === "paris") {
-                data = data.filter(r => r.event_slug === "paris");
+            if (eventSlug && eventSlug !== "all" && eventSlug !== "dubai") {
+                data = data.filter(r => r.event_slug === eventSlug);
             }
             error = null;
         }

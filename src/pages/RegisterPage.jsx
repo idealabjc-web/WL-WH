@@ -167,7 +167,7 @@ export default function RegisterPage({ speakers = [], onAdd, toast, currentEvent
             const ok = await onAdd(rec);
             setSyncFailed(!ok);
             if (ok) {
-                setForm(emptyForm);
+                setForm({ ...emptyForm, eventSlug: currentEvent?.slug || "dubai" });
                 setPhotoFile(null);
                 setPhotoPreview(null);
                 setAbstractFile(null);

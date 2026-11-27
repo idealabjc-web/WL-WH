@@ -7,7 +7,7 @@ import { supabase } from "../../supabaseClient";
 import { rowToSpeaker } from "../../api/speakersApi";
 import { loginSpeaker, slugify } from "../publicApi";
 import { getCountryFlagUrl, getCountryName } from "../../utils/countryFlags";
-import { getEventConfig, getEventTables } from '../../eventsConfig';
+import { getEventConfig, getEventTables, getAllEvents, normalizeEventSlug } from '../../eventsConfig';
 import {
     Lock,
     Mail,
@@ -32,12 +32,27 @@ export default function SpeakerIndividualPage({
     onAdminClick,
     eventSlug,
 }) {
-    const detectedEventSlug = eventSlug || (typeof window !== "undefined" && window.location.pathname.includes("paris") ? "paris" : "dubai");
+    const detectedEventSlug = eventSlug || (typeof window !== "undefined" ? normalizeEventSlug(window.location.pathname) : "dubai") || "dubai";
     const [targetSpeaker, setTargetSpeaker] = useState(null);
     const [loadingTarget, setLoadingTarget] = useState(true);
 
     const currentEvent = getEventConfig(targetSpeaker?.eventSlug || detectedEventSlug);
-    const isParis = currentEvent.slug === "paris";
+    const backdropSrc =
+        currentEvent.slug === "paris"
+            ? "/images/site/paris_eiffel_full_backdrop.jpg"
+            : currentEvent.slug === "canada"
+                ? "/images/site/canada_toronto_aurora.svg"
+                : currentEvent.slug === "japan"
+                    ? "/images/site/japan_tokyo_twilight.svg"
+                    : "/dubai_bg.jpg";
+    const highlightClass =
+        currentEvent.slug === "paris"
+            ? "text-blue-400"
+            : currentEvent.slug === "canada"
+                ? "sc-crimson-text"
+                : currentEvent.slug === "japan"
+                    ? "sc-sakura-text"
+                    : "sc-gold-text";
 
     const [identifier, setIdentifier] = useState("");
     const [password, setPassword] = useState("");
@@ -68,14 +83,18 @@ export default function SpeakerIndividualPage({
                 let matchedEvent = detectedEventSlug;
 
                 if (!matched) {
-                    const altSlug = detectedEventSlug === 'paris' ? 'dubai' : 'paris';
-                    const altTables = getEventTables(altSlug);
-                    const altRes = await supabase.from(altTables.speakers).select("*, " + altTables.sessions + "(*), " + altTables.accommodations + "(*), " + altTables.attendance + "(*)");
-                    if (altRes.data) {
-                        const found = altRes.data.find((r) => slugify(r.name) === slug || slugify(r.id) === slug);
-                        if (found) {
-                            matched = found;
-                            matchedEvent = altSlug;
+                    const otherEvents = getAllEvents().filter((ev) => ev.slug !== detectedEventSlug);
+                    for (const ev of otherEvents) {
+                        const altRes = await supabase
+                            .from(ev.tables.speakers)
+                            .select("*, " + ev.tables.sessions + "(*), " + ev.tables.attendance + "(*)");
+                        if (altRes.data) {
+                            const found = altRes.data.find((r) => slugify(r.name) === slug || slugify(r.id) === slug);
+                            if (found) {
+                                matched = found;
+                                matchedEvent = ev.slug;
+                                break;
+                            }
                         }
                     }
                 }
@@ -83,7 +102,12 @@ export default function SpeakerIndividualPage({
                 if (matched && mounted) {
                     if (!matched.accommodations || matched.accommodations.length === 0) {
                         try {
-                            const { data: acc } = await supabase.from("accommodations").select("*").eq("speaker_id", matched.id).maybeSingle();
+                            const matchedTables = getEventTables(matchedEvent);
+                            let accQ = supabase.from(matchedTables.accommodations).select("*").eq("speaker_id", matched.id);
+                            if (matchedTables.accommodations === "accommodations" && matchedEvent !== "dubai") {
+                                accQ = accQ.eq("event", matchedEvent);
+                            }
+                            const { data: acc } = await accQ.maybeSingle();
                             if (acc) matched.accommodations = [acc];
                         } catch {}
                     }
@@ -189,11 +213,11 @@ export default function SpeakerIndividualPage({
             <div className="sc-login-wrap">
                 {/* Left Visual Column */}
                 <div className="sc-login-visual">
-                    <img src={isParis ? "/images/site/paris_eiffel_full_backdrop.jpg" : "/dubai_bg.jpg"} alt={`${currentEvent.name} Backdrop`} />
+                    <img src={backdropSrc} alt={`${currentEvent.name} Backdrop`} />
                     <div style={{ position: "relative", zIndex: 10, maxWidth: "520px" }}>
                         <span className="sc-eyebrow">SPEAKER CHAPTERS · {currentEvent.name.toUpperCase()}</span>
                         <h2 className="sc-display" style={{ fontSize: "42px", margin: "14px 0 10px" }}>
-                            Your Dedicated <span className={isParis ? "text-blue-400" : "sc-gold-text"}>Speaker Portal</span>
+                            Your Dedicated <span className={highlightClass}>Speaker Portal</span>
                         </h2>
                         <p style={{ color: "#d2d6ea", fontSize: "16px", lineHeight: "1.7" }}>
                             Access your live itinerary, conference room allocation, presentation slot timings, hotel
@@ -202,11 +226,11 @@ export default function SpeakerIndividualPage({
 
                         <div style={{ marginTop: "24px", display: "flex", gap: "12px", flexWrap: "wrap" }}>
                             <div className="sc-meta-chip">
-                                <Calendar size={14} style={{ color: isParis ? "#60a5fa" : "var(--sc-gold)" }} />
+                                <Calendar size={14} style={{ color: currentEvent.badgeAccent || "var(--sc-gold)" }} />
                                 <span>{currentEvent.dates}</span>
                             </div>
                             <div className="sc-meta-chip">
-                                <Hotel size={14} style={{ color: isParis ? "#60a5fa" : "var(--sc-gold)" }} />
+                                <Hotel size={14} style={{ color: currentEvent.badgeAccent || "var(--sc-gold)" }} />
                                 <span>{currentEvent.venueShort}</span>
                             </div>
                         </div>

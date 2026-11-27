@@ -11,9 +11,10 @@ import { formatTimeAmPm } from "./CheckinPage";
 
 /**
  * Parses any time slot string into minutes from midnight (0 - 1440)
- * Handles both 24-hour and 12-hour AM/PM formats, e.g.:
+ * Handles all 24-hour and 12-hour AM/PM formats, e.g.:
  *  - "08:00 - 08:30" => 480
  *  - "08:00 AM - 08:30 AM" => 480
+ *  - "8:30 am" => 510
  *  - "10:30 AM - 11:00 AM" => 630
  *  - "12:00 PM - 12:30 PM" => 720
  *  - "12:30 PM - 01:00 PM" => 750
@@ -23,18 +24,20 @@ import { formatTimeAmPm } from "./CheckinPage";
 export function parseStartTimeToMinutes(timeStr) {
     if (!timeStr || typeof timeStr !== "string") return 999999;
     const clean = timeStr.trim();
-    const match = clean.match(/(\d{1,2}):(\d{2})(?:\s*(AM|PM))?/i);
+    // Matches "08:00", "8:30", "08.30", "8:00 AM", "8am", "14:00"
+    const match = clean.match(/(\d{1,2})(?:[:.](\d{2}))?\s*(AM|PM)?/i);
     if (!match) return 999999;
 
     let hours = parseInt(match[1], 10);
-    const minutes = parseInt(match[2], 10) || 0;
+    const minutes = match[2] ? parseInt(match[2], 10) : 0;
     const meridiem = match[3] ? match[3].toUpperCase() : null;
 
     if (meridiem === "PM" && hours < 12) {
         hours += 12;
     } else if (meridiem === "AM" && hours === 12) {
         hours = 0;
-    } else if (!meridiem && hours >= 1 && hours <= 6) {
+    } else if (!meridiem && hours >= 1 && hours <= 7) {
+        // Without AM/PM indicator, conference sessions between 1 and 7 are afternoon
         hours += 12;
     }
 
@@ -236,8 +239,8 @@ export default function LiveUpdatesPage({
 
             return daySessions.map((sess, idx) => {
                 const room = sess.conferenceRoom || sess.conference_room || sess.room || s.conferenceRoom || "Room TBA";
-                const timeSlot = sess.timeSlot || sess.time_slot || s.timeSlot || "";
-                const sessionTitle = sess.sessionTitle || sess.session_title || s.sessionTitle || "";
+                const timeSlot = sess.timeSlot || sess.time_slot || sess.time || s.timeSlot || s.time_slot || s.time || "";
+                const sessionTitle = sess.sessionTitle || sess.session_title || sess.title || s.sessionTitle || s.session_title || s.talk || "";
 
                 return {
                     ...s,
@@ -563,9 +566,9 @@ export default function LiveUpdatesPage({
 
                         {/* Multi-Day Navigation Strip */}
                         <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80">
-                            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-                                <span className="text-xs font-bold uppercase tracking-wider text-slate-400 mr-1 shrink-0 hidden sm:inline">
-                                    Select Day:
+                            <div className="flex items-center gap-2 overflow-x-auto p-1.5 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/70 dark:border-slate-800/80 no-scrollbar">
+                                <span className="text-xs font-bold uppercase tracking-wider text-slate-400 px-2 shrink-0 hidden sm:inline">
+                                    Event Schedule:
                                 </span>
                                 {DAYS.map((d) => {
                                     const isSelected = selectedDay === d.id;
@@ -573,17 +576,19 @@ export default function LiveUpdatesPage({
                                         <button
                                             key={d.id}
                                             onClick={() => setSelectedDay(d.id)}
-                                            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 shrink-0 ${isSelected
-                                                    ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/25 scale-[1.02]"
-                                                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700"
-                                                }`}
+                                            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all flex items-center gap-2 shrink-0 ${
+                                                isSelected
+                                                    ? "bg-emerald-600 text-white shadow-sm shadow-emerald-600/30 scale-[1.02]"
+                                                    : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200/60 dark:border-slate-700"
+                                            }`}
                                         >
-                                            <Calendar size={14} className={isSelected ? "text-white" : "text-slate-400"} />
+                                            <Calendar size={14} className={isSelected ? "text-white" : "text-emerald-500"} />
                                             <span>{d.label}</span>
-                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isSelected
-                                                    ? "bg-white/25 text-white"
-                                                    : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
-                                                }`}>
+                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                                isSelected 
+                                                    ? "bg-white/25 text-white" 
+                                                    : "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
+                                            }`}>
                                                 {d.fullDate.split(",")[0]}
                                             </span>
                                         </button>

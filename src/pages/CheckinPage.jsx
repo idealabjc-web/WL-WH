@@ -5,7 +5,7 @@ import {
     QrCode as QrIcon, ChevronDown, ChevronUp, Sparkles, Send,
     Home, UserCheck, X, Users, Eye, ArrowRight, ShieldCheck,
     SlidersHorizontal, Check, AlertTriangle, Smartphone, ListFilter,
-    LogOut, MessageSquare, RotateCcw, Wifi, Mic, Monitor
+    LogOut, MessageSquare, RotateCcw, Wifi, Mic, Monitor, Globe
 } from "lucide-react";
 import jsQR from "jsqr";
 import QRCode from "qrcode";
@@ -87,6 +87,7 @@ export default function CheckinPage({
     const [selected, setSelected] = useState(null);
     const [selectedSource, setSelectedSource] = useState(null); // "directory" | "camera" | null
     const [filterStatus, setFilterStatus] = useState("all"); // "all" | "pending" | "checkedin"
+    const [countryFilter, setCountryFilter] = useState("all");
     
     // Camera scanner states
     const [scanning, setScanning] = useState(false);
@@ -395,6 +396,19 @@ export default function CheckinPage({
 
     useEffect(() => () => stopScan(), [stopScan]);
 
+    // Countries extracted only from registered speakers
+    const registeredCountries = useMemo(() => {
+        const counts = {};
+        (speakers || []).forEach(s => {
+            const c = (s.country || "").trim();
+            if (c) counts[c] = (counts[c] || 0) + 1;
+        });
+        return Object.keys(counts).sort((a, b) => a.localeCompare(b)).map(name => ({
+            name,
+            count: counts[name]
+        }));
+    }, [speakers]);
+
     // Filtered speakers list for Directory Lookups in QR Scan
     const filteredSpeakers = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -403,7 +417,13 @@ export default function CheckinPage({
                 (s.name && s.name.toLowerCase().includes(q)) || 
                 (s.id && s.id.toLowerCase().includes(q)) || 
                 (s.sessionTitle && s.sessionTitle.toLowerCase().includes(q)) ||
-                (s.room && s.room.toLowerCase().includes(q));
+                (s.room && s.room.toLowerCase().includes(q)) ||
+                (s.country && s.country.toLowerCase().includes(q));
+
+            if (countryFilter !== "all") {
+                const spkCountry = (s.country || "").trim().toLowerCase();
+                if (spkCountry !== countryFilter.toLowerCase()) return false;
+            }
 
             const isChecked = Boolean(s.checkedIn || s.checked_in);
             const isDeparted = Boolean(s.checkedOut || s.checked_out);
@@ -415,7 +435,7 @@ export default function CheckinPage({
 
             return matchesQuery && matchesStatus;
         });
-    }, [speakers, query, filterStatus]);
+    }, [speakers, query, filterStatus, countryFilter]);
 
     const checkedOutCount = (speakers || []).filter(s => !!(s.checkedOut || s.checked_out)).length;
     const checkedInCount = (speakers || []).filter(s => !!(s.checkedIn || s.checked_in) && !(s.checkedOut || s.checked_out)).length;
@@ -1362,6 +1382,21 @@ export default function CheckinPage({
                                 >
                                     Pending ({pendingCount})
                                 </button>
+                                {registeredCountries.length > 0 && (
+                                    <div className="relative shrink-0 ml-auto">
+                                        <select
+                                            value={countryFilter}
+                                            onChange={(e) => setCountryFilter(e.target.value)}
+                                            className="text-xs py-1.5 pl-2.5 pr-6 rounded-lg font-semibold border border-slate-200 bg-white text-slate-700 hover:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-500 shadow-xs cursor-pointer min-h-[32px]"
+                                            title="Filter directory by country"
+                                        >
+                                            <option value="all">All Countries ({speakers.length})</option>
+                                            {registeredCountries.map(c => (
+                                                <option key={c.name} value={c.name}>{c.name} ({c.count})</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Multiple Search Matches Prompt if user searched by keyword */}

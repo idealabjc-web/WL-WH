@@ -3,8 +3,10 @@ import { Link, navigate } from "../router";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 import FrenchFlagAnimation from "../components/FrenchFlagAnimation";
+import HeroCinemaSlideshow from "../components/HeroCinemaSlideshow";
 import ParisFlightLandingIntro from "../components/ParisFlightLandingIntro";
 import ScrollFlyIn from "../components/ScrollFlyIn";
+import { VaporCountdown } from "@/components/ui/countdown-vapor-digits";
 import { PARIS_EVENT, PARIS_KEYNOTE_FACULTY, BRAND } from "../seriesData";
 import { getCountryFlagUrl } from "../../utils/countryFlags";
 import { fetchPublicSpeakers, slugify } from "../publicApi";
@@ -30,6 +32,9 @@ import {
     ExternalLink,
     Search,
     UserCheck,
+    Globe,
+    ChevronDown,
+    Filter,
 } from "lucide-react";
 
 // Icon lookup for the "What is Provided" cards
@@ -46,8 +51,88 @@ const ICON_MAP = {
     Layers,
 };
 
+// 5-Day Academic Schedule & Journey Roadmap for Paris European Summit (March 8 – 12, 2027)
+const PARIS_DAYS_AGENDA = [
+    {
+        day: 1,
+        date: "Monday, March 8, 2027",
+        title: "Inaugural Plenary & European Leadership Convocation",
+        theme: "Global Healthcare Horizons & Cross-Border Collaboration",
+        rooms: "Conference Room 1 (Mainstage) & Room 2 (Executive)",
+        highlights: [
+            "Opening Presidential Address & European Health Council Keynote",
+            "Global Clinical Leadership & Innovation Panel Discussion",
+            "Official Delegate Welcome Ceremony & Accompanying Persons Reception",
+            "Evening: Welcome Faculty Dinner in Central Paris"
+        ],
+        eveningEvent: "Welcome Faculty Dinner & Cocktail Reception 🍷",
+        badge: "DAY 1 · INAUGURATION"
+    },
+    {
+        day: 2,
+        date: "Tuesday, March 9, 2027",
+        title: "Clinical AI, Neural Diagnostics & Robotic Surgery",
+        theme: "Intelligent Medicine & Next-Generation Surgical Suites",
+        rooms: "Room 1 (AI & Diagnostics) & Room 2 (Robotic Surgery)",
+        highlights: [
+            "Deep Learning in Diagnostic Radiology & Real-time Pathology",
+            "Autonomous & Tele-Operated Robotic Surgical Platforms",
+            "Hospital Clinical AI Integration & Patient Privacy Frameworks",
+            "Live Interactive Case Presentations & Masterclasses"
+        ],
+        eveningEvent: "Parisian Academic Faculty & Industry Mixer",
+        badge: "DAY 2 · AI & SURGERY"
+    },
+    {
+        day: 3,
+        date: "Wednesday, March 10, 2027",
+        title: "Precision Oncology, Genomics & Global Ethics",
+        theme: "Targeted Therapeutics, Biomarkers & Bioethical Policy",
+        rooms: "Room 1 (Oncology Frontiers) & Room 2 (Bioethics Forum)",
+        highlights: [
+            "Next-Generation Sequencing (NGS) in Targeted Cancer Therapeutics",
+            "Immunotherapy Biomarkers & Liquid Biopsy Innovations",
+            "European Bioethics Policy on Gene Editing & CRISPR Trials",
+            "Oral Abstract Presentations & Panel Q&A Sessions"
+        ],
+        eveningEvent: "PeerCite Academic Press Author Reception 📚",
+        badge: "DAY 3 · ONCOLOGY & ETHICS"
+    },
+    {
+        day: 4,
+        date: "Thursday, March 11, 2027",
+        title: "Digital Health, Decentralized Trials & Gala Cruise",
+        theme: "Virtual Health Ecosystems & Clinical Translation",
+        rooms: "Room 1 (Digital Health) & Room 2 (Clinical Trials)",
+        highlights: [
+            "Decentralized Global Clinical Registries & Wearable Biosensors",
+            "Epidemic Surveillance & Cross-Continental Health Data Systems",
+            "Moderated Poster Sessions & Young Investigator Showcase",
+            "Evening: Exclusive River Seine Illumination Gala Cruise 🚢"
+        ],
+        eveningEvent: "Exclusive River Seine Illumination Gala Cruise 🚢",
+        badge: "DAY 4 · DIGITAL HEALTH & GALA"
+    },
+    {
+        day: 5,
+        date: "Friday, March 12, 2027",
+        title: "Valedictory Plenary & Official CME Credentialing",
+        theme: "Summit Whitepaper Ratification & Future Perspectives",
+        rooms: "Room 1 (Valedictory Auditorium)",
+        highlights: [
+            "Ratification of the Paris European Summit Clinical Whitepaper",
+            "Distinguished Investigator & Best Oral Presentation Awards",
+            "Conferment of European CPD/CME Continuous Education Credits",
+            "Official Valedictory Toast & Announcement of 2028 Summit City"
+        ],
+        eveningEvent: "Farewell Toast & Departure Concierge ✈️",
+        badge: "DAY 5 · VALEDICTORY & CME"
+    }
+];
+
 export default function ParisSeriesPage({ onAdminClick }) {
     const [showLandingIntro, setShowLandingIntro] = useState(true);
+    const [activeParisDay, setActiveParisDay] = useState(1);
     const handleIntroDismiss = useCallback(() => {
         setShowLandingIntro(false);
     }, []);
@@ -67,6 +152,7 @@ export default function ParisSeriesPage({ onAdminClick }) {
     const [abstractModalOpen, setAbstractModalOpen] = useState(false);
     const [speakerSearch, setSpeakerSearch] = useState("");
     const [selectedTrack, setSelectedTrack] = useState("all");
+    const [selectedCountry, setSelectedCountry] = useState("all");
     const [dbSpeakers, setDbSpeakers] = useState([]);
 
     useEffect(() => {
@@ -181,15 +267,35 @@ export default function ParisSeriesPage({ onAdminClick }) {
         }));
     }, [dbSpeakers]);
 
+    // Extract countries only from registered Paris speakers
+    const registeredCountries = useMemo(() => {
+        const counts = {};
+        allParisSpeakers.forEach((s) => {
+            const raw = s.country ? s.country.trim() : "";
+            if (raw) {
+                counts[raw] = (counts[raw] || 0) + 1;
+            }
+        });
+        return Object.keys(counts)
+            .sort((a, b) => a.localeCompare(b))
+            .map((name) => ({
+                name,
+                count: counts[name],
+                flagUrl: getCountryFlagUrl(name, "w40")
+            }));
+    }, [allParisSpeakers]);
+
     const filteredParisSpeakers = allParisSpeakers.filter((spk) => {
         const matchesTrack = selectedTrack === "all" || spk.trackId === selectedTrack;
+        const matchesCountry = selectedCountry === "all" ||
+            (spk.country && spk.country.trim().toLowerCase() === selectedCountry.toLowerCase());
         const q = speakerSearch.toLowerCase().trim();
         const matchesSearch = !q ||
             spk.name.toLowerCase().includes(q) ||
             spk.talk.toLowerCase().includes(q) ||
             spk.country.toLowerCase().includes(q) ||
             spk.institution.toLowerCase().includes(q);
-        return matchesTrack && matchesSearch;
+        return matchesTrack && matchesCountry && matchesSearch;
     });
 
     return (
@@ -215,9 +321,15 @@ export default function ParisSeriesPage({ onAdminClick }) {
 
             {/* ─── HERO WITH PARIS SKYLINE & FRENCH TRICOLOR ANIMATION ─────── */}
             <section className="sc-paris-hero">
-                <div className="sc-hero-bg">
-                    <img src="/images/site/paris_eiffel_twilight.jpg" alt="Paris Skyline with Eiffel Tower" />
-                </div>
+                <HeroCinemaSlideshow
+                    accentColor="#60a5fa"
+                    slides={[
+                        { src: "/images/site/paris_eiffel_twilight.jpg", label: "Eiffel Tower Twilight", alt: "Paris Skyline with Eiffel Tower" },
+                        { src: "/images/site/paris_seine_river.jpg", label: "River Seine & Bridge", alt: "Paris River Seine evening lights" },
+                        { src: "/images/site/paris_louvre_museum.jpg", label: "The Louvre Pyramid", alt: "The Louvre glass pyramid courtyard at dusk" },
+                        { src: "/images/site/paris_arc_triomphe.jpg", label: "Arc de Triomphe", alt: "Arc de Triomphe and Champs-Elysees" },
+                    ]}
+                />
                 <div className="sc-hero-shade" />
                 <div className="sc-hero-grid" />
 
@@ -225,27 +337,29 @@ export default function ParisSeriesPage({ onAdminClick }) {
                     <div className="sc-dubai-hero-grid">
                         {/* Left column: Event Headline & Details */}
                         <div>
-                            {/* French Colors Bar */}
-                            <div className="sc-france-bar">
-                                <i style={{ background: "#002654" }} />
-                                <i style={{ background: "#ffffff" }} />
-                                <i style={{ background: "#ed2939" }} />
+                            {/* French Accent & Series Eyebrow */}
+                            <div style={{ display: "inline-flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
+                                <span className="sc-france-bar" style={{ margin: 0, width: "32px", height: "5px", borderRadius: "999px" }}>
+                                    <i style={{ background: "#002654" }} />
+                                    <i style={{ background: "#ffffff" }} />
+                                    <i style={{ background: "#ed2939" }} />
+                                </span>
+                                <span className="sc-eyebrow" style={{ color: "#7C9BFA", letterSpacing: "0.18em", margin: 0 }}>
+                                    SPEAKER CHAPTERS · EUROPEAN EDITION
+                                </span>
                             </div>
 
-                            <span className="sc-eyebrow" style={{ color: "#7C9BFA" }}>
-                                SPEAKER CHAPTERS · UPCOMING EUROPEAN EDITION (MARCH 8 – 12, 2027)
-                            </span>
-
-                            <h1 className="sc-hero-title sc-display" style={{ margin: "14px 0 0", fontSize: "clamp(42px, 6vw, 76px)" }}>
-                                Paris Series <span className="sc-blue-text">March 8 – 12, 2027</span>
+                            <h1 className="sc-hero-title sc-display" style={{ margin: "10px 0 0", fontSize: "clamp(36px, 5.2vw, 68px)", lineHeight: 1.15 }}>
+                                Paris Series <br />
+                                <span className="sc-blue-text">March 8 – 12, 2027</span>
                             </h1>
 
-                            <p className="sc-section-lead" style={{ marginTop: "18px", fontSize: "19px" }}>
+                            <p className="sc-section-lead" style={{ marginTop: "16px", fontSize: "18px" }}>
                                 {PARIS_EVENT.headline}
                             </p>
 
                             {/* Event Metadata Chips */}
-                            <div className="sc-meta-row">
+                            <div className="sc-meta-row" style={{ marginTop: "18px" }}>
                                 <div className="sc-meta-chip">
                                     <Calendar size={17} style={{ color: "#5B7CFA" }} />
                                     <span><b>Dates:</b> {PARIS_EVENT.dates}</span>
@@ -256,172 +370,87 @@ export default function ParisSeriesPage({ onAdminClick }) {
                                 </div>
                             </div>
 
-                            {/* Live Countdown to Event */}
-                            <div className="sc-countdown">
-                                <div className="sc-cd-box">
-                                    <b className="sc-blue-text">{timeLeft.days}</b>
-                                    <span>Days</span>
+                            {/* Ultra-Luxury Paris European Summit Timepiece */}
+                            <div className="sc-paris-timer" style={{ marginTop: "24px" }}>
+                                <div className="sc-paris-timer-header">
+                                    <div className="sc-paris-timer-badge">
+                                        <span className="sc-paris-timer-beacon" />
+                                        <span>Official European Summit Countdown · Live</span>
+                                    </div>
+                                    <div className="sc-paris-timer-target">
+                                        March 8 – 12, 2027
+                                    </div>
                                 </div>
-                                <div className="sc-cd-box">
-                                    <b>{String(timeLeft.hours).padStart(2, "0")}</b>
-                                    <span>Hours</span>
-                                </div>
-                                <div className="sc-cd-box">
-                                    <b>{String(timeLeft.mins).padStart(2, "0")}</b>
-                                    <span>Minutes</span>
-                                </div>
-                                <div className="sc-cd-box">
-                                    <b>{String(timeLeft.secs).padStart(2, "0")}</b>
-                                    <span>Seconds</span>
-                                </div>
-                            </div>
 
-                            {/* Action Buttons */}
-                            <div style={{ marginTop: "32px", display: "flex", flexWrap: "wrap", gap: "12px" }}>
-                                <button
-                                    type="button"
-                                    onClick={() => setAbstractModalOpen(true)}
-                                    className="sc-btn sc-btn-blue"
-                                >
-                                    <FileText size={16} />
-                                    <span>Submit Abstract / Call for Speakers</span>
-                                    <ArrowRight size={16} className="sc-arrow" />
-                                </button>
-                                <a
-                                    href="#speakers"
-                                    className="sc-btn sc-btn-ghost"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        const el = document.getElementById("speakers");
-                                        if (el) {
-                                            el.scrollIntoView({ behavior: "smooth", block: "start" });
-                                            window.history.pushState({}, "", "#speakers");
-                                        }
-                                    }}
-                                >
-                                    <Users size={16} />
-                                    <span>Paris Speakers & Faculty</span>
-                                </a>
-                                <a
-                                    href="#tracks"
-                                    className="sc-btn sc-btn-ghost"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        const el = document.getElementById("tracks");
-                                        if (el) {
-                                            el.scrollIntoView({ behavior: "smooth", block: "start" });
-                                            window.history.pushState({}, "", "#tracks");
-                                        }
-                                    }}
-                                >
-                                    <span>Summit Tracks</span>
-                                </a>
+                                <div className="flex justify-center items-center py-4 my-1 w-full" style={{ color: "#c9dbff" }}>
+                                    <VaporCountdown
+                                        targetDate="2027-03-08T09:00:00"
+                                        labels={["DAYS", "HOURS", "MINS", "SECS"]}
+                                        className="text-blue-200"
+                                    />
+                                </div>
+
+                                <div className="sc-paris-timer-footer">
+                                    <span>
+                                        <MapPin size={13} style={{ color: "#60a5fa" }} />
+                                        <span>Central Paris, France · Rooms 1 &amp; 2</span>
+                                    </span>
+                                    <span>5-Day European Summit 🇫🇷</span>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Right column: 3D Animated French Tricolor Flag */}
-                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                        {/* Right column: 3D Animated French Tricolor Flag with Diplomatic Seal */}
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                            <div
+                                className="sc-hero-halo-pulse"
+                                style={{ background: "radial-gradient(circle, rgba(91, 124, 250, 0.34), rgba(237, 41, 57, 0.18) 58%, transparent 78%)" }}
+                                aria-hidden="true"
+                            />
+
                             <div
                                 style={{
                                     padding: "24px 28px",
                                     borderRadius: "28px",
-                                    background: "rgba(255, 255, 255, 0.04)",
-                                    border: "1px solid rgba(91, 124, 250, 0.28)",
-                                    backdropFilter: "blur(20px)",
-                                    boxShadow: "0 30px 80px -20px rgba(0,0,0,0.7), 0 0 40px -10px rgba(91, 124, 250, 0.2)",
+                                    background: "linear-gradient(160deg, rgba(255, 255, 255, 0.06), rgba(8, 12, 36, 0.85))",
+                                    border: "1px solid rgba(91, 124, 250, 0.35)",
+                                    backdropFilter: "blur(24px)",
+                                    boxShadow: "0 30px 80px -20px rgba(0,0,0,0.85), 0 0 50px -10px rgba(91, 124, 250, 0.3)",
                                     textAlign: "center",
+                                    position: "relative",
+                                    overflow: "hidden",
+                                    maxWidth: "380px",
+                                    width: "100%",
                                 }}
                             >
-                                <FrenchFlagAnimation width={300} height={160} />
-                                <div style={{ marginTop: "18px" }}>
-                                    <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#7C9BFA" }}>
-                                        HOST NATION
+                                <div style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: "2px", background: "linear-gradient(90deg, transparent, #60a5fa, transparent)" }} />
+                                
+                                <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 12px", borderRadius: "999px", background: "rgba(91, 124, 250, 0.15)", border: "1px solid rgba(91, 124, 250, 0.3)", marginBottom: "14px", fontSize: "11px", fontWeight: 700, letterSpacing: "0.15em", color: "#9bb5ff" }}>
+                                    <Sparkles size={12} style={{ color: "#fde047" }} />
+                                    <span>OFFICIAL SUMMIT HOST</span>
+                                </div>
+
+                                <FrenchFlagAnimation width={240} height={130} />
+                                
+                                <div style={{ marginTop: "16px" }}>
+                                    <div style={{ fontFamily: "var(--sc-display)", fontSize: "22px", fontWeight: 700, color: "#ffffff" }}>
+                                        Paris, France 🇫🇷
                                     </div>
-                                    <div style={{ fontFamily: "var(--sc-display)", fontSize: "22px", fontWeight: 700, marginTop: "2px" }}>
-                                        France · Paris 🇫🇷
+                                    <div style={{ fontSize: "12px", color: "#94a3b8", marginTop: "4px", letterSpacing: "0.05em" }}>
+                                        48.8566° N, 2.3522° E · Central Paris
                                     </div>
-                                    <div style={{ fontSize: "12.5px", color: "var(--sc-muted)", marginTop: "4px" }}>
-                                        Venue: Coming Soon
+                                    <div style={{ marginTop: "10px", display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 12px", borderRadius: "8px", background: "rgba(96, 165, 250, 0.1)", border: "1px solid rgba(96, 165, 250, 0.25)", fontSize: "11.5px", color: "#60a5fa", fontWeight: 600 }}>
+                                        <span>Rooms 1 &amp; 2 · 5-Day Access</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* ─── SUMMIT TRACKS & SCIENTIFIC THEMES ───────────── */}
-            <section id="tracks" className="sc-section">
-                <div className="sc-container">
-                    <div style={{ textAlign: "center", marginBottom: "40px" }} className="sc-reveal">
-                        <span className="sc-eyebrow" style={{ color: "#7C9BFA" }}>ACADEMIC THEMES & STREAMS</span>
-                        <h2 className="sc-section-title sc-display">
-                            Summit <span className="sc-blue-text">Tracks</span> & Core Focus
-                        </h2>
-                        <p className="sc-section-lead" style={{ margin: "0 auto" }}>
-                            The Paris Series brings together groundbreaking researchers and healthcare pioneers across
-                            six multidisciplinary tracks. Select your theme to submit your keynote proposal.
-                        </p>
-                    </div>
-
-                    <div className="sc-grid-3 sc-reveal">
-                        {PARIS_EVENT.tracks.map((track) => (
-                            <div key={track.id} className="sc-track-card">
-                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
-                                    <span
-                                        style={{
-                                            fontSize: "11px",
-                                            fontWeight: 700,
-                                            letterSpacing: "0.15em",
-                                            textTransform: "uppercase",
-                                            padding: "4px 10px",
-                                            borderRadius: "999px",
-                                            background: "rgba(91, 124, 250, 0.14)",
-                                            color: "#9bb5ff",
-                                            border: "1px solid rgba(91, 124, 250, 0.3)",
-                                        }}
-                                    >
-                                        {track.tag}
-                                    </span>
-                                    <Sparkles size={16} style={{ color: "#5B7CFA" }} />
-                                </div>
-                                <h3 style={{ fontSize: "19px", lineHeight: "1.35", marginBottom: "10px", fontFamily: "var(--sc-display)" }}>
-                                    {track.title}
-                                </h3>
-                                <p style={{ color: "var(--sc-muted)", fontSize: "14.5px", lineHeight: "1.6", flex: 1 }}>
-                                    {track.desc}
-                                </p>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setFormData((prev) => ({ ...prev, track: track.id }));
-                                        setAbstractModalOpen(true);
-                                    }}
-                                    style={{
-                                        marginTop: "18px",
-                                        background: "none",
-                                        border: "none",
-                                        color: "#5B7CFA",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: "8px",
-                                        fontSize: "13px",
-                                        fontWeight: 600,
-                                        cursor: "pointer",
-                                        padding: 0,
-                                    }}
-                                >
-                                    <span>Submit proposal for this track</span>
-                                    <ArrowRight size={14} />
-                                </button>
-                            </div>
-                        ))}
                     </div>
                 </div>
             </section>
 
             {/* ─── PARIS FACULTY & KEYNOTE SPEAKERS DIRECTORY ──── */}
-            <section id="speakers" className="sc-section">
+            <section id="speakers" className="sc-section" style={{ borderTop: "1px solid var(--sc-border)" }}>
                 <div className="sc-container">
                     <div style={{ textAlign: "center", marginBottom: "30px" }} className="sc-reveal">
                         <span className="sc-eyebrow" style={{ color: "#7C9BFA" }}>
@@ -436,23 +465,96 @@ export default function ParisSeriesPage({ onAdminClick }) {
                         </p>
                     </div>
 
-                    {/* Toolbar: Search input & counter */}
-                    <div className="sc-speaker-toolbar">
-                        <div className="sc-search">
-                            <Search size={18} />
-                            <input
-                                type="text"
-                                value={speakerSearch}
-                                onChange={(e) => setSpeakerSearch(e.target.value)}
-                                placeholder="Search Paris faculty by name, topic, institution, or country..."
-                            />
+                    {/* Unified Filter Bar with Search, Country Select & Quick Chips */}
+                    <div className="sc-directory-filter-bar sc-blue-theme">
+                        <div className="sc-directory-filter-top">
+                            <div className="sc-directory-search-country">
+                                <div className="sc-search">
+                                    <Search size={18} />
+                                    <input
+                                        type="text"
+                                        value={speakerSearch}
+                                        onChange={(e) => setSpeakerSearch(e.target.value)}
+                                        placeholder="Search Paris faculty by name, topic, institution, or country..."
+                                    />
+                                </div>
+
+                                {registeredCountries.length > 0 && (
+                                    <div className="sc-country-filter-wrap">
+                                        <Globe size={16} />
+                                        <select
+                                            value={selectedCountry}
+                                            onChange={(e) => setSelectedCountry(e.target.value)}
+                                            className="sc-country-select"
+                                            title="Filter Paris faculty by country"
+                                        >
+                                            <option value="all">All Countries ({allParisSpeakers.length})</option>
+                                            {registeredCountries.map((c) => (
+                                                <option key={c.name} value={c.name}>
+                                                    {c.name} ({c.count})
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <ChevronDown size={14} className="sc-country-chevron" />
+                                    </div>
+                                )}
+
+                                {(selectedCountry !== "all" || speakerSearch || selectedTrack !== "all") && (
+                                    <button
+                                        type="button"
+                                        onClick={() => { setSelectedCountry("all"); setSpeakerSearch(""); setSelectedTrack("all"); }}
+                                        className="sc-btn sc-btn-ghost"
+                                        style={{ height: "46px", padding: "0 18px", fontSize: "13px", borderRadius: "999px" }}
+                                    >
+                                        Reset Filters
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="sc-directory-stats">
+                                <span>Showing</span>
+                                <b>{filteredParisSpeakers.length}</b>
+                                <span>Paris keynote speaker{filteredParisSpeakers.length !== 1 ? 's' : ''}</span>
+                            </div>
                         </div>
 
-                        <div style={{ fontSize: "14px", color: "var(--sc-muted)", display: "flex", alignItems: "center", gap: "8px" }}>
-                            <span>Showing</span>
-                            <b style={{ color: "#5B7CFA" }}>{filteredParisSpeakers.length}</b>
-                            <span>Paris keynote speaker{filteredParisSpeakers.length !== 1 ? 's' : ''}</span>
-                        </div>
+                        {/* Quick Country Pills Strip (Only registered Paris speakers' countries) */}
+                        {registeredCountries.length > 0 && (
+                            <div className="sc-country-chips-row sc-blue-theme" aria-label="Country Filter Quick Pills">
+                                <span className="sc-country-chips-label">Country:</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedCountry("all")}
+                                    className={`sc-country-pill ${selectedCountry === "all" ? "is-active" : ""}`}
+                                >
+                                    <Globe size={13} />
+                                    <span>All</span>
+                                    <span style={{ opacity: 0.7, fontSize: "11px" }}>({allParisSpeakers.length})</span>
+                                </button>
+                                {registeredCountries.map((c) => {
+                                    const isActive = selectedCountry.toLowerCase() === c.name.toLowerCase();
+                                    return (
+                                        <button
+                                            key={c.name}
+                                            type="button"
+                                            onClick={() => setSelectedCountry(isActive ? "all" : c.name)}
+                                            className={`sc-country-pill ${isActive ? "is-active" : ""}`}
+                                        >
+                                            {c.flagUrl && (
+                                                <img
+                                                    src={c.flagUrl}
+                                                    alt=""
+                                                    className="sc-country-pill-flag"
+                                                    loading="lazy"
+                                                />
+                                            )}
+                                            <span>{c.name}</span>
+                                            <span style={{ opacity: 0.7, fontSize: "11px" }}>({c.count})</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
 
                     {/* Speakers Grid with Call for Keynotes card */}
@@ -555,6 +657,185 @@ export default function ParisSeriesPage({ onAdminClick }) {
                                 </Link>
                             );
                         })}
+                    </div>
+                </div>
+            </section>
+
+            {/* ─── SUMMIT TRACKS & SCIENTIFIC THEMES ───────────── */}
+            <section id="tracks" className="sc-section">
+                <div className="sc-container">
+                    <div style={{ textAlign: "center", marginBottom: "40px" }} className="sc-reveal">
+                        <span className="sc-eyebrow" style={{ color: "#7C9BFA" }}>ACADEMIC THEMES & STREAMS</span>
+                        <h2 className="sc-section-title sc-display">
+                            Summit <span className="sc-blue-text">Tracks</span> & Core Focus
+                        </h2>
+                        <p className="sc-section-lead" style={{ margin: "0 auto" }}>
+                            The Paris Series brings together groundbreaking researchers and healthcare pioneers across
+                            six multidisciplinary tracks. Select your theme to submit your keynote proposal.
+                        </p>
+                    </div>
+
+                    <div className="sc-grid-3 sc-reveal">
+                        {PARIS_EVENT.tracks.map((track) => (
+                            <div key={track.id} className="sc-track-card">
+                                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
+                                    <span
+                                        style={{
+                                            fontSize: "11px",
+                                            fontWeight: 700,
+                                            letterSpacing: "0.15em",
+                                            textTransform: "uppercase",
+                                            padding: "4px 10px",
+                                            borderRadius: "999px",
+                                            background: "rgba(91, 124, 250, 0.14)",
+                                            color: "#9bb5ff",
+                                            border: "1px solid rgba(91, 124, 250, 0.3)",
+                                        }}
+                                    >
+                                        {track.tag}
+                                    </span>
+                                    <Sparkles size={16} style={{ color: "#5B7CFA" }} />
+                                </div>
+                                <h3 style={{ fontSize: "19px", lineHeight: "1.35", marginBottom: "10px", fontFamily: "var(--sc-display)" }}>
+                                    {track.title}
+                                </h3>
+                                <p style={{ color: "var(--sc-muted)", fontSize: "14.5px", lineHeight: "1.6", flex: 1 }}>
+                                    {track.desc}
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setFormData((prev) => ({ ...prev, track: track.id }));
+                                        setAbstractModalOpen(true);
+                                    }}
+                                    style={{
+                                        marginTop: "18px",
+                                        background: "none",
+                                        border: "none",
+                                        color: "#5B7CFA",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "8px",
+                                        fontSize: "13px",
+                                        fontWeight: 600,
+                                        cursor: "pointer",
+                                        padding: 0,
+                                    }}
+                                >
+                                    <span>Submit proposal for this track</span>
+                                    <ArrowRight size={14} />
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* ─── 5-DAY PARIS ACADEMIC JOURNEY ROADMAP ───────── */}
+            <section id="agenda" className="sc-section" style={{ background: "rgba(6, 10, 32, 0.45)", borderTop: "1px solid var(--sc-border)" }}>
+                <div className="sc-container">
+                    <div style={{ textAlign: "center", marginBottom: "36px" }} className="sc-reveal">
+                        <span className="sc-eyebrow" style={{ color: "#7C9BFA" }}>
+                            5-DAY EUROPEAN SUMMIT ROADMAP · MARCH 8 – 12, 2027
+                        </span>
+                        <h2 className="sc-section-title sc-display">
+                            The Paris <span className="sc-blue-text">5-Day Experience</span>
+                        </h2>
+                        <p className="sc-section-lead" style={{ margin: "0 auto" }}>
+                            Spanning five intensive days of global keynote addresses, surgical robotics masterclasses, and an evening gala on the River Seine.
+                            Select each day to preview plenary sessions, room allocations, and special events.
+                        </p>
+                    </div>
+
+                    <div className="sc-paris-agenda-wrap sc-reveal">
+                        {/* Day Selector Tabs */}
+                        <div className="sc-paris-day-tabs">
+                            {PARIS_DAYS_AGENDA.map((d) => (
+                                <button
+                                    key={d.day}
+                                    type="button"
+                                    onClick={() => setActiveParisDay(d.day)}
+                                    className={`sc-paris-day-tab ${activeParisDay === d.day ? "is-active" : ""}`}
+                                >
+                                    <span className="sc-paris-day-tab-num">Day {d.day}</span>
+                                    <span className="sc-paris-day-tab-date">{d.date.split(",")[1]?.trim() || `Day ${d.day}`}</span>
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Active Day Content */}
+                        {(() => {
+                            const cur = PARIS_DAYS_AGENDA.find((d) => d.day === activeParisDay) || PARIS_DAYS_AGENDA[0];
+                            return (
+                                <div key={cur.day} className="sc-paris-day-content">
+                                    <div className="sc-paris-day-card">
+                                        {/* Main Itinerary */}
+                                        <div className="sc-paris-day-main">
+                                            <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "4px 12px", borderRadius: "999px", background: "rgba(91, 124, 250, 0.15)", border: "1px solid rgba(91, 124, 250, 0.3)", fontSize: "11px", fontWeight: 700, letterSpacing: "0.15em", color: "#9bb5ff", marginBottom: "14px" }}>
+                                                <span>{cur.badge}</span>
+                                            </div>
+                                            <h3 style={{ fontFamily: "var(--sc-display)", fontSize: "24px", color: "#ffffff", marginBottom: "8px" }}>
+                                                {cur.title}
+                                            </h3>
+                                            <p style={{ color: "#94a3b8", fontSize: "15px", marginBottom: "20px", fontStyle: "italic" }}>
+                                                Theme: {cur.theme}
+                                            </p>
+
+                                            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginBottom: "24px" }}>
+                                                <span className="sc-meta-chip" style={{ fontSize: "13px", padding: "8px 14px" }}>
+                                                    <Calendar size={14} style={{ color: "#5B7CFA" }} />
+                                                    <span>{cur.date}</span>
+                                                </span>
+                                                <span className="sc-meta-chip" style={{ fontSize: "13px", padding: "8px 14px" }}>
+                                                    <MapPin size={14} style={{ color: "#5B7CFA" }} />
+                                                    <span>{cur.rooms}</span>
+                                                </span>
+                                            </div>
+
+                                            <h4 style={{ fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.14em", color: "#cbd5e1", fontWeight: 700, marginBottom: "12px" }}>
+                                                Program Highlights &amp; Plenaries
+                                            </h4>
+                                            <ul className="sc-check-list">
+                                                {cur.highlights.map((h, i) => (
+                                                    <li key={i}>
+                                                        <CheckCircle2 size={18} style={{ color: "#5B7CFA" }} />
+                                                        <span>{h}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+
+                                        {/* Side Card: Evening Event & Keynote Access */}
+                                        <div className="sc-paris-day-side">
+                                            <div>
+                                                <div style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.16em", color: "#7C9BFA", marginBottom: "6px" }}>
+                                                    SPECIAL EVENING SOCIAL
+                                                </div>
+                                                <h4 style={{ fontFamily: "var(--sc-display)", fontSize: "20px", color: "#ffffff", marginBottom: "12px" }}>
+                                                    {cur.eveningEvent}
+                                                </h4>
+                                                <p style={{ color: "var(--sc-muted)", fontSize: "13.5px", lineHeight: "1.6" }}>
+                                                    Exclusive for confirmed keynote faculty, advisory chairs, and accompanying delegates.
+                                                    Transportation provided from the central conference venue.
+                                                </p>
+                                            </div>
+
+                                            <div style={{ marginTop: "24px", paddingTop: "18px", borderTop: "1px solid rgba(255, 255, 255, 0.08)" }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setAbstractModalOpen(true)}
+                                                    className="sc-btn sc-btn-blue"
+                                                    style={{ width: "100%", justifyContent: "center", height: "46px", fontSize: "13.5px" }}
+                                                >
+                                                    <FileText size={15} />
+                                                    <span>Nominate / Apply to Present</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
             </section>

@@ -134,29 +134,34 @@ export default function SpeakerPortalPage({ speaker, onLogout, currentEvent }) {
     const refresh = useCallback(async () => {
         if (!isSupabaseConfigured) return;
         try {
-            const [s, f, a] = await Promise.all([fetchSpeakers(), fetchFeedback(), fetchAnnouncements()]);
+            const [s, f, a] = await Promise.all([
+                fetchSpeakers(eventConfig.slug),
+                fetchFeedback(eventConfig.slug),
+                fetchAnnouncements(eventConfig.slug),
+            ]);
             setSpeakers(s || []);
             setFeedback(f || []);
             setAnnouncements(a || []);
         } catch (err) {
             console.error("Failed to refresh data", err);
         }
-    }, []);
+    }, [eventConfig.slug]);
 
     useEffect(() => {
         if (!isSupabaseConfigured) return;
         refresh();
+        const tables = getEventTables(eventConfig.slug);
         const channel = supabase
-            .channel("speaker-portal-changes")
-            .on("postgres_changes", { event: "*", schema: "public", table: "speakers" }, refresh)
+            .channel(`speaker-portal-changes-${eventConfig.slug}`)
+            .on("postgres_changes", { event: "*", schema: "public", table: tables.speakers }, refresh)
             .on("postgres_changes", { event: "*", schema: "public", table: "feedback" }, refresh)
             .on("postgres_changes", { event: "*", schema: "public", table: "announcements" }, refresh)
-            .on("postgres_changes", { event: "*", schema: "public", table: "sessions" }, refresh)
-            .on("postgres_changes", { event: "*", schema: "public", table: "accommodations" }, refresh)
-            .on("postgres_changes", { event: "*", schema: "public", table: "attendance" }, refresh)
+            .on("postgres_changes", { event: "*", schema: "public", table: tables.sessions }, refresh)
+            .on("postgres_changes", { event: "*", schema: "public", table: tables.accommodations }, refresh)
+            .on("postgres_changes", { event: "*", schema: "public", table: tables.attendance }, refresh)
             .subscribe();
         return () => supabase.removeChannel(channel);
-    }, [refresh]);
+    }, [refresh, eventConfig.slug]);
 
     // Derived active speaker from live list or fallback to initial speaker prop
     const currentSpeaker = (speakers && speakers.length > 0
@@ -169,7 +174,7 @@ export default function SpeakerPortalPage({ speaker, onLogout, currentEvent }) {
         
         const s = speakers.find((x) => x.id === id) || currentSpeaker;
         if (!s) return;
-        const merged = { ...s, checkedIn: true, checkedInAt, concerns: notes };
+        const merged = { ...s, checkedIn: true, checkedInAt, concerns: notes, eventSlug: s.eventSlug || eventConfig.slug };
         
         if (isSupabaseConfigured && supabase) {
             try {
@@ -199,7 +204,8 @@ export default function SpeakerPortalPage({ speaker, onLogout, currentEvent }) {
             ...s, 
             checkedOut: true, 
             checkedOutAt, 
-            checkoutNotes: checkoutNotes !== undefined ? checkoutNotes : s.checkoutNotes 
+            checkoutNotes: checkoutNotes !== undefined ? checkoutNotes : s.checkoutNotes,
+            eventSlug: s.eventSlug || eventConfig.slug,
         };
 
         if (isSupabaseConfigured && supabase) {
@@ -221,7 +227,7 @@ export default function SpeakerPortalPage({ speaker, onLogout, currentEvent }) {
 
         const s = speakers.find((x) => x.id === id) || currentSpeaker;
         if (!s) return;
-        const merged = { ...s, checkedOut: false, checkedOutAt: null };
+        const merged = { ...s, checkedOut: false, checkedOutAt: null, eventSlug: s.eventSlug || eventConfig.slug };
 
         if (isSupabaseConfigured && supabase) {
             try {
@@ -239,7 +245,7 @@ export default function SpeakerPortalPage({ speaker, onLogout, currentEvent }) {
         setSpeakers((prev) => prev.map((s) => (s.id === id ? { ...s, concerns: notes } : s)));
         
         if (isSupabaseConfigured && supabase) {
-            const tables = getEventTables(speaker?.eventSlug || speaker?.event_slug);
+            const tables = getEventTables(speaker?.eventSlug || speaker?.event_slug || eventConfig.slug);
             const { error } = await supabase.from(tables.speakers).update({ concerns: notes }).eq("id", id);
             if (error) {
                 toast("Notes saved locally but failed to sync.");
@@ -250,10 +256,11 @@ export default function SpeakerPortalPage({ speaker, onLogout, currentEvent }) {
     };
 
     const addFeedback = async (entry) => {
-        setFeedback((prev) => [...prev, entry]);
+        const entryWithEvent = { ...entry, eventSlug: entry.eventSlug || eventConfig.slug };
+        setFeedback((prev) => [...prev, entryWithEvent]);
         if (isSupabaseConfigured && supabase) {
             try {
-                const { error } = await insertFeedbackRecord(entry);
+                const { error } = await insertFeedbackRecord(entryWithEvent);
                 if (error) {
                     console.error("Error inserting feedback:", error);
                     toast("Feedback saved locally.");
@@ -297,7 +304,7 @@ export default function SpeakerPortalPage({ speaker, onLogout, currentEvent }) {
                         {/* Brand Logo & Event Tag */}
                         <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
                             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-[#4457F5] via-[#3B6CF6] to-[#7A4DF0] flex items-center justify-center font-black text-white text-xs shadow-md shadow-blue-600/30">
-                                {eventConfig.slug === "paris" ? "PR" : "WL"}
+                                {eventConfig.code || "WL"}
                             </div>
                             <div>
                                 <div className="text-[9px] sm:text-[10px] font-bold tracking-[0.14em] text-[#8B9BFF] uppercase leading-none">

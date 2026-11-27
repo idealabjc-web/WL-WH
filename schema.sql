@@ -188,6 +188,9 @@ exception when duplicate_object then null; end $$;
 do $$ begin
   create policy "public update accommodations" on accommodations for update using (true);
 exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public delete accommodations" on accommodations for delete using (true);
+exception when duplicate_object then null; end $$;
 
 do $$ begin
   create policy "public read attendance" on attendance for select using (true);
@@ -329,6 +332,7 @@ alter table speakers add column if not exists abstract_url text;
 alter table speakers add column if not exists photo_url text;
 
 -- ─────────────────────────────────────────────────────────────
+-- ─────────────────────────────────────────────────────────────
 -- BUCKET 6: conference-gallery & GALLERY DATABASE TABLE
 -- ─────────────────────────────────────────────────────────────
 
@@ -393,3 +397,255 @@ do $$ begin
   create policy "allow public delete on gallery" on gallery for delete using (true);
 exception when duplicate_object then null; end $$;
 
+-- ─────────────────────────────────────────────────────────────
+-- CANADA SERIES ISOLATED TABLES
+-- ─────────────────────────────────────────────────────────────
+create table if not exists canada_speakers (
+  id text primary key,
+  name text not null,
+  email text,
+  phone text,
+  country text,
+  diet text default 'No preference',
+  allergy text,
+  tour text default 'yes',
+  concerns text,
+  qr_url text,
+  id_card_url text,
+  photo_url text,
+  abstract_status text,
+  abstract_url text,
+  whose_speaker text,
+  team text,
+  portal_token text,
+  speaker_tag text,
+  role text,
+  password_hash text,
+  id_card_position jsonb,
+  accompanying_persons jsonb,
+  event_slug text not null default 'canada',
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_canada_speakers_email on canada_speakers(email);
+create index if not exists idx_canada_speakers_event on canada_speakers(event_slug);
+
+create table if not exists canada_sessions (
+  id uuid primary key default gen_random_uuid(),
+  speaker_id text references canada_speakers(id) on delete cascade,
+  session_title text,
+  day text,
+  time_slot text,
+  conference_room text,
+  room text
+);
+
+create index if not exists idx_canada_sessions_speaker_id on canada_sessions(speaker_id);
+
+create table if not exists canada_accommodations (
+  id uuid primary key default gen_random_uuid(),
+  speaker_id text references canada_speakers(id) on delete cascade,
+  accommodation_status text,
+  checkin_date text,
+  checkout_date text,
+  nights text,
+  hotel_room text,
+  event text default 'canada'
+);
+
+create index if not exists idx_canada_accommodations_speaker_id on canada_accommodations(speaker_id);
+
+create table if not exists canada_attendance (
+  id uuid primary key default gen_random_uuid(),
+  speaker_id text references canada_speakers(id) on delete cascade,
+  checked_in boolean default false,
+  checked_in_at timestamptz,
+  checked_out boolean default false,
+  checked_out_at timestamptz,
+  checkout_notes text
+);
+
+create index if not exists idx_canada_attendance_speaker_id on canada_attendance(speaker_id);
+
+-- ─────────────────────────────────────────────────────────────
+-- JAPAN SERIES ISOLATED TABLES
+-- ─────────────────────────────────────────────────────────────
+create table if not exists japan_speakers (
+  id text primary key,
+  name text not null,
+  email text,
+  phone text,
+  country text,
+  diet text default 'No preference',
+  allergy text,
+  tour text default 'yes',
+  concerns text,
+  qr_url text,
+  id_card_url text,
+  photo_url text,
+  abstract_status text,
+  abstract_url text,
+  whose_speaker text,
+  team text,
+  portal_token text,
+  speaker_tag text,
+  role text,
+  password_hash text,
+  id_card_position jsonb,
+  accompanying_persons jsonb,
+  event_slug text not null default 'japan',
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_japan_speakers_email on japan_speakers(email);
+create index if not exists idx_japan_speakers_event on japan_speakers(event_slug);
+
+create table if not exists japan_sessions (
+  id uuid primary key default gen_random_uuid(),
+  speaker_id text references japan_speakers(id) on delete cascade,
+  session_title text,
+  day text,
+  time_slot text,
+  conference_room text,
+  room text
+);
+
+create index if not exists idx_japan_sessions_speaker_id on japan_sessions(speaker_id);
+
+create table if not exists japan_accommodations (
+  id uuid primary key default gen_random_uuid(),
+  speaker_id text references japan_speakers(id) on delete cascade,
+  accommodation_status text,
+  checkin_date text,
+  checkout_date text,
+  nights text,
+  hotel_room text,
+  event text default 'japan'
+);
+
+create index if not exists idx_japan_accommodations_speaker_id on japan_accommodations(speaker_id);
+
+create table if not exists japan_attendance (
+  id uuid primary key default gen_random_uuid(),
+  speaker_id text references japan_speakers(id) on delete cascade,
+  checked_in boolean default false,
+  checked_in_at timestamptz,
+  checked_out boolean default false,
+  checked_out_at timestamptz,
+  checkout_notes text
+);
+
+create index if not exists idx_japan_attendance_speaker_id on japan_attendance(speaker_id);
+
+alter table canada_speakers enable row level security;
+alter table canada_sessions enable row level security;
+alter table canada_accommodations enable row level security;
+alter table canada_attendance enable row level security;
+alter table japan_speakers enable row level security;
+alter table japan_sessions enable row level security;
+alter table japan_accommodations enable row level security;
+alter table japan_attendance enable row level security;
+
+do $$ begin
+  create policy "public read canada_speakers" on canada_speakers for select using (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public insert canada_speakers" on canada_speakers for insert with check (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public update canada_speakers" on canada_speakers for update using (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public delete canada_speakers" on canada_speakers for delete using (true);
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "public read canada_sessions" on canada_sessions for select using (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public insert canada_sessions" on canada_sessions for insert with check (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public update canada_sessions" on canada_sessions for update using (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public delete canada_sessions" on canada_sessions for delete using (true);
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "public read canada_accommodations" on canada_accommodations for select using (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public insert canada_accommodations" on canada_accommodations for insert with check (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public update canada_accommodations" on canada_accommodations for update using (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public delete canada_accommodations" on canada_accommodations for delete using (true);
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "public read canada_attendance" on canada_attendance for select using (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public insert canada_attendance" on canada_attendance for insert with check (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public update canada_attendance" on canada_attendance for update using (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public delete canada_attendance" on canada_attendance for delete using (true);
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "public read japan_speakers" on japan_speakers for select using (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public insert japan_speakers" on japan_speakers for insert with check (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public update japan_speakers" on japan_speakers for update using (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public delete japan_speakers" on japan_speakers for delete using (true);
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "public read japan_sessions" on japan_sessions for select using (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public insert japan_sessions" on japan_sessions for insert with check (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public update japan_sessions" on japan_sessions for update using (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public delete japan_sessions" on japan_sessions for delete using (true);
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "public read japan_accommodations" on japan_accommodations for select using (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public insert japan_accommodations" on japan_accommodations for insert with check (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public update japan_accommodations" on japan_accommodations for update using (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public delete japan_accommodations" on japan_accommodations for delete using (true);
+exception when duplicate_object then null; end $$;
+
+do $$ begin
+  create policy "public read japan_attendance" on japan_attendance for select using (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public insert japan_attendance" on japan_attendance for insert with check (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public update japan_attendance" on japan_attendance for update using (true);
+exception when duplicate_object then null; end $$;
+do $$ begin
+  create policy "public delete japan_attendance" on japan_attendance for delete using (true);
+exception when duplicate_object then null; end $$;

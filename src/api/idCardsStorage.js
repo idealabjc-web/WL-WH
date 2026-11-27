@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from "../supabaseClient";
-import { getEventTables, resolveEventFolder } from "../eventsConfig";
+import { getEventTables, resolveEventFolder, getAllEvents } from "../eventsConfig";
 
 const CACHE_KEY = "wlwh_id_cards_cache_v10";
 
@@ -113,24 +113,26 @@ export async function fetchStoredIdCards(speakers = []) {
         return null;
     };
 
-    // 1. Check dedicated 'id-cards' bucket across dubai, paris, and root
+    // 1. Check dedicated 'id-cards' bucket across all event folders and root
     try {
-        const [dubaiRes, parisRes, rootRes] = await Promise.allSettled([
-            supabase.storage.from("id-cards").list("dubai"),
-            supabase.storage.from("id-cards").list("paris"),
+        const eventSlugs = getAllEvents().map((e) => e.slug);
+        const eventFolderSet = new Set(eventSlugs);
+        const settled = await Promise.allSettled([
+            ...eventSlugs.map((slug) => supabase.storage.from("id-cards").list(slug)),
             supabase.storage.from("id-cards").list("")
         ]);
 
         const candidateFiles = [];
-        if (dubaiRes.status === "fulfilled" && Array.isArray(dubaiRes.value?.data)) {
-            dubaiRes.value.data.forEach(f => candidateFiles.push({ ...f, path: `dubai/${f.name}` }));
-        }
-        if (parisRes.status === "fulfilled" && Array.isArray(parisRes.value?.data)) {
-            parisRes.value.data.forEach(f => candidateFiles.push({ ...f, path: `paris/${f.name}` }));
-        }
+        eventSlugs.forEach((slug, idx) => {
+            const res = settled[idx];
+            if (res.status === "fulfilled" && Array.isArray(res.value?.data)) {
+                res.value.data.forEach(f => candidateFiles.push({ ...f, path: `${slug}/${f.name}` }));
+            }
+        });
+        const rootRes = settled[eventSlugs.length];
         if (rootRes.status === "fulfilled" && Array.isArray(rootRes.value?.data)) {
             rootRes.value.data.forEach(f => {
-                if (f.name !== "dubai" && f.name !== "paris") {
+                if (!eventFolderSet.has(f.name)) {
                     candidateFiles.push({ ...f, path: f.name });
                 }
             });

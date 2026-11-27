@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --ns-muted: #4d4d4d;
+}
+
+.dark {
+  --ns-muted: #8f8f8f;
+}
+
 /* ─── Portal Animation Library ───────────────────────────────── */
 
 @keyframes fadeInUp {

@@ -10,13 +10,16 @@ import HomePage from "./site/pages/HomePage";
 import HomeGalleryPage from "./site/pages/HomeGalleryPage";
 import DubaiSeriesPage from "./site/pages/DubaiSeriesPage";
 import ParisSeriesPage from "./site/pages/ParisSeriesPage";
+import CanadaSeriesPage from "./site/pages/CanadaSeriesPage";
+import JapanSeriesPage from "./site/pages/JapanSeriesPage";
 import PublicAgendaPage from "./site/pages/PublicAgendaPage";
+import TestimonialsPage from "./site/pages/TestimonialsPage";
 import SpeakerIndividualPage from "./site/pages/SpeakerIndividualPage";
 import SeriesComingSoonPage from "./site/pages/SeriesComingSoonPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import EventPortal from "./EventPortal";
 import SpeakerPortalPage from "./pages/speaker/SpeakerPortalPage";
-import { getEventConfig } from "./eventsConfig";
+import { getEventConfig, getAllEvents } from "./eventsConfig";
 
 // Include public site CSS
 import "./site/site.css";
@@ -61,9 +64,8 @@ export default function AdminApp() {
 
                         // Clean search params and navigate directly to their personalized slug
                         const speakerSlug = slugify(speakerObj.name);
-                        const isParis = speakerObj.eventSlug === "paris" || window.location.pathname.includes("paris");
-                        const seriesPath = isParis ? "paris-series" : "dubai-series";
-                        navigate(`/${seriesPath}/${speakerSlug}`, { replace: true });
+                        const evConfig = getEventConfig(speakerObj.eventSlug || window.location.pathname);
+                        navigate(`${evConfig.publicPath}/${speakerSlug}`, { replace: true });
                     }
                 } catch (err) {
                     console.error("Magic link authentication failed:", err);
@@ -115,16 +117,14 @@ export default function AdminApp() {
     // Normalize path
     const path = rawPath.toLowerCase();
 
-    // Determine effective event slug based on URL or saved state
-    let effectiveEventSlug = activeEventSlug;
-    if (path === "/admin/paris" || path.startsWith("/admin/paris/")) {
-        effectiveEventSlug = "paris";
-    } else if (path === "/admin/dubai" || path.startsWith("/admin/dubai/")) {
-        effectiveEventSlug = "dubai";
-    }
+    const allEvents = getAllEvents();
+    const matchedAdminEvent = allEvents.find(
+        (ev) => path === `/admin/${ev.slug}` || path.startsWith(`/admin/${ev.slug}/`)
+    );
+    const effectiveEventSlug = matchedAdminEvent ? matchedAdminEvent.slug : activeEventSlug;
 
     // 1. Explicit Staff / Admin Dashboard Route
-    if (path === "/admin" || path === "/admin/dubai" || path === "/admin/paris" || path === "/staff" || path === "/portal-admin") {
+    if (path === "/admin" || Boolean(matchedAdminEvent) || path === "/staff" || path === "/portal-admin") {
         if (!session || session.type !== "admin") {
             return (
                 <div className="relative">
@@ -184,27 +184,33 @@ export default function AdminApp() {
                         <span>
                             Staff / Admin: <b>{session.user?.email || session.user?.name}</b>
                         </span>
-                        <span style={{ background: "rgba(255,255,255,0.1)", padding: "2px 8px", borderRadius: "999px", fontSize: "11px", color: currentEvent.slug === "paris" ? "#93c5fd" : "#fcd34d", fontWeight: 700 }}>
+                        <span style={{ background: "rgba(255,255,255,0.1)", padding: "2px 8px", borderRadius: "999px", fontSize: "11px", color: currentEvent.badgeAccent, fontWeight: 700 }}>
                             {currentEvent.flag} {currentEvent.name}
                         </span>
                     </div>
-                    <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
-                        <button
-                            type="button"
-                            onClick={() => handleEventChange(effectiveEventSlug === "paris" ? "dubai" : "paris")}
-                            style={{
-                                color: effectiveEventSlug === "paris" ? "#fcd34d" : "#93c5fd",
-                                background: "rgba(255,255,255,0.06)",
-                                border: "1px solid rgba(255,255,255,0.15)",
-                                padding: "3px 10px",
-                                borderRadius: "6px",
-                                cursor: "pointer",
-                                fontSize: "11.5px",
-                                fontWeight: 700
-                            }}
-                        >
-                            Switch to {effectiveEventSlug === "paris" ? "🇦🇪 Dubai" : "🇫🇷 Paris"} Admin ⇄
-                        </button>
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                        {allEvents.map((ev) => {
+                            const active = ev.slug === effectiveEventSlug;
+                            return (
+                                <button
+                                    key={ev.slug}
+                                    type="button"
+                                    onClick={() => handleEventChange(ev.slug)}
+                                    style={{
+                                        color: active ? "#ffffff" : ev.badgeAccent,
+                                        background: active ? ev.accent : "rgba(255,255,255,0.06)",
+                                        border: `1px solid ${active ? ev.badgeAccent : "rgba(255,255,255,0.14)"}`,
+                                        padding: "3px 9px",
+                                        borderRadius: "6px",
+                                        cursor: "pointer",
+                                        fontSize: "11.5px",
+                                        fontWeight: 700,
+                                    }}
+                                >
+                                    {ev.flag} {ev.shortName}
+                                </button>
+                            );
+                        })}
                         <button
                             type="button"
                             onClick={() => navigate("/")}
@@ -214,17 +220,10 @@ export default function AdminApp() {
                         </button>
                         <button
                             type="button"
-                            onClick={() => navigate("/dubai-series")}
-                            style={{ color: "#93c5fd", background: "none", border: 0, cursor: "pointer", fontWeight: 600 }}
+                            onClick={() => navigate(currentEvent.publicPath)}
+                            style={{ color: currentEvent.badgeAccent, background: "none", border: 0, cursor: "pointer", fontWeight: 600 }}
                         >
-                            Dubai Series →
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => navigate("/paris-series")}
-                            style={{ color: "#60a5fa", background: "none", border: 0, cursor: "pointer", fontWeight: 600 }}
-                        >
-                            Paris Series →
+                            {currentEvent.shortName} Series →
                         </button>
                     </div>
                 </div>
@@ -251,7 +250,7 @@ export default function AdminApp() {
     }
 
     // 2. Public Read-Only Calendar Agenda Pages
-    if (path === "/agenda" || path === "/dubai-series/agenda") {
+    if (path === "/agenda") {
         return (
             <PublicAgendaPage
                 eventSlug="dubai"
@@ -260,65 +259,54 @@ export default function AdminApp() {
         );
     }
 
-    if (path === "/paris-series/agenda") {
+    const agendaEvent = allEvents.find((ev) => path === `${ev.publicPath}/agenda`);
+    if (agendaEvent) {
         return (
             <PublicAgendaPage
-                eventSlug="paris"
-                onAdminClick={() => navigate("/admin/paris")}
+                eventSlug={agendaEvent.slug}
+                onAdminClick={() => navigate(agendaEvent.adminPath)}
             />
         );
     }
 
-    // 3. Dubai Series Individual Speaker Portal: `/dubai-series/:speakerName`
-    if (path.startsWith("/dubai-series/")) {
-        const speakerSlugParam = path.replace("/dubai-series/", "").replace(/\/+$/, "");
-        if (speakerSlugParam) {
-            return (
-                <SpeakerIndividualPage
-                    eventSlug="dubai"
-                    slug={speakerSlugParam}
-                    session={session}
-                    onLogin={handleLogin}
-                    onLogout={handleLogout}
-                    onAdminClick={() => navigate("/admin/dubai")}
-                />
-            );
+    // 3. Individual Speaker Portal routes: `/:seriesSlug/:speakerName`
+    for (const ev of allEvents) {
+        const prefix = `${ev.publicPath}/`;
+        if (path.startsWith(prefix)) {
+            const speakerSlugParam = path.slice(prefix.length).replace(/\/+$/, "");
+            if (speakerSlugParam) {
+                return (
+                    <SpeakerIndividualPage
+                        eventSlug={ev.slug}
+                        slug={speakerSlugParam}
+                        session={session}
+                        onLogin={handleLogin}
+                        onLogout={handleLogout}
+                        onAdminClick={() => navigate(ev.adminPath)}
+                    />
+                );
+            }
         }
     }
 
-    // 4. Paris Series Individual Speaker Portal: `/paris-series/:speakerName`
-    if (path.startsWith("/paris-series/")) {
-        const speakerSlugParam = path.replace("/paris-series/", "").replace(/\/+$/, "");
-        if (speakerSlugParam) {
-            return (
-                <SpeakerIndividualPage
-                    eventSlug="paris"
-                    slug={speakerSlugParam}
-                    session={session}
-                    onLogin={handleLogin}
-                    onLogout={handleLogout}
-                    onAdminClick={() => navigate("/admin/paris")}
-                />
-            );
-        }
+    // 4. Live & Active Flagship Series Pages
+    if (path === "/gallery") {
+        return <HomeGalleryPage onAdminClick={() => navigate("/admin/dubai")} />;
     }
-
-    // 5. Dubai Series Flagship Page: `/dubai-series`
+    if (path === "/testimonials") {
+        return <TestimonialsPage onAdminClick={() => navigate("/admin/dubai")} />;
+    }
     if (path === "/dubai-series") {
-        return (
-            <DubaiSeriesPage
-                onAdminClick={() => navigate("/admin")}
-            />
-        );
+        return <DubaiSeriesPage onAdminClick={() => navigate("/admin/dubai")} />;
     }
-
-    // 4. Paris Series Flagship Page: `/paris-series`
     if (path === "/paris-series") {
-        return (
-            <ParisSeriesPage
-                onAdminClick={() => navigate("/admin")}
-            />
-        );
+        return <ParisSeriesPage onAdminClick={() => navigate("/admin/paris")} />;
+    }
+    if (path === "/canada-series") {
+        return <CanadaSeriesPage onAdminClick={() => navigate("/admin/canada")} />;
+    }
+    if (path === "/japan-series") {
+        return <JapanSeriesPage onAdminClick={() => navigate("/admin/japan")} />;
     }
 
     // 5. Other Series Pages: `/canada-series`, `/london-series`, etc.

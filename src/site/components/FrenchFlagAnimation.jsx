@@ -8,7 +8,7 @@ export default function FrenchFlagAnimation({ width = 320, height = 160 }) {
     return (
         <div className="sc-flag-stage" style={{ width: "fit-content", margin: "0 auto" }}>
             {/* Flag Pole with golden ball finial */}
-            <div className="sc-flag-pole">
+            <div className="sc-flag-pole" style={{ height: `${height + 32}px` }}>
                 {/* Ropes & mounting rings */}
                 <div
                     style={{

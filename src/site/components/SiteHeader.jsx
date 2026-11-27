@@ -24,31 +24,25 @@ export default function SiteHeader({ activeSeries = null, activePage = null, onA
         return () => document.removeEventListener("click", close);
     }, []);
 
+    const resolvedSeries = activeSeries || "dubai-series";
+    const seriesSpeakersHref = `/${resolvedSeries}#speakers`;
+    const seriesAgendaHref = `/${resolvedSeries}/agenda`;
+
     const handleNavigateToSpeakers = (e) => {
         e.preventDefault();
         setMobileOpen(false);
         const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
+        const targetPath = `/${resolvedSeries}`;
 
-        if (activeSeries === "paris-series" || currentPath === "/paris-series") {
+        if (currentPath === targetPath) {
             const el = document.getElementById("speakers");
             if (el) {
                 el.scrollIntoView({ behavior: "smooth", block: "start" });
-                window.history.pushState({}, "", "/paris-series#speakers");
-                return;
-            }
-            navigate("/paris-series#speakers");
-            return;
-        }
-
-        if (currentPath === "/dubai-series") {
-            const el = document.getElementById("speakers");
-            if (el) {
-                el.scrollIntoView({ behavior: "smooth", block: "start" });
-                window.history.pushState({}, "", "/dubai-series#speakers");
+                window.history.pushState({}, "", `${targetPath}#speakers`);
                 return;
             }
         }
-        navigate("/dubai-series#speakers");
+        navigate(`${targetPath}#speakers`);
     };
 
     const handleSectionNav = (hash) => (e) => {
@@ -70,6 +64,15 @@ export default function SiteHeader({ activeSeries = null, activePage = null, onA
     const handleGalleryNav = (e) => {
         e.preventDefault();
         setMobileOpen(false);
+        const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
+        if (currentPath === "/dubai-series") {
+            const el = document.getElementById("conference-gallery");
+            if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "start" });
+                window.history.pushState({}, "", "/dubai-series#conference-gallery");
+                return;
+            }
+        }
         if (!activeSeries) {
             navigate("/gallery");
             return;
@@ -149,7 +152,7 @@ export default function SiteHeader({ activeSeries = null, activePage = null, onA
                                                         {s.status === "live" ? (
                                                             <span className="sc-pill sc-pill-live">Live</span>
                                                         ) : s.status === "upcoming" ? (
-                                                            <span className="sc-pill sc-pill-upcoming">March 2027</span>
+                                                            <span className="sc-pill sc-pill-upcoming">{s.badgeLabel || "Upcoming"}</span>
                                                         ) : (
                                                             <span className="sc-pill sc-pill-soon">Soon</span>
                                                         )}
@@ -162,13 +165,9 @@ export default function SiteHeader({ activeSeries = null, activePage = null, onA
                                 </div>
                             </div>
 
-                            <a href="#partners" className="sc-nav-link" onClick={handlePartnersNav}>
-                                Supporting Partners
-                            </a>
-
                             {activeSeries && (
                                 <Link
-                                    to={activeSeries === "paris-series" ? "/paris-series#speakers" : "/dubai-series#speakers"}
+                                    to={seriesSpeakersHref}
                                     className="sc-nav-link"
                                     onClick={handleNavigateToSpeakers}
                                 >
@@ -176,13 +175,15 @@ export default function SiteHeader({ activeSeries = null, activePage = null, onA
                                 </Link>
                             )}
 
-                            <Link
-                                to={activeSeries === "paris-series" ? "/paris-series/agenda" : "/dubai-series/agenda"}
-                                className={`sc-nav-link ${activePage === "agenda" ? "is-active" : ""}`}
-                                onClick={() => setMobileOpen(false)}
-                            >
-                                Agenda
-                            </Link>
+                            {activeSeries && (
+                                <Link
+                                    to={seriesAgendaHref}
+                                    className={`sc-nav-link ${activePage === "agenda" ? "is-active" : ""}`}
+                                    onClick={() => setMobileOpen(false)}
+                                >
+                                    Agenda
+                                </Link>
+                            )}
 
                             <a
                                 href={!activeSeries ? "/gallery" : `/gallery?series=${activeSeries}`}
@@ -191,6 +192,14 @@ export default function SiteHeader({ activeSeries = null, activePage = null, onA
                             >
                                 Gallery
                             </a>
+
+                            <Link
+                                to="/testimonials"
+                                className="sc-nav-link"
+                                onClick={() => setMobileOpen(false)}
+                            >
+                                Testimonials
+                            </Link>
                         </nav>
 
                         {/* Right Action: Aeroplane Animation */}
@@ -223,9 +232,15 @@ export default function SiteHeader({ activeSeries = null, activePage = null, onA
                     <Link to="/paris-series" className="sc-nav-link" onClick={() => setMobileOpen(false)}>
                         🇫🇷 Paris Series (March 2027)
                     </Link>
+                    <Link to="/canada-series" className="sc-nav-link" onClick={() => setMobileOpen(false)}>
+                        🇨🇦 Canada Series (July 2027)
+                    </Link>
+                    <Link to="/japan-series" className="sc-nav-link" onClick={() => setMobileOpen(false)}>
+                        🇯🇵 Japan Series (Oct 2027)
+                    </Link>
 
                     <h4>Other Destinations</h4>
-                    {SERIES.filter((s) => s.slug !== "dubai-series" && s.slug !== "paris-series").map((s) => (
+                    {SERIES.filter((s) => s.status === "soon").map((s) => (
                         <Link
                             key={s.slug}
                             to={`/${s.slug}`}
@@ -242,6 +257,9 @@ export default function SiteHeader({ activeSeries = null, activePage = null, onA
                     <Link to="/paris-series#tracks" className="sc-nav-link" onClick={() => setMobileOpen(false)}>
                         Paris Summit Tracks & Focus
                     </Link>
+                    <Link to="/testimonials" className="sc-nav-link" onClick={() => setMobileOpen(false)}>
+                        Speaker Testimonials & Reviews
+                    </Link>
                     <Link to="/dubai-series#event-details" className="sc-nav-link" onClick={handleSectionNav("event-details")}>
                         Event Details & What's Provided
                     </Link>
@@ -250,7 +268,7 @@ export default function SiteHeader({ activeSeries = null, activePage = null, onA
                     </Link>
                     {activeSeries && (
                         <Link
-                            to={activeSeries === "paris-series" ? "/paris-series#speakers" : "/dubai-series#speakers"}
+                            to={seriesSpeakersHref}
                             className="sc-nav-link"
                             onClick={handleNavigateToSpeakers}
                         >
@@ -264,13 +282,12 @@ export default function SiteHeader({ activeSeries = null, activePage = null, onA
                     >
                         Agenda
                     </Link>
-                    <a
-                        href={!activeSeries ? "/gallery" : `/gallery?series=${activeSeries}`}
-                        className="sc-nav-link"
-                        onClick={handleGalleryNav}
-                    >
-                        Gallery
-                    </a>
+                    <Link to="/dubai-series#conference-gallery" className="sc-nav-link" onClick={handleSectionNav("conference-gallery")}>
+                        Conference Gallery
+                    </Link>
+                    <Link to="/dubai-series#gallery" className="sc-nav-link" onClick={handleSectionNav("gallery")}>
+                        Experience Gallery
+                    </Link>
                     <a href="#partners" className="sc-nav-link" onClick={handlePartnersNav}>
                         Supporting Partners
                     </a>

@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" width="1200" height="720">
+  <defs>
+    <linearGradient id="kyotoSky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#090b20"/>
+      <stop offset="55%" stop-color="#28102f"/>
+      <stop offset="100%" stop-color="#4c1130"/>
+    </linearGradient>
+    <linearGradient id="lake" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#22102c"/>
+      <stop offset="100%" stop-color="#050715"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="720" fill="url(#kyotoSky)"/>
+  <circle cx="600" cy="285" r="145" fill="#fb7185" opacity="0.22"/>
+  <circle cx="600" cy="285" r="85" fill="#fda4af" opacity="0.4"/>
+  <!-- Misty mountains -->
+  <path d="M 0 460 Q 250 320 520 420 T 1200 390 L 1200 490 L 0 490 Z" fill="#140c26"/>
+  <!-- Torii Gate -->
+  <g transform="translate(425,215)" fill="#e11d48">
+    <path d="M 0 35 Q 175 55 350 35 L 340 58 Q 175 74 10 58 Z"/>
+    <rect x="35" y="92" width="280" height="18" rx="4"/>
+    <rect x="65" y="55" width="28" height="225"/>
+    <rect x="257" y="55" width="28" height="225"/>
+    <rect x="163" y="56" width="24" height="44" fill="#9f1239"/>
+  </g>
+  <!-- Water reflection -->
+  <rect x="0" y="485" width="1200" height="235" fill="url(#lake)"/>
+  <g fill="#e11d48" opacity="0.25">
+    <rect x="490" y="505" width="28" height="150"/>
+    <rect x="682" y="505" width="28" height="150"/>
+    <ellipse cx="600" cy="560" rx="140" ry="12" fill="#fda4af" opacity="0.22"/>
+  </g>
+</svg>
+

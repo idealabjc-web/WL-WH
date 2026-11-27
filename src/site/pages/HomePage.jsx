@@ -132,22 +132,22 @@ export default function HomePage({ onAdminClick }) {
                             "KEYNOTE SESSIONS",
                             "PARIS SERIES · MARCH 2027",
                             "VERIFIED SPEAKER PORTAL",
-                            "CANADA SERIES · SUMMER 2027",
+                            "CANADA SERIES · JULY 2027",
                             "GLOBAL RESEARCH & INNOVATION",
-                            "LONDON SERIES · AUTUMN 2027",
+                            "JAPAN SERIES · OCT 2027",
                             "NETWORKING EXCELLENCE",
-                            "SINGAPORE SERIES · WINTER 2027",
+                            "LONDON SERIES · AUTUMN 2027",
                             "TAMPER-PROOF CERTOPUS CERTIFICATE",
                         ].concat([
                             "DUBAI SERIES · NOV 25–26, 2026",
                             "KEYNOTE SESSIONS",
                             "PARIS SERIES · MARCH 2027",
                             "VERIFIED SPEAKER PORTAL",
-                            "CANADA SERIES · SUMMER 2027",
+                            "CANADA SERIES · JULY 2027",
                             "GLOBAL RESEARCH & INNOVATION",
-                            "LONDON SERIES · AUTUMN 2027",
+                            "JAPAN SERIES · OCT 2027",
                             "NETWORKING EXCELLENCE",
-                            "SINGAPORE SERIES · WINTER 2027",
+                            "LONDON SERIES · AUTUMN 2027",
                             "TAMPER-PROOF CERTOPUS CERTIFICATE",
                         ]).map((text, i) => (
                             <div key={i} className="sc-ticker-item">
@@ -210,7 +210,7 @@ export default function HomePage({ onAdminClick }) {
                                 <div className="sc-series-top">
                                     <span className="sc-series-flag">{s.flag}</span>
                                     {s.status === "upcoming" ? (
-                                        <span className="sc-pill sc-pill-upcoming">March 2027</span>
+                                        <span className="sc-pill sc-pill-upcoming">{s.badgeLabel || "Upcoming"}</span>
                                     ) : (
                                         <span className="sc-pill sc-pill-soon">Coming Soon</span>
                                     )}

@@ -14,7 +14,7 @@ import { TIME_SLOTS, EVENT_DAYS, generatePortalToken, uploadSpeakerAbstract, upl
 import { supabase } from "../supabaseClient";
 import * as XLSX from "xlsx-js-style";
 import { slugify } from "../site/publicApi";
-import { getEventTables } from "../eventsConfig";
+import { getEventTables, getEventConfig } from "../eventsConfig";
 
 
 
@@ -255,7 +255,7 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
         }
 
         const speakerSlug = slugify(speaker.name || speaker.id);
-        const seriesSlug = (speaker.eventSlug === "paris" || currentEvent?.slug === "paris") ? "paris-series" : "dubai-series";
+        const seriesSlug = getEventConfig(speaker.eventSlug || currentEvent?.slug).seriesSlug;
         const link = `${window.location.origin}/${seriesSlug}/${speakerSlug}?s=${speaker.id}&t=${token}`;
         navigator.clipboard.writeText(link).then(() => {
             alert("Speaker portal link copied to clipboard:\n" + link);
@@ -430,8 +430,9 @@ function SpeakerDetail({ speaker, onClose, onUpdate, onDelete, onUndoCheckout, o
                                 <label className="text-xs font-semibold text-slate-700">Viewing Room</label>
                                 <select className={inputCls} value={viewRoom} onChange={(e) => setViewRoom(e.target.value)}>
                                     <option value="">Select Room...</option>
-                                    <option value="Room 1">Room 1</option>
-                                    <option value="Room 2">Room 2</option>
+                                    {(currentEvent?.rooms?.length ? currentEvent.rooms : ["Room 1", "Room 2"]).map(r => (
+                                        <option key={r} value={r}>{r}</option>
+                                    ))}
                                 </select>
                             </div>
                         </div>

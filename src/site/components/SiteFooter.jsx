@@ -40,7 +40,7 @@ export default function SiteFooter({ onAdminClick }) {
                                         {s.status === "live" ? (
                                             <span className="sc-pill sc-pill-live" style={{ padding: "1px 6px", fontSize: "9px" }}>Live</span>
                                         ) : s.status === "upcoming" ? (
-                                            <span className="sc-pill sc-pill-upcoming" style={{ padding: "1px 6px", fontSize: "9px" }}>March 2027</span>
+                                            <span className="sc-pill sc-pill-upcoming" style={{ padding: "1px 6px", fontSize: "9px" }}>{s.badgeLabel || "Upcoming"}</span>
                                         ) : null}
                                     </Link>
                                 </li>
@@ -93,7 +93,7 @@ export default function SiteFooter({ onAdminClick }) {
                         © {new Date().getFullYear()} Speaker Chapters Inc. All rights reserved.
                     </div>
                     <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
-                        <span>Dubai · Paris · Toronto · London · Singapore</span>
+                        <span>Dubai · Paris · Toronto · Tokyo · London · Singapore</span>
                         <button
                             type="button"
                             onClick={scrollToTop}

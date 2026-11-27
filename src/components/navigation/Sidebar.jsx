@@ -2,6 +2,7 @@ import React from "react";
 import {
     Menu, X, PanelLeftClose, PanelLeft
 } from "lucide-react";
+import { getAllEvents } from "../../eventsConfig";
 
 export default function Sidebar({
     tabs,
@@ -15,7 +16,7 @@ export default function Sidebar({
     onEventChange,
 }) {
     const showExpanded = !collapsed || mobileOpen;
-    const isParis = currentEvent?.slug === "paris";
+    const allEvents = getAllEvents();
 
     return (
         <>
@@ -43,14 +44,14 @@ export default function Sidebar({
                     {showExpanded ? (
                         <>
                             <div className="flex items-center gap-3 overflow-hidden">
-                                <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${isParis ? "from-blue-500 to-indigo-600" : "from-amber-400 to-amber-600"} flex items-center justify-center font-bold text-white text-sm shadow-md shrink-0`}>
-                                    {isParis ? "PR" : "WL"}
+                                <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${currentEvent?.badgeGradient || "from-amber-400 to-amber-600"} flex items-center justify-center font-bold text-white text-sm shadow-md shrink-0`}>
+                                    {currentEvent?.code || "WL"}
                                 </div>
                                 <div className="min-w-0">
                                     <div className="font-bold text-sm text-slate-800 dark:text-slate-100 tracking-tight truncate">
                                         Admin Portal
                                     </div>
-                                    <div className={`text-[10px] ${isParis ? "text-blue-500" : "text-amber-500"} font-semibold tracking-wide uppercase truncate flex items-center gap-1`}>
+                                    <div className="text-[10px] font-semibold tracking-wide uppercase truncate flex items-center gap-1" style={{ color: currentEvent?.badgeAccent || "#f59e0b" }}>
                                         <span>{currentEvent?.flag || "🇦🇪"}</span>
                                         <span>{currentEvent?.shortName || "Dubai"} Ops</span>
                                     </div>
@@ -101,33 +102,27 @@ export default function Sidebar({
                             <span>Active Summit</span>
                             <span className="text-[9px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.2 rounded">Live</span>
                         </div>
-                        <div className="p-1 rounded-xl bg-slate-100 dark:bg-slate-900 flex items-center gap-1 border border-slate-200/80 dark:border-slate-800">
-                            <button
-                                type="button"
-                                onClick={() => onEventChange && onEventChange("dubai")}
-                                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-bold transition-all ${
-                                    !isParis
-                                        ? "bg-amber-500 text-white shadow-xs"
-                                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                                }`}
-                                title="Switch to Dubai Series"
-                            >
-                                <span>🇦🇪</span>
-                                <span className="truncate">Dubai</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => onEventChange && onEventChange("paris")}
-                                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-bold transition-all ${
-                                    isParis
-                                        ? "bg-blue-600 text-white shadow-xs"
-                                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                                }`}
-                                title="Switch to Paris Series"
-                            >
-                                <span>🇫🇷</span>
-                                <span className="truncate">Paris</span>
-                            </button>
+                        <div className="p-1 rounded-xl bg-slate-100 dark:bg-slate-900 grid grid-cols-2 gap-1 border border-slate-200/80 dark:border-slate-800">
+                            {allEvents.map((ev) => {
+                                const active = currentEvent?.slug === ev.slug;
+                                return (
+                                    <button
+                                        key={ev.slug}
+                                        type="button"
+                                        onClick={() => onEventChange && onEventChange(ev.slug)}
+                                        className={`flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-xs font-bold transition-all ${
+                                            active
+                                                ? "text-white shadow-xs"
+                                                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                                        }`}
+                                        style={active ? { backgroundColor: ev.accent } : undefined}
+                                        title={`Switch to ${ev.name}`}
+                                    >
+                                        <span>{ev.flag}</span>
+                                        <span className="truncate">{ev.shortName}</span>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 )}

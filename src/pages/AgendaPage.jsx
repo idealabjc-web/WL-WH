@@ -75,7 +75,7 @@ export default function AgendaPage({ speakers = [], onUpdate, onRefresh, toast, 
     const handleClearAllSlots = async () => {
         setResettingSlots(true);
         try {
-            const res = await clearAllSessionSlots();
+            const res = await clearAllSessionSlots(currentEvent?.slug || "dubai");
             if (res.success) {
                 toast("All speaker slots have been cleared. Session titles & details are preserved.");
                 setShowResetConfirm(false);

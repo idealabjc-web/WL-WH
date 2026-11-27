@@ -1,0 +1,262 @@
+/* ─────────────────────────────────────────────────────────────
+   3D Luxury Flipping Card Countdown Timer Styles
+   ───────────────────────────────────────────────────────────── */
+
+.sc-cards-timer-grid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin: 18px 0 14px;
+  user-select: none;
+  perspective: 1000px;
+}
+
+/* Individual Unit (Card + Sub-label) */
+.sc-card-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  max-width: 108px;
+}
+
+/* 3D Perspective Stage */
+.sc-card-stage {
+  width: 100%;
+  height: 84px;
+  perspective: 700px;
+}
+
+/* 3D Flipping Card Face */
+.sc-card-face {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-style: preserve-3d;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Active 3D Flip Keyframe Animation */
+.sc-card-face.is-flipping {
+  animation: sc-3d-card-flip 0.52s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes sc-3d-card-flip {
+  0% {
+    transform: rotateX(0deg);
+    filter: brightness(1);
+  }
+  45% {
+    transform: rotateX(-90deg) scale(0.96);
+    filter: brightness(0.5);
+  }
+  55% {
+    transform: rotateX(90deg) scale(0.96);
+    filter: brightness(0.65);
+  }
+  82% {
+    transform: rotateX(-6deg) scale(1.02);
+    filter: brightness(1.15);
+  }
+  100% {
+    transform: rotateX(0deg) scale(1);
+    filter: brightness(1);
+  }
+}
+
+/* Card Digits - 100% Crisp, Intact & Centered */
+.sc-card-digit {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.sc-card-digit span {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+  font-size: 38px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  display: inline-block;
+}
+
+/* Top Glass Glare Reflection */
+.sc-card-glare {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 48%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.02) 80%, transparent 100%);
+  border-top-left-radius: 15px;
+  border-top-right-radius: 15px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Bottom Specular Bevel Line */
+.sc-card-bevel {
+  position: absolute;
+  bottom: 0;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* Sub-labels (DAYS, HOURS, MINUTES, SECONDS) */
+.sc-card-label {
+  display: block;
+  margin-top: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+/* Colon Separator */
+.sc-card-colon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 2px;
+  margin-bottom: 22px;
+}
+
+.sc-colon-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  animation: sc-colon-pulse 2s ease-in-out infinite;
+}
+
+@keyframes sc-colon-pulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   DUBAI GOLD EDITION THEME
+   ───────────────────────────────────────────────────────────── */
+.sc-card-gold .sc-card-face {
+  background: linear-gradient(160deg, #1c182a 0%, #0d0a14 70%, #06040a 100%);
+  border: 1px solid rgba(226, 184, 92, 0.35);
+  box-shadow: 0 18px 36px -10px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 20px -5px rgba(226, 184, 92, 0.18);
+}
+
+.sc-card-gold .sc-card-digit span {
+  background: linear-gradient(180deg, #ffffff 0%, #f7e5b2 45%, #e2b85c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 10px rgba(226, 184, 92, 0.35));
+}
+
+.sc-card-gold .sc-card-bevel {
+  background: linear-gradient(90deg, transparent, rgba(226, 184, 92, 0.5), transparent);
+}
+
+.sc-card-gold .sc-card-label {
+  color: #d1b473;
+}
+
+.sc-cards-gold .sc-colon-dot {
+  background: #e2b85c;
+  box-shadow: 0 0 10px rgba(226, 184, 92, 0.8);
+}
+
+.sc-card-gold .sc-card-face.is-flipping {
+  box-shadow: 0 22px 50px -10px rgba(0, 0, 0, 0.95), 0 0 35px 2px rgba(226, 184, 92, 0.45);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   PARIS SAPPHIRE EDITION THEME
+   ───────────────────────────────────────────────────────────── */
+.sc-card-blue .sc-card-face {
+  background: linear-gradient(160deg, #121c45 0%, #080d22 70%, #040714 100%);
+  border: 1px solid rgba(91, 124, 250, 0.4);
+  box-shadow: 0 18px 36px -10px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 22px -5px rgba(91, 124, 250, 0.22);
+}
+
+.sc-card-blue .sc-card-digit span {
+  background: linear-gradient(180deg, #ffffff 0%, #c9dbff 45%, #7C9BFA 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 10px rgba(91, 124, 250, 0.4));
+}
+
+.sc-card-blue .sc-card-bevel {
+  background: linear-gradient(90deg, transparent, rgba(91, 124, 250, 0.55), transparent);
+}
+
+.sc-card-blue .sc-card-label {
+  color: #8da4ff;
+}
+
+.sc-cards-blue .sc-colon-dot {
+  background: #5B7CFA;
+  box-shadow: 0 0 10px rgba(91, 124, 250, 0.85);
+}
+
+.sc-card-blue .sc-card-face.is-flipping {
+  box-shadow: 0 22px 50px -10px rgba(0, 0, 0, 0.95), 0 0 35px 2px rgba(91, 124, 250, 0.5);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Responsive Scaling
+   ───────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .sc-cards-timer-grid {
+    gap: 8px;
+    margin: 14px 0 10px;
+  }
+
+  .sc-card-stage {
+    height: 68px;
+  }
+
+  .sc-card-face {
+    border-radius: 12px;
+  }
+
+  .sc-card-digit span {
+    font-size: 28px;
+  }
+
+  .sc-card-label {
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
+    margin-top: 7px;
+  }
+
+  .sc-card-colon {
+    gap: 6px;
+    margin-bottom: 18px;
+  }
+
+  .sc-colon-dot {
+    width: 4px;
+    height: 4px;
+  }
+}

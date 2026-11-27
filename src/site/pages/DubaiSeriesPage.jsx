@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { Link, navigate } from "../router";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 import DubaiFlagAnimation from "../components/DubaiFlagAnimation";
+import { VaporCountdown } from "@/components/ui/countdown-vapor-digits";
+import DubaiTestimonialsSection from "../components/DubaiTestimonialsSection";
+import SpeakerFolderGallery from "../components/SpeakerFolderGallery";
 import { DUBAI_EVENT, BRAND } from "../seriesData";
 import { fetchPublicSpeakers, speakerSlug } from "../publicApi";
 import { fetchGalleryItems } from "../../api/galleryApi";
@@ -34,6 +37,8 @@ import {
     Image as ImageIcon,
     Film,
     RefreshCw,
+    Globe,
+    ChevronDown,
 } from "lucide-react";
 
 // Icon lookup for the "What is Provided" cards
@@ -52,13 +57,12 @@ export default function DubaiSeriesPage({ onAdminClick }) {
     const [speakers, setSpeakers] = useState([]);
     const [loadingSpeakers, setLoadingSpeakers] = useState(true);
     const [search, setSearch] = useState("");
+    const [selectedCountry, setSelectedCountry] = useState("all");
     const [lightboxImage, setLightboxImage] = useState(null);
 
     // Conference Gallery state
     const [galleryItems, setGalleryItems] = useState([]);
     const [loadingGallery, setLoadingGallery] = useState(true);
-    const [galleryCategory, setGalleryCategory] = useState("all");
-    const [galleryMediaType, setGalleryMediaType] = useState("all");
 
     // Event countdown timer to Nov 25, 2026
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
@@ -162,15 +166,41 @@ export default function DubaiSeriesPage({ onAdminClick }) {
         return () => observer.disconnect();
     }, []);
 
-    const filteredSpeakers = speakers.filter((s) => {
-        const q = search.toLowerCase().trim();
-        if (!q) return true;
-        return (
-            s.name.toLowerCase().includes(q) ||
-            (s.talk && s.talk.toLowerCase().includes(q)) ||
-            (s.country && s.country.toLowerCase().includes(q))
-        );
-    });
+    // Extract countries only from registered speakers
+    const registeredCountries = useMemo(() => {
+        const counts = {};
+        speakers.forEach((s) => {
+            const raw = s.country ? s.country.trim() : "";
+            if (raw) {
+                counts[raw] = (counts[raw] || 0) + 1;
+            }
+        });
+        return Object.keys(counts)
+            .sort((a, b) => a.localeCompare(b))
+            .map((name) => ({
+                name,
+                count: counts[name],
+                flagUrl: getCountryFlagUrl(name, "w40")
+            }));
+    }, [speakers]);
+
+    const filteredSpeakers = useMemo(() => {
+        return speakers.filter((s) => {
+            if (selectedCountry !== "all") {
+                const spkCountry = (s.country || "").trim().toLowerCase();
+                if (spkCountry !== selectedCountry.toLowerCase()) {
+                    return false;
+                }
+            }
+            const q = search.toLowerCase().trim();
+            if (!q) return true;
+            return (
+                s.name.toLowerCase().includes(q) ||
+                (s.talk && s.talk.toLowerCase().includes(q)) ||
+                (s.country && s.country.toLowerCase().includes(q))
+            );
+        });
+    }, [speakers, selectedCountry, search]);
 
     return (
         <div ref={pageRef} className="sc-site sc-page">
@@ -196,7 +226,7 @@ export default function DubaiSeriesPage({ onAdminClick }) {
                                 <i style={{ background: "#000000" }} />
                             </div>
 
-                            <span className="sc-eyebrow">SPEAKER CHAPTERS · FLAGSHIP EDITION</span>
+                            <span className="sc-eyebrow">SPEAKER CHAPTERS</span>
 
                             <h1 className="sc-hero-title sc-display" style={{ margin: "14px 0 0", fontSize: "clamp(42px, 6vw, 76px)" }}>
                                 Dubai Series <span className="sc-gold-text">2026</span>
@@ -218,23 +248,32 @@ export default function DubaiSeriesPage({ onAdminClick }) {
                                 </div>
                             </div>
 
-                            {/* Live Countdown to Event */}
-                            <div className="sc-countdown">
-                                <div className="sc-cd-box">
-                                    <b className="sc-gold-text">{timeLeft.days}</b>
-                                    <span>Days</span>
+                            {/* Ultra-Luxury Dubai Horology Timer */}
+                            <div className="sc-dubai-timer">
+                                <div className="sc-dubai-timer-header">
+                                    <div className="sc-dubai-timer-badge">
+                                        <span className="sc-dubai-timer-beacon" />
+                                        <span>Official Countdown · Live</span>
+                                    </div>
+                                    <div className="sc-dubai-timer-target">
+                                        November 25, 2026
+                                    </div>
                                 </div>
-                                <div className="sc-cd-box">
-                                    <b>{String(timeLeft.hours).padStart(2, "0")}</b>
-                                    <span>Hours</span>
+
+                                <div className="flex justify-center items-center py-4 my-1 w-full" style={{ color: "#f7e5b2" }}>
+                                    <VaporCountdown
+                                        targetDate="2026-11-25T09:00:00"
+                                        labels={["DAYS", "HOURS", "MINS", "SECS"]}
+                                        className="text-amber-200"
+                                    />
                                 </div>
-                                <div className="sc-cd-box">
-                                    <b>{String(timeLeft.mins).padStart(2, "0")}</b>
-                                    <span>Minutes</span>
-                                </div>
-                                <div className="sc-cd-box">
-                                    <b>{String(timeLeft.secs).padStart(2, "0")}</b>
-                                    <span>Seconds</span>
+
+                                <div className="sc-dubai-timer-footer">
+                                    <span>
+                                        <MapPin size={13} style={{ color: "var(--sc-gold)" }} />
+                                        <span>Le Méridien Dubai Hotel & Conference Centre</span>
+                                    </span>
+                                    <span>United Arab Emirates 🇦🇪</span>
                                 </div>
                             </div>
 
@@ -318,23 +357,96 @@ export default function DubaiSeriesPage({ onAdminClick }) {
                         </p>
                     </div>
 
-                    {/* Toolbar: Search input & counter */}
-                    <div className="sc-speaker-toolbar">
-                        <div className="sc-search">
-                            <Search size={18} />
-                            <input
-                                type="text"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Search by speaker name, topic, or country..."
-                            />
+                    {/* Unified Filter Bar with Search, Country Select & Quick Chips */}
+                    <div className="sc-directory-filter-bar">
+                        <div className="sc-directory-filter-top">
+                            <div className="sc-directory-search-country">
+                                <div className="sc-search">
+                                    <Search size={18} />
+                                    <input
+                                        type="text"
+                                        value={search}
+                                        onChange={(e) => setSearch(e.target.value)}
+                                        placeholder="Search by speaker name, topic, or country..."
+                                    />
+                                </div>
+
+                                {registeredCountries.length > 0 && (
+                                    <div className="sc-country-filter-wrap">
+                                        <Globe size={16} />
+                                        <select
+                                            value={selectedCountry}
+                                            onChange={(e) => setSelectedCountry(e.target.value)}
+                                            className="sc-country-select"
+                                            title="Filter directory by country"
+                                        >
+                                            <option value="all">All Countries ({speakers.length})</option>
+                                            {registeredCountries.map((c) => (
+                                                <option key={c.name} value={c.name}>
+                                                    {c.name} ({c.count})
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <ChevronDown size={14} className="sc-country-chevron" />
+                                    </div>
+                                )}
+
+                                {(selectedCountry !== "all" || search) && (
+                                    <button
+                                        type="button"
+                                        onClick={() => { setSelectedCountry("all"); setSearch(""); }}
+                                        className="sc-btn sc-btn-ghost"
+                                        style={{ height: "46px", padding: "0 18px", fontSize: "13px", borderRadius: "999px" }}
+                                    >
+                                        Reset Filters
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="sc-directory-stats">
+                                <span>Showing</span>
+                                <b>{filteredSpeakers.length}</b>
+                                <span>of {speakers.length} confirmed speakers</span>
+                            </div>
                         </div>
 
-                        <div style={{ fontSize: "14px", color: "var(--sc-muted)", display: "flex", alignItems: "center", gap: "8px" }}>
-                            <span>Showing</span>
-                            <b style={{ color: "var(--sc-gold)" }}>{filteredSpeakers.length}</b>
-                            <span>of {speakers.length} confirmed speakers</span>
-                        </div>
+                        {/* Quick Country Pills Strip (Only registered speakers' countries) */}
+                        {registeredCountries.length > 0 && (
+                            <div className="sc-country-chips-row" aria-label="Country Filter Quick Pills">
+                                <span className="sc-country-chips-label">Country:</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedCountry("all")}
+                                    className={`sc-country-pill ${selectedCountry === "all" ? "is-active" : ""}`}
+                                >
+                                    <Globe size={13} />
+                                    <span>All</span>
+                                    <span style={{ opacity: 0.7, fontSize: "11px" }}>({speakers.length})</span>
+                                </button>
+                                {registeredCountries.map((c) => {
+                                    const isActive = selectedCountry.toLowerCase() === c.name.toLowerCase();
+                                    return (
+                                        <button
+                                            key={c.name}
+                                            type="button"
+                                            onClick={() => setSelectedCountry(isActive ? "all" : c.name)}
+                                            className={`sc-country-pill ${isActive ? "is-active" : ""}`}
+                                        >
+                                            {c.flagUrl && (
+                                                <img
+                                                    src={c.flagUrl}
+                                                    alt=""
+                                                    className="sc-country-pill-flag"
+                                                    loading="lazy"
+                                                />
+                                            )}
+                                            <span>{c.name}</span>
+                                            <span style={{ opacity: 0.7, fontSize: "11px" }}>({c.count})</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
 
                     {/* Speaker Cards Grid */}
@@ -347,15 +459,15 @@ export default function DubaiSeriesPage({ onAdminClick }) {
                     ) : filteredSpeakers.length === 0 ? (
                         <div className="sc-empty">
                             <Users size={36} style={{ color: "var(--sc-gold)", margin: "0 auto 12px" }} />
-                            <h3>No speakers match "{search}"</h3>
-                            <p>Try searching with another keyword or clear the search input.</p>
+                            <h3>No speakers match {selectedCountry !== "all" && search ? `"${search}" in ${selectedCountry}` : selectedCountry !== "all" ? `country "${selectedCountry}"` : `"${search}"`}</h3>
+                            <p>Try searching with another keyword or clear the active filters.</p>
                             <button
                                 type="button"
-                                onClick={() => setSearch("")}
+                                onClick={() => { setSearch(""); setSelectedCountry("all"); }}
                                 className="sc-btn sc-btn-ghost"
                                 style={{ marginTop: "16px", height: "40px", padding: "0 20px", fontSize: "13px" }}
                             >
-                                Clear Search
+                                Clear Filters
                             </button>
                         </div>
                     ) : (
@@ -422,6 +534,9 @@ export default function DubaiSeriesPage({ onAdminClick }) {
                     )}
                 </div>
             </section>
+
+            {/* ─── VOICES FROM DUBAI SERIES 2026 TESTIMONIALS ──── */}
+            <DubaiTestimonialsSection />
 
             {/* ─── ABOUT THE EVENT ─────────────────────────────── */}
             <section id="event-details" className="sc-section">
@@ -681,211 +796,25 @@ export default function DubaiSeriesPage({ onAdminClick }) {
             {/* ─── CONFERENCE MEDIA GALLERY (UPLOADED BY STAFF) ─── */}
             <section id="conference-gallery" className="sc-section" style={{ background: "rgba(11, 16, 48, 0.45)" }}>
                 <div className="sc-container">
-                    <div style={{ textAlign: "center", marginBottom: "32px" }} className="sc-reveal">
-                        <span className="sc-eyebrow">CONFERENCE HIGHLIGHTS</span>
+                    <div style={{ textAlign: "center", marginBottom: "36px" }} className="sc-reveal">
+                        <span className="sc-eyebrow">CONFERENCE HIGHLIGHTS & SPEAKERS ALBUMS</span>
                         <h2 className="sc-section-title sc-display">
                             Dubai Series <span className="sc-gold-text">Conference Gallery</span>
                         </h2>
-                        <p className="sc-section-lead" style={{ margin: "0 auto" }}>
-                            Relive keynotes, panel discussions, networking moments, and the Day 3 Tour. Filter by day or media type below.
+                        <p className="sc-section-lead" style={{ margin: "0 auto", maxWidth: "680px" }}>
+                            Each keynote speaker has a dedicated photo album folder. Click on any speaker's card below to explore and download their on-stage keynote and award moments.
                         </p>
                     </div>
 
-                    {/* Category & Media Type Filter Buttons */}
-                    {(() => {
-                        const GALLERY_TABS = [
-                            { id: "all", label: "All" },
-                            { id: "day1", label: "Day 1" },
-                            { id: "day2", label: "Day 2" },
-                            { id: "day3_tour", label: "Day 3 Tour" },
-                            { id: "other", label: "Other / All Categories" },
-                        ];
-
-                        const matchCat = (cat, target) => {
-                            if (target === "all") return true;
-                            if (target === "day3_tour") return cat === "day3_tour" || cat === "day3" || cat === "tour";
-                            return cat === target;
-                        };
-
-                        const filteredGallery = galleryItems.filter((item) => {
-                            const catMatch = matchCat(item.category, galleryCategory);
-                            const typeMatch = galleryMediaType === "all" || item.media_type === galleryMediaType;
-                            return catMatch && typeMatch;
-                        });
-
-                        return (
-                            <>
-                                <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "28px" }}>
-                                    {/* Day / Category Buttons */}
-                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                                        {GALLERY_TABS.map((t) => {
-                                            const count = t.id === "all"
-                                                ? galleryItems.length
-                                                : galleryItems.filter((i) => matchCat(i.category, t.id)).length;
-                                            const isActive = galleryCategory === t.id;
-                                            return (
-                                                <button
-                                                    key={t.id}
-                                                    type="button"
-                                                    onClick={() => setGalleryCategory(t.id)}
-                                                    style={{
-                                                        padding: "8px 16px",
-                                                        borderRadius: "999px",
-                                                        fontSize: "13px",
-                                                        fontWeight: 600,
-                                                        cursor: "pointer",
-                                                        transition: "all 0.2s",
-                                                        border: isActive ? "1px solid var(--sc-gold)" : "1px solid rgba(255,255,255,0.16)",
-                                                        background: isActive ? "var(--sc-gold)" : "rgba(255,255,255,0.06)",
-                                                        color: isActive ? "#0b1030" : "#e2e8f0",
-                                                    }}
-                                                >
-                                                    {t.label} ({count})
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-
-                                    {/* Photo / Video Filter Buttons + Refresh */}
-                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                        <div style={{ display: "flex", gap: "6px", background: "rgba(255,255,255,0.06)", padding: "4px", borderRadius: "999px", border: "1px solid rgba(255,255,255,0.12)" }}>
-                                            {[
-                                                { id: "all", label: "All Media" },
-                                                { id: "photo", label: "Photos" },
-                                                { id: "video", label: "Videos" },
-                                            ].map((mt) => {
-                                                const active = galleryMediaType === mt.id;
-                                                return (
-                                                    <button
-                                                        key={mt.id}
-                                                        type="button"
-                                                        onClick={() => setGalleryMediaType(mt.id)}
-                                                        style={{
-                                                            padding: "6px 14px",
-                                                            borderRadius: "999px",
-                                                            fontSize: "12px",
-                                                            fontWeight: 600,
-                                                            cursor: "pointer",
-                                                            border: "none",
-                                                            background: active ? "rgba(255,255,255,0.18)" : "transparent",
-                                                            color: active ? "#fff" : "#94a3b8",
-                                                        }}
-                                                    >
-                                                        {mt.label}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-
-                                        <button
-                                            type="button"
-                                            onClick={loadConferenceGallery}
-                                            disabled={loadingGallery}
-                                            title="Refresh gallery"
-                                            style={{
-                                                display: "inline-flex",
-                                                alignItems: "center",
-                                                justifyContent: "center",
-                                                width: "34px",
-                                                height: "34px",
-                                                borderRadius: "999px",
-                                                border: "1px solid rgba(255,255,255,0.16)",
-                                                background: "rgba(255,255,255,0.06)",
-                                                color: "#e2e8f0",
-                                                cursor: "pointer",
-                                                transition: "all 0.2s",
-                                            }}
-                                        >
-                                            <RefreshCw size={15} className={loadingGallery ? "animate-spin" : ""} />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {loadingGallery ? (
-                                    <div style={{ textAlign: "center", padding: "48px 20px", color: "#94a3b8", fontSize: "14px" }}>
-                                        Loading conference gallery...
-                                    </div>
-                                ) : filteredGallery.length === 0 ? (
-                                    <div style={{
-                                        textAlign: "center",
-                                        padding: "48px 20px",
-                                        borderRadius: "20px",
-                                        border: "1px dashed rgba(255,255,255,0.18)",
-                                        background: "rgba(255,255,255,0.03)",
-                                        color: "#cbd5e1",
-                                    }}>
-                                        <Camera size={32} style={{ color: "var(--sc-gold)", margin: "0 auto 12px" }} />
-                                        <p style={{ fontSize: "16px", fontWeight: 600, color: "#fff", marginBottom: "6px" }}>
-                                            No conference media uploaded in this category yet
-                                        </p>
-                                        <p style={{ fontSize: "13px", color: "#94a3b8", maxWidth: "460px", margin: "0 auto" }}>
-                                            Photos and videos uploaded by our team for Day 1, Day 2, Day 3 Tour, and other moments will appear right here.
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <div className="sc-conf-gallery">
-                                        {filteredGallery.map((item) => {
-                                            const isVideo = item.media_type === "video";
-                                            const catLabel =
-                                                item.category === "day1" ? "Day 1" :
-                                                item.category === "day2" ? "Day 2" :
-                                                (item.category === "day3_tour" || item.category === "day3" || item.category === "tour") ? "Day 3 Tour" :
-                                                "Other";
-                                            return (
-                                                <figure
-                                                    key={item.id}
-                                                    onClick={() => setLightboxImage({
-                                                        src: item.url,
-                                                        title: item.caption || item.filename || catLabel,
-                                                        mediaType: item.media_type,
-                                                        category: catLabel,
-                                                    })}
-                                                    style={{ position: "relative" }}
-                                                >
-                                                    {isVideo ? (
-                                                        <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 10", background: "#050816" }}>
-                                                            <video
-                                                                src={item.url}
-                                                                autoPlay
-                                                                muted
-                                                                loop
-                                                                playsInline
-                                                                preload="auto"
-                                                                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                                                            />
-                                                        </div>
-                                                    ) : (
-                                                        <img src={item.url} alt={item.caption || item.filename || "Conference Photo"} loading="lazy" />
-                                                    )}
-                                                    <span style={{
-                                                        position: "absolute",
-                                                        top: "10px",
-                                                        right: "10px",
-                                                        padding: "3px 10px",
-                                                        borderRadius: "999px",
-                                                        fontSize: "11px",
-                                                        fontWeight: 700,
-                                                        background: "rgba(11,16,48,0.85)",
-                                                        color: "var(--sc-gold)",
-                                                        border: "1px solid rgba(255,255,255,0.15)",
-                                                    }}>
-                                                        {catLabel}
-                                                    </span>
-                                                    <figcaption>
-                                                        <span>{item.caption || item.filename || catLabel}</span>
-                                                    </figcaption>
-                                                </figure>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </>
-                        );
-                    })()}
+                    <SpeakerFolderGallery
+                        galleryItems={galleryItems}
+                        speakers={speakers}
+                        loading={loadingGallery}
+                        onRefresh={loadConferenceGallery}
+                    />
                 </div>
             </section>
 
-            {/* ─── DUBAI PLACES GALLERY ────────────────────────── */}
             <section id="gallery" className="sc-section" style={{ background: "rgba(11, 16, 48, 0.25)" }}>
                 <div className="sc-container">
                     <div style={{ textAlign: "center", marginBottom: "40px" }} className="sc-reveal">

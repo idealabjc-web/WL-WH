@@ -11,7 +11,6 @@ export default function PublicAgendaPage({ eventSlug = "dubai", onAdminClick }) 
     const [loading, setLoading] = useState(true);
 
     const currentEvent = getEventConfig(eventSlug);
-    const isParis = currentEvent.slug === "paris";
 
     const loadAgenda = useCallback(async () => {
         try {
@@ -43,7 +42,7 @@ export default function PublicAgendaPage({ eventSlug = "dubai", onAdminClick }) 
     return (
         <div className="sc-site sc-page" style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
             <SiteHeader
-                activeSeries={isParis ? "paris-series" : "dubai-series"}
+                activeSeries={currentEvent.seriesSlug}
                 activePage="agenda"
                 onAdminClick={onAdminClick}
             />

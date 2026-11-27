@@ -25,7 +25,7 @@ import DataExportPage from "./pages/DataExportPage";
 import AbstractAnalysisPage from "./pages/AbstractAnalysisPage";
 import LiveUpdatesPage from "./pages/LiveUpdatesPage";
 import GalleryPage from "./pages/GalleryPage";
-import { getEventConfig, getEventTables, DEFAULT_EVENT_SLUG } from "./eventsConfig";
+import { getEventConfig, getEventTables, getAllEvents, DEFAULT_EVENT_SLUG } from "./eventsConfig";
 
 const VALID_TABS = ["dashboard", "live-updates", "register", "checkin", "gallery", "idcards", "feedback", "broadcasts", "agenda", "analysis", "advanced-slots", "abstract-analysis", "settings", "audit", "export"];
 
@@ -167,7 +167,7 @@ export default function EventPortal({
         if (!existing) return false;
         
         const changedFields = Object.keys(updatedData).filter(key => updatedData[key] !== existing[key]);
-        const merged = { ...existing, ...updatedData };
+        const merged = { ...existing, ...updatedData, eventSlug: existing.eventSlug || currentEvent.slug };
         
         try {
             await updateSpeakerRecord(id, merged);
@@ -194,7 +194,7 @@ export default function EventPortal({
         );
         const s = speakers.find((x) => x.id === id);
         if (!s) return;
-        const merged = { ...s, checkedIn: true, checkedInAt, concerns: notes !== undefined ? notes : (s.concerns || "") };
+        const merged = { ...s, checkedIn: true, checkedInAt, concerns: notes !== undefined ? notes : (s.concerns || ""), eventSlug: s.eventSlug || currentEvent.slug };
         try {
             await updateSpeakerRecord(id, merged);
             logAction(userEmail, 'CHECK_IN', id);
@@ -220,7 +220,8 @@ export default function EventPortal({
             ...s, 
             checkedOut: true, 
             checkedOutAt, 
-            checkoutNotes: checkoutNotes !== undefined ? checkoutNotes : s.checkoutNotes 
+            checkoutNotes: checkoutNotes !== undefined ? checkoutNotes : s.checkoutNotes,
+            eventSlug: s.eventSlug || currentEvent.slug,
         };
         try {
             await updateSpeakerRecord(id, merged);
@@ -238,7 +239,7 @@ export default function EventPortal({
         );
         const s = speakers.find((x) => x.id === id);
         if (!s) return;
-        const merged = { ...s, checkedOut: false, checkedOutAt: null };
+        const merged = { ...s, checkedOut: false, checkedOutAt: null, eventSlug: s.eventSlug || currentEvent.slug };
         try {
             await updateSpeakerRecord(id, merged);
             logAction(userEmail, 'UNDO_CHECKOUT', id);
@@ -277,7 +278,11 @@ export default function EventPortal({
             return false;
         }
         try {
-            await supabase.from("accommodations").delete().eq("speaker_id", id);
+            let accDel = supabase.from(tables.accommodations).delete().eq("speaker_id", id);
+            if (tables.accommodations === "accommodations" && currentEvent.slug !== "dubai") {
+                accDel = accDel.eq("event", currentEvent.slug);
+            }
+            await accDel;
         } catch (e) {
             console.warn("Accommodation cleanup warning:", e);
         }
@@ -370,7 +375,7 @@ export default function EventPortal({
 
                         <div className="min-w-0">
                             <div className="flex items-center gap-1.5 sm:gap-2">
-                                <span className={`text-[9px] sm:text-xs font-semibold ${isParis ? "text-blue-600 dark:text-blue-400" : "text-amber-600 dark:text-amber-400"} uppercase tracking-wider flex items-center gap-1`}>
+                                <span className="text-[9px] sm:text-xs font-semibold uppercase tracking-wider flex items-center gap-1" style={{ color: currentEvent.badgeAccent }}>
                                     <span>{currentEvent.flag}</span>
                                     <span>{currentEvent.badgeTag}</span>
                                 </span>
@@ -389,30 +394,25 @@ export default function EventPortal({
                         {/* Fast Top Bar Event Switcher */}
                         {onEventChange && (
                             <div className="hidden sm:flex items-center bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1 gap-1">
-                                <button
-                                    type="button"
-                                    onClick={() => onEventChange("dubai")}
-                                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1 ${
-                                        !isParis
-                                            ? "bg-amber-500 text-white shadow-xs"
-                                            : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
-                                    }`}
-                                >
-                                    <span>🇦🇪</span>
-                                    <span>Dubai</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => onEventChange("paris")}
-                                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1 ${
-                                        isParis
-                                            ? "bg-blue-600 text-white shadow-xs"
-                                            : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
-                                    }`}
-                                >
-                                    <span>🇫🇷</span>
-                                    <span>Paris</span>
-                                </button>
+                                {getAllEvents().map((ev) => {
+                                    const active = currentEvent.slug === ev.slug;
+                                    return (
+                                        <button
+                                            key={ev.slug}
+                                            type="button"
+                                            onClick={() => onEventChange(ev.slug)}
+                                            className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1 ${
+                                                active
+                                                    ? "text-white shadow-xs"
+                                                    : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                                            }`}
+                                            style={active ? { backgroundColor: ev.accent } : undefined}
+                                        >
+                                            <span>{ev.flag}</span>
+                                            <span>{ev.shortName}</span>
+                                        </button>
+                                    );
+                                })}
                             </div>
                         )}
 
@@ -452,8 +452,8 @@ export default function EventPortal({
                         <div className="flex flex-col items-center justify-center py-32 gap-4">
                             <div className="relative w-14 h-14">
                                 <div className="w-14 h-14 rounded-full border-[3px] border-slate-200 dark:border-slate-700" />
-                                <div className={`absolute inset-0 w-14 h-14 rounded-full border-[3px] ${isParis ? "border-blue-600" : "border-amber-500"} border-t-transparent animate-spin`} />
-                                <div className={`absolute inset-2 rounded-full ${isParis ? "bg-blue-600/10" : "bg-amber-500/10"} animate-pulse`} />
+                                <div className="absolute inset-0 w-14 h-14 rounded-full border-[3px] border-t-transparent animate-spin" style={{ borderColor: `${currentEvent.accent} transparent transparent transparent` }} />
+                                <div className="absolute inset-2 rounded-full animate-pulse" style={{ backgroundColor: `${currentEvent.accent}1A` }} />
                             </div>
                             <div className="text-center">
                                 <div className="text-sm font-semibold text-slate-700 dark:text-slate-200">Loading {currentEvent.name} data</div>

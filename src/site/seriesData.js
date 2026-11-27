@@ -20,6 +20,7 @@ export const SERIES = [
         country: "United Arab Emirates",
         flag: "🇦🇪",
         status: "live",
+        badgeLabel: "Live",
         dates: "November 25 – 26, 2026",
         cover: "/images/site/dubai_burj_al_arab.jpg",
         accent: "#C8A24A",
@@ -30,6 +31,7 @@ export const SERIES = [
         country: "France",
         flag: "🇫🇷",
         status: "upcoming",
+        badgeLabel: "March 2027",
         dates: "March 8 – 12, 2027",
         cover: "/images/site/paris_series_cover.jpg",
         accent: "#5B7CFA",
@@ -39,10 +41,22 @@ export const SERIES = [
         city: "Toronto",
         country: "Canada",
         flag: "🇨🇦",
-        status: "soon",
-        dates: "Summer 2027",
+        status: "upcoming",
+        badgeLabel: "July 2027",
+        dates: "July 14 – 17, 2027",
         cover: "/images/site/canada_series_cover.jpg",
         accent: "#E5484D",
+    },
+    {
+        slug: "japan-series",
+        city: "Tokyo",
+        country: "Japan",
+        flag: "🇯🇵",
+        status: "upcoming",
+        badgeLabel: "Oct 2027",
+        dates: "October 18 – 21, 2027",
+        cover: "/images/site/japan_hero_fuji_tokyo.jpg",
+        accent: "#E11D48",
     },
     {
         slug: "london-series",
@@ -231,4 +245,175 @@ export const PARIS_EVENT = {
 
 // Paris Series Keynote Faculty & Session Chairs Directory (Populated dynamically from database)
 export const PARIS_KEYNOTE_FACULTY = [];
+
+// ─── Canada Series details ───────────────────────────────────
+export const CANADA_EVENT = {
+    title: "Speaker Chapters · Canada Series",
+    headline: "Where North American biotech pioneers & clinical leaders converge under Toronto's skyline.",
+    dates: "July 14 – 17, 2027",
+    venue: "Metro Toronto Convention Centre (MTCC)",
+    venueAddress: "255 Front St W, Downtown Toronto, ON, Canada",
+    mapsUrl: "https://www.google.com/maps/search/Metro+Toronto+Convention+Centre",
+    about: [
+        "The Canada Series (July 14 – 17, 2027) convenes pioneering clinicians, genomic researchers, hospital executives, and biomedical entrepreneurs in the heart of Downtown Toronto.",
+        "Across four intensive summer days of keynote plenaries, Maple Leaf clinical roundtables, and an evening excursion to Niagara Falls & Lake Ontario, speakers accelerate translational science across North America.",
+    ],
+    stats: [
+        { value: 4, suffix: "", label: "Days of Summits" },
+        { value: 110, suffix: "+", label: "North American Faculty" },
+        { value: 30, suffix: "+", label: "Countries Represented" },
+        { value: 8, suffix: "", label: "Research Alliances" },
+    ],
+    tracks: [
+        {
+            id: "biotech",
+            title: "Biotech, Spatial Genomics & Translational Lab Discovery",
+            desc: "Bridging academic benchtop breakthroughs in CRISPR, mRNA delivery, and organoids into North American clinical trials.",
+            tag: "Biotech",
+        },
+        {
+            id: "ai-systems",
+            title: "AI in Health Systems, Imaging & Predictive Triage",
+            desc: "Deploying trustworthy clinical AI models across university hospital networks and provincial digital health records.",
+            tag: "Health AI",
+        },
+        {
+            id: "cardio",
+            title: "Cardiovascular Innovation & Metabolic Therapeutics",
+            desc: "Next-generation structural heart interventions, lipidomics, and integrative metabolic care.",
+            tag: "Cardiology",
+        },
+        {
+            id: "equity",
+            title: "Indigenous Health, Rural Access & Equitable Care Models",
+            desc: "Scalable tele-specialist networks and community-governed health systems across northern and remote regions.",
+            tag: "Public Health",
+        },
+        {
+            id: "neuro",
+            title: "Neuro-Engineering, Brain-Computer Interfaces & Mental Health",
+            desc: "Cortical neuromodulation, early Alzheimer's fluid biomarkers, and precision psychiatric therapeutics.",
+            tag: "Neuroscience",
+        },
+        {
+            id: "cell-therapy",
+            title: "Regenerative Medicine, Stem Cells & CAR-T Engineering",
+            desc: "Toronto Discovery District advances in cellular immunotherapies and tissue bioprinting.",
+            tag: "Regen Med",
+        },
+    ],
+    provided: [
+        { icon: "Hotel", title: "Downtown Toronto Suite", text: "Hosted luxury accommodation steps away from CN Tower and the Financial & Discovery District." },
+        { icon: "Utensils", title: "Canadian Culinary Hospitality", text: "Artisanal breakfasts, curated Great Lakes luncheon banquets, and lakeside espresso lounges." },
+        { icon: "Plane", title: "Pearson (YYZ) UP Express Link", text: "25-minute express rail connection straight from Toronto Pearson Airport to Union Station." },
+        { icon: "Award", title: "Royal College MOC / CME Credits", text: "Verifiable North American continuing medical education and cryptographic speaker certification." },
+        { icon: "BadgeCheck", title: "Maple Executive Credential Kit", text: "Custom NFC-enabled speaker pass, proceedings folio, and lifetime Speaker Chapters badge." },
+        { icon: "Camera", title: "Stage Broadcast & PR Coverage", text: "Multi-angle 4K keynote recording, portrait studio session, and international editorial syndicate." },
+        { icon: "Users", title: "Venture & Hospital Matchmaking", text: "Closed-door roundtables connecting principal investigators with biotech funds and hospital CEOs." },
+        { icon: "Compass", title: "Niagara Falls & Lake Gala", text: "Guided twilight excursion to Niagara-on-the-Lake and Lake Ontario VIP Faculty Cruise." },
+    ],
+    hotel: {
+        name: "InterContinental Toronto Centre · Connected to MTCC",
+        stars: 4,
+        image: "/images/site/canada_series_cover.jpg",
+        highlights: [
+            "Direct indoor walkway into the Metro Toronto Convention Centre auditoriums",
+            "Steps from Union Station UP Express airport rail & CN Tower Plaza",
+            "Hosted complimentary executive rooms for confirmed keynote faculty",
+            "Private Harbourfront executive lounge for speaker bilateral meetings",
+        ],
+    },
+    gallery: [
+        { src: "/images/site/canada_hero_toronto_aurora.jpg", title: "Toronto Skyline, CN Tower & Northern Aurora" },
+        { src: "/images/site/canada_series_cover.jpg", title: "Downtown Toronto Waterfront & Financial Core" },
+        { src: "/images/site/canada_hero_niagara_rockies.jpg", title: "Niagara Falls Illuminated Twilight & Maple Foliage" },
+        { src: "/images/site/hotel_room_stay.jpg", title: "InterContinental Toronto Executive Speaker Suites" },
+    ],
+};
+
+// ─── Japan Series details ────────────────────────────────────
+export const JAPAN_EVENT = {
+    title: "Speaker Chapters · Japan Series",
+    headline: "Where centuries of precision craftsmanship unite with autonomous robotics & longevity science.",
+    dates: "October 18 – 21, 2027",
+    venue: "Tokyo International Forum · Marunouchi",
+    venueAddress: "3-5-1 Marunouchi, Chiyoda City, Tokyo, Japan",
+    mapsUrl: "https://www.google.com/maps/search/Tokyo+International+Forum",
+    about: [
+        "The Japan Series (October 18 – 21, 2027) brings the world's foremost surgical roboticists, cellular longevity researchers, and Asia-Pacific hospital directors to Marunouchi, central Tokyo.",
+        "Held inside the iconic glass atrium of the Tokyo International Forum during autumn foliage season, four days of precision symposias culminate in executive Omotenashi hospitality and Kyoto cultural extensions.",
+    ],
+    stats: [
+        { value: 4, suffix: "", label: "Days in Tokyo" },
+        { value: 130, suffix: "+", label: "Asia-Pacific & Global Chairs" },
+        { value: 38, suffix: "+", label: "Countries Represented" },
+        { value: 8, suffix: "", label: "Institutional Partners" },
+    ],
+    tracks: [
+        {
+            id: "robotics",
+            title: "Humanoid Care Robotics & Micro-Surgical Automation",
+            desc: "Japanese kinematic engineering for sub-millimeter vascular anastomoses and elder-care assistive robotics.",
+            tag: "Robotics",
+        },
+        {
+            id: "longevity",
+            title: "iPSC Cellular Reprogramming & Healthy Longevity",
+            desc: "Stem cell banking, senolytic therapeutics, and lessons from Japan's Blue Zone centenarian cohorts.",
+            tag: "Longevity",
+        },
+        {
+            id: "quantum",
+            title: "Quantum Sensors, Ultra-High-Field MRI & Neural Tech",
+            desc: "Diamond NV-center biosensing, 7T functional neuroimaging, and non-invasive brain mapping.",
+            tag: "Deep Tech",
+        },
+        {
+            id: "oncology",
+            title: "Heavy-Ion Radiotherapy & Immuno-Oncology",
+            desc: "Carbon-ion beam precision oncology, antibody-drug conjugates, and early endoscopic AI detection.",
+            tag: "Oncology",
+        },
+        {
+            id: "iot-icu",
+            title: "Smart Hospital IoT, Society 5.0 & Tele-ICU Networks",
+            desc: "Zero-latency 6G surgical telemetry, autonomous ward logistics, and disaster-resilient hospital clouds.",
+            tag: "Society 5.0",
+        },
+        {
+            id: "nanomedicine",
+            title: "Targeted Nanomedicine & Nucleic Acid Therapeutics",
+            desc: "Lipid nanoparticle brain delivery, antisense oligonucleotides, and precision formulation scale-up.",
+            tag: "Nanomed",
+        },
+    ],
+    provided: [
+        { icon: "Hotel", title: "Marunouchi / Ginza Stay", text: "Reserved tranquil luxury suites in Tokyo's prestigious Marunouchi-Ginza district near the Forum." },
+        { icon: "Utensils", title: "Omotenashi Kaiseki Dining", text: "Authentic seasonal Japanese culinary banquets, matcha tea lounges, and dietary concierge." },
+        { icon: "Plane", title: "Haneda & Narita Express", text: "Seamless Narita Express & Tokyo Monorail transfers directly into Tokyo Station (3 min walk)." },
+        { icon: "Award", title: "APAC Accredited Credentials", text: "Bilingual digital & cryptographic speaker verification certificates plus PeerCite proceedings." },
+        { icon: "BadgeCheck", title: "Sakura Imperial Credential Folio", text: "Laser-etched aluminum badge, simultaneous translation earpiece, and Tokyo welcome edition." },
+        { icon: "Camera", title: "4K Summit Cinema & Media", text: "Dedicated Japanese & international press studio, keynote portraits, and stage broadcast." },
+        { icon: "Users", title: "Ministry & Pharma Dialogues", text: "Bilateral exchanges with Osaka/Tokyo biomedical clusters and Asia-Pacific R&D chiefs." },
+        { icon: "Compass", title: "Tokyo Bay & Kyoto Extensions", text: "Private Tokyo Bay evening yakatabune cruise and optional Shinkansen heritage tour." },
+    ],
+    hotel: {
+        name: "Palace Hotel & Imperial Marunouchi Precinct",
+        stars: 5,
+        image: "/images/site/japan_hero_fuji_tokyo.jpg",
+        highlights: [
+            "3-minute walk from Tokyo Station Shinkansen Concourse and International Forum",
+            "Dedicated simultaneous English–Japanese keynote interpretation booths",
+            "Hosted luxury suites with panoramic Imperial Palace moat & Ginza views",
+            "On-site Shinkansen & Kyoto speaker travel concierge desk",
+        ],
+    },
+    gallery: [
+        { src: "/images/site/japan_hero_fuji_tokyo.jpg", title: "Mt. Fuji, Tokyo Tower & Illuminated Sakura" },
+        { src: "/images/site/japan_hero_kyoto_torii.jpg", title: "Kyoto Crimson Torii Shrine & Pagoda Twilight" },
+        { src: "/images/site/japan_tokyo_twilight.svg", title: "Tokyo Night Horizon & Sumida River" },
+        { src: "/images/site/hotel_room_stay.jpg", title: "Marunouchi Executive Suites & Quiet Study Rooms" },
+    ],
+};
+
 
