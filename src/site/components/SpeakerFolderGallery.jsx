@@ -14,6 +14,7 @@ import {
     X,
     Camera,
     Layers,
+    LayoutGrid,
     Calendar,
     Compass
 } from "lucide-react";
@@ -42,6 +43,7 @@ export default function SpeakerFolderGallery({
     const [searchSpeaker, setSearchSpeaker] = useState("");
     const [lightboxIndex, setLightboxIndex] = useState(null);
     const [activeCategory, setActiveCategory] = useState("all"); // "all" | "day1" | "day2" | "day3_tour" | "other"
+    const [folderViewMode, setFolderViewMode] = useState("masonry"); // "masonry" | "contain"
 
     const galleryTopRef = useRef(null);
     const isFirstRender = useRef(true);
@@ -413,56 +415,141 @@ export default function SpeakerFolderGallery({
                             </div>
                         </div>
 
-                        {/* Category filter / country info inside folder */}
-                        <div className="flex items-center gap-2 self-start sm:self-auto">
+                        {/* Right Action Bar: View Switcher & Country */}
+                        <div className="flex items-center gap-3 self-start sm:self-auto flex-wrap">
+                            <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/10">
+                                <button
+                                    type="button"
+                                    onClick={() => setFolderViewMode("masonry")}
+                                    title="Natural uncropped view (every photo shown fully)"
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                        folderViewMode === "masonry"
+                                            ? "bg-amber-400 text-black shadow"
+                                            : "text-slate-400 hover:text-white"
+                                    }`}
+                                >
+                                    <Layers size={13} />
+                                    <span>Natural View</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setFolderViewMode("contain")}
+                                    title="Full-fit uniform grid"
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                                        folderViewMode === "contain"
+                                            ? "bg-amber-400 text-black shadow"
+                                            : "text-slate-400 hover:text-white"
+                                    }`}
+                                >
+                                    <LayoutGrid size={13} />
+                                    <span>Full-Fit Grid</span>
+                                </button>
+                            </div>
+
                             <span className="text-xs font-bold text-slate-300 bg-black/40 px-3.5 py-1.5 rounded-full border border-white/10">
                                 {activeFolder.speaker.country || "Dubai Series 2026"}
                             </span>
                         </div>
                     </div>
 
-                    {/* Photos Grid within the Selected Folder */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                        {activeFolder.items.map((item, idx) => {
-                            const isVideo = item.media_type === "video";
-                            return (
-                                <div
-                                    key={item.id}
-                                    onClick={() => setLightboxIndex(idx)}
-                                    className="group relative cursor-pointer rounded-2xl overflow-hidden border border-white/10 bg-slate-900 shadow-lg hover:border-amber-400 transition-all duration-300 hover:-translate-y-1 aspect-[4/3]"
-                                >
-                                    {isVideo ? (
-                                        <div className="relative w-full h-full bg-slate-950 flex items-center justify-center">
-                                            <video src={item.url} className="w-full h-full object-cover" />
-                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                                <div className="w-12 h-12 rounded-full bg-amber-400 text-black flex items-center justify-center shadow-lg">
-                                                    <Play size={22} fill="currentColor" />
+                    {/* Photos View within Selected Folder */}
+                    {folderViewMode === "masonry" ? (
+                        /* Mode A: Natural Masonry - Every image renders at its exact authentic aspect ratio without any cropping */
+                        <div className="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
+                            {activeFolder.items.map((item, idx) => {
+                                const isVideo = item.media_type === "video";
+                                return (
+                                    <div
+                                        key={item.id}
+                                        onClick={() => setLightboxIndex(idx)}
+                                        className="break-inside-avoid mb-4 group relative cursor-pointer rounded-2xl overflow-hidden border border-white/10 bg-slate-900/90 shadow-lg hover:border-amber-400 transition-all duration-300 hover:-translate-y-1"
+                                    >
+                                        {isVideo ? (
+                                            <div className="relative w-full aspect-video bg-slate-950 flex items-center justify-center">
+                                                <video src={item.url} className="w-full h-full object-cover" />
+                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                    <div className="w-12 h-12 rounded-full bg-amber-400 text-black flex items-center justify-center shadow-lg">
+                                                        <Play size={22} fill="currentColor" />
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ) : (
-                                        <img
-                                            src={item.url}
-                                            alt={item.caption || activeFolder.speaker.name}
-                                            className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
-                                            loading="lazy"
-                                        />
-                                    )}
+                                        ) : (
+                                            <img
+                                                src={item.url}
+                                                alt={item.caption || activeFolder.speaker.name}
+                                                className="w-full h-auto block transition-transform duration-300 group-hover:scale-[1.02]"
+                                                loading="lazy"
+                                            />
+                                        )}
 
-                                    {/* Overlay on hover */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-3 flex flex-col justify-end">
-                                        <span className="text-[11px] font-bold text-white truncate">
-                                            {item.caption || item.filename}
-                                        </span>
-                                        <span className="text-[10px] text-amber-300 flex items-center gap-1 mt-0.5">
-                                            <ZoomIn size={12} />
-                                            <span>Click to preview</span>
-                                        </span>
+                                        {/* Overlay on hover */}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-3 flex flex-col justify-end pointer-events-none">
+                                            <span className="text-[11px] font-bold text-white truncate">
+                                                {item.caption || item.filename}
+                                            </span>
+                                            <span className="text-[10px] text-amber-300 flex items-center gap-1 mt-0.5">
+                                                <ZoomIn size={12} />
+                                                <span>Click to preview</span>
+                                            </span>
+                                        </div>
                                     </div>
-                                </div>
-                            );
-                        })}
-                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        /* Mode B: Full-Fit Uniform Grid - Contained with ambient glow, zero cropping */
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                            {activeFolder.items.map((item, idx) => {
+                                const isVideo = item.media_type === "video";
+                                return (
+                                    <div
+                                        key={item.id}
+                                        onClick={() => setLightboxIndex(idx)}
+                                        className="group relative cursor-pointer rounded-2xl overflow-hidden border border-white/10 bg-slate-950 shadow-lg hover:border-amber-400 transition-all duration-300 hover:-translate-y-1 h-60 sm:h-72 flex items-center justify-center"
+                                    >
+                                        {isVideo ? (
+                                            <div className="relative w-full h-full bg-slate-950 flex items-center justify-center">
+                                                <video src={item.url} className="w-full h-full object-cover" />
+                                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                    <div className="w-12 h-12 rounded-full bg-amber-400 text-black flex items-center justify-center shadow-lg">
+                                                        <Play size={22} fill="currentColor" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {/* Ambient blurred glow backdrop */}
+                                                <img
+                                                    src={item.url}
+                                                    alt=""
+                                                    aria-hidden="true"
+                                                    className="absolute inset-0 w-full h-full object-cover blur-xl opacity-20 scale-110 pointer-events-none"
+                                                />
+                                                {/* Uncropped contained image */}
+                                                <img
+                                                    src={item.url}
+                                                    alt={item.caption || activeFolder.speaker.name}
+                                                    className="relative z-10 max-w-full max-h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+                                                    loading="lazy"
+                                                />
+                                            </>
+                                        )}
+
+                                        {/* Overlay on hover */}
+                                        <div className="absolute inset-0 z-20 bg-gradient-to-t from-black/85 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity p-3 flex flex-col justify-end pointer-events-none">
+                                            <span className="text-[11px] font-bold text-white truncate">
+                                                {item.caption || item.filename}
+                                            </span>
+                                            <span className="text-[10px] text-amber-300 flex items-center gap-1 mt-0.5">
+                                                <ZoomIn size={12} />
+                                                <span>Click to preview</span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             )}
 

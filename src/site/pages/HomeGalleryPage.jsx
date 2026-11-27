@@ -2,18 +2,18 @@ import React, { useState, useEffect } from "react";
 import { Link } from "../router";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
+import SpeakerFolderGallery from "../components/SpeakerFolderGallery";
 import { SERIES } from "../seriesData";
 import { fetchGalleryItems } from "../../api/galleryApi";
+import { fetchPublicSpeakers } from "../publicApi";
 import {
     Camera,
     ArrowLeft,
     ArrowRight,
     Calendar,
-    Play,
     RefreshCw,
     X,
     Images,
-    Sparkles,
     MapPin,
     Globe,
     Film,
@@ -39,11 +39,18 @@ const GALLERY_SERIES = SERIES.map((s) => {
 export default function HomeGalleryPage({ onAdminClick }) {
     const [selectedSeries, setSelectedSeries] = useState(null); // null = show available series first
     const [galleryItems, setGalleryItems] = useState([]);
+    const [speakers, setSpeakers] = useState([]);
     const [loadingGallery, setLoadingGallery] = useState(false);
-    const [galleryCategory, setGalleryCategory] = useState("all");
-    const [galleryMediaType, setGalleryMediaType] = useState("all");
-    const [lightboxImage, setLightboxImage] = useState(null);
     const [dubaiCount, setDubaiCount] = useState(null);
+
+    // Fetch registered public speakers so SpeakerFolderGallery can group photos by speaker
+    useEffect(() => {
+        fetchPublicSpeakers()
+            .then((list) => {
+                if (Array.isArray(list)) setSpeakers(list);
+            })
+            .catch(() => {});
+    }, []);
 
     // Sync selectedSeries with ?series=<slug> query param when navigating directly to a series gallery
     useEffect(() => {
@@ -54,13 +61,16 @@ export default function HomeGalleryPage({ onAdminClick }) {
                 const found = GALLERY_SERIES.find((s) => s.slug === seriesSlug);
                 if (found) {
                     setSelectedSeries(found);
-                    setGalleryCategory("all");
-                    setGalleryMediaType("all");
                     loadSeriesGallery(found.eventKey);
                     return;
                 }
             }
-            setSelectedSeries(null);
+            // Default to live Dubai Series so user sees the gallery directly on /gallery
+            const defaultDubai = GALLERY_SERIES.find((s) => s.eventKey === "dubai") || GALLERY_SERIES[0];
+            if (defaultDubai) {
+                setSelectedSeries(defaultDubai);
+                loadSeriesGallery(defaultDubai.eventKey);
+            }
         };
 
         syncFromUrl();
@@ -104,36 +114,10 @@ export default function HomeGalleryPage({ onAdminClick }) {
 
     const handleOpenSeries = (seriesItem) => {
         setSelectedSeries(seriesItem);
-        setGalleryCategory("all");
-        setGalleryMediaType("all");
         setGalleryItems([]);
         window.scrollTo({ top: 0, behavior: "smooth" });
         loadSeriesGallery(seriesItem.eventKey);
     };
-
-    const filteredGallery = galleryItems.filter((item) => {
-        if (galleryCategory !== "all") {
-            const cat = item.category || "other";
-            if (galleryCategory === "day3_tour") {
-                if (cat !== "day3_tour" && cat !== "day3" && cat !== "tour") return false;
-            } else if (cat !== galleryCategory) {
-                return false;
-            }
-        }
-        if (galleryMediaType !== "all") {
-            const mType = item.media_type || "photo";
-            if (mType !== galleryMediaType) return false;
-        }
-        return true;
-    });
-
-    const categories = [
-        { id: "all", label: "All" },
-        { id: "day1", label: "Day 1" },
-        { id: "day2", label: "Day 2" },
-        { id: "day3_tour", label: "Day 3 Tour" },
-        { id: "other", label: "Other" },
-    ];
 
     return (
         <div className="sc-site sc-page" style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
@@ -438,211 +422,19 @@ export default function HomeGalleryPage({ onAdminClick }) {
                                     </div>
                                 </div>
                             ) : (
-                                <>
-                                    {/* Category & Media Type Filter Bar */}
-                                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "28px" }}>
-                                        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                                            {categories.map((t) => {
-                                                const count = t.id === "all"
-                                                    ? galleryItems.length
-                                                    : galleryItems.filter((item) => {
-                                                        const cat = item.category || "other";
-                                                        if (t.id === "day3_tour") return cat === "day3_tour" || cat === "day3" || cat === "tour";
-                                                        return cat === t.id;
-                                                    }).length;
-                                                const isActive = galleryCategory === t.id;
-                                                return (
-                                                    <button
-                                                        key={t.id}
-                                                        type="button"
-                                                        onClick={() => setGalleryCategory(t.id)}
-                                                        style={{
-                                                            padding: "8px 16px",
-                                                            borderRadius: "999px",
-                                                            fontSize: "13px",
-                                                            fontWeight: 600,
-                                                            cursor: "pointer",
-                                                            transition: "all 0.2s",
-                                                            border: isActive ? "1px solid var(--sc-gold)" : "1px solid rgba(255,255,255,0.16)",
-                                                            background: isActive ? "var(--sc-gold)" : "rgba(255,255,255,0.06)",
-                                                            color: isActive ? "#0b1030" : "#e2e8f0",
-                                                        }}
-                                                    >
-                                                        {t.label} ({count})
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-
-                                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                            <div style={{ display: "flex", gap: "6px", background: "rgba(255,255,255,0.06)", padding: "4px", borderRadius: "999px", border: "1px solid rgba(255,255,255,0.12)" }}>
-                                                {[
-                                                    { id: "all", label: "All Media" },
-                                                    { id: "photo", label: "Photos" },
-                                                    { id: "video", label: "Videos" },
-                                                ].map((mt) => {
-                                                    const active = galleryMediaType === mt.id;
-                                                    return (
-                                                        <button
-                                                            key={mt.id}
-                                                            type="button"
-                                                            onClick={() => setGalleryMediaType(mt.id)}
-                                                            style={{
-                                                                padding: "6px 14px",
-                                                                borderRadius: "999px",
-                                                                fontSize: "12px",
-                                                                fontWeight: 600,
-                                                                cursor: "pointer",
-                                                                border: "none",
-                                                                background: active ? "rgba(255,255,255,0.18)" : "transparent",
-                                                                color: active ? "#fff" : "#94a3b8",
-                                                            }}
-                                                        >
-                                                            {mt.label}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-
-                                            <button
-                                                type="button"
-                                                onClick={() => loadSeriesGallery(selectedSeries.eventKey)}
-                                                disabled={loadingGallery}
-                                                title="Refresh gallery"
-                                                style={{
-                                                    display: "inline-flex",
-                                                    alignItems: "center",
-                                                    justifyContent: "center",
-                                                    width: "34px",
-                                                    height: "34px",
-                                                    borderRadius: "999px",
-                                                    border: "1px solid rgba(255,255,255,0.16)",
-                                                    background: "rgba(255,255,255,0.06)",
-                                                    color: "#e2e8f0",
-                                                    cursor: "pointer",
-                                                }}
-                                            >
-                                                <RefreshCw size={15} className={loadingGallery ? "animate-spin" : ""} />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {filteredGallery.length === 0 ? (
-                                        <div style={{
-                                            textAlign: "center",
-                                            padding: "60px 20px",
-                                            borderRadius: "20px",
-                                            border: "1px dashed rgba(255,255,255,0.18)",
-                                            background: "rgba(255,255,255,0.03)",
-                                            color: "#cbd5e1",
-                                        }}>
-                                            <Camera size={36} style={{ color: "var(--sc-gold)", margin: "0 auto 12px" }} />
-                                            <p style={{ fontSize: "16px", fontWeight: 600, color: "#fff", marginBottom: "6px" }}>
-                                                No conference media uploaded in this category yet
-                                            </p>
-                                            <p style={{ fontSize: "13px", color: "#94a3b8", maxWidth: "460px", margin: "0 auto" }}>
-                                                Photos and videos uploaded by our team for Day 1, Day 2, Day 3 Tour, and other moments will appear right here.
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        <div className="sc-conf-gallery">
-                                            {filteredGallery.map((item) => {
-                                                const isVideo = item.media_type === "video";
-                                                const catLabel =
-                                                    item.category === "day1" ? "Day 1" :
-                                                    item.category === "day2" ? "Day 2" :
-                                                    (item.category === "day3_tour" || item.category === "day3" || item.category === "tour") ? "Day 3 Tour" :
-                                                    "Other";
-                                                return (
-                                                    <figure
-                                                        key={item.id}
-                                                        onClick={() => setLightboxImage({
-                                                            src: item.url,
-                                                            title: item.caption || item.filename || catLabel,
-                                                            mediaType: item.media_type,
-                                                            category: catLabel,
-                                                        })}
-                                                        style={{ position: "relative" }}
-                                                    >
-                                                        {isVideo ? (
-                                                            <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 10", background: "#050816" }}>
-                                                                <video
-                                                                    src={item.url}
-                                                                    autoPlay
-                                                                    muted
-                                                                    loop
-                                                                    playsInline
-                                                                    preload="auto"
-                                                                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-                                                                />
-                                                            </div>
-                                                        ) : (
-                                                            <img src={item.url} alt={item.caption || item.filename || "Conference Photo"} loading="lazy" />
-                                                        )}
-                                                        <span style={{
-                                                            position: "absolute",
-                                                            top: "10px",
-                                                            right: "10px",
-                                                            padding: "3px 10px",
-                                                            borderRadius: "999px",
-                                                            fontSize: "11px",
-                                                            fontWeight: 700,
-                                                            background: "rgba(11,16,48,0.85)",
-                                                            color: "var(--sc-gold)",
-                                                            border: "1px solid rgba(255,255,255,0.15)",
-                                                        }}>
-                                                            {catLabel}
-                                                        </span>
-                                                        <figcaption>
-                                                            <span>{item.caption || item.filename || catLabel}</span>
-                                                        </figcaption>
-                                                    </figure>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </>
+                                <div style={{ marginTop: "16px" }}>
+                                    <SpeakerFolderGallery
+                                        galleryItems={galleryItems}
+                                        speakers={speakers}
+                                        loading={loadingGallery}
+                                        onRefresh={() => loadSeriesGallery(selectedSeries.eventKey)}
+                                    />
+                                </div>
                             )}
                         </>
                     )}
                 </div>
             </main>
-
-            {/* Lightbox Modal */}
-            {lightboxImage && (
-                <div className="sc-lightbox" onClick={() => setLightboxImage(null)}>
-                    <button
-                        type="button"
-                        onClick={() => setLightboxImage(null)}
-                        aria-label="Close"
-                        style={{
-                            width: "42px",
-                            height: "42px",
-                            borderRadius: "50%",
-                            border: "1px solid rgba(255,255,255,0.25)",
-                            background: "rgba(11,16,48,0.85)",
-                            color: "#fff",
-                            display: "grid",
-                            placeItems: "center",
-                            cursor: "pointer",
-                        }}
-                    >
-                        <X size={20} />
-                    </button>
-                    <div onClick={(e) => e.stopPropagation()} style={{ textAlign: "center" }}>
-                        {lightboxImage.mediaType === "video" ? (
-                            <video src={lightboxImage.src} controls autoPlay />
-                        ) : (
-                            <img src={lightboxImage.src} alt={lightboxImage.title} />
-                        )}
-                        {lightboxImage.title && (
-                            <div style={{ marginTop: "14px", color: "#fff", fontSize: "15px", fontWeight: 600 }}>
-                                {lightboxImage.title}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
 
             <SiteFooter onAdminClick={onAdminClick} />
         </div>
