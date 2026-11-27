@@ -268,7 +268,7 @@ export function JapanEntryIntro({ onComplete }) {
                 >
                     <span>東京 · JAPAN SERIES</span>
                     <span style={{ color: "#fb7185" }}>✦</span>
-                    <span>OCT 18 – 21, 2027</span>
+                    <span>2027</span>
                 </div>
 
                 <h1

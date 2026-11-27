@@ -233,10 +233,10 @@ export default function SiteHeader({ activeSeries = null, activePage = null, onA
                         🇫🇷 Paris Series (March 2027)
                     </Link>
                     <Link to="/canada-series" className="sc-nav-link" onClick={() => setMobileOpen(false)}>
-                        🇨🇦 Canada Series (July 2027)
+                        🇨🇦 Canada Series (2027)
                     </Link>
                     <Link to="/japan-series" className="sc-nav-link" onClick={() => setMobileOpen(false)}>
-                        🇯🇵 Japan Series (Oct 2027)
+                        🇯🇵 Japan Series (2027)
                     </Link>
 
                     <h4>Other Destinations</h4>

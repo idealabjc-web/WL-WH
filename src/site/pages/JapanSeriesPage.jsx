@@ -54,7 +54,7 @@ const JAPAN_DAYS_AGENDA = [
     {
         day: 1,
         kanjiSeal: "第一日 · 始",
-        date: "Monday, October 18, 2027",
+        date: "Day 1 · 2027",
         title: "Imperial Opening Convocation & Society 5.0 Keynotes",
         theme: "Precision Craftsmanship Meets Future Medicine in Tokyo",
         rooms: "Sakura Imperial Hall & Room 1",
@@ -70,7 +70,7 @@ const JAPAN_DAYS_AGENDA = [
     {
         day: 2,
         kanjiSeal: "第二日 · 技",
-        date: "Tuesday, October 19, 2027",
+        date: "Day 2 · 2027",
         title: "Autonomous Surgical Robotics & Micro-Kinetics",
         theme: "Sub-Millimeter Dexterity & Tele-Operated Suites",
         rooms: "Room 1 (Surgical Robotics) & Room 2 (Deep Tech)",
@@ -86,7 +86,7 @@ const JAPAN_DAYS_AGENDA = [
     {
         day: 3,
         kanjiSeal: "第三日 · 命",
-        date: "Wednesday, October 20, 2027",
+        date: "Day 3 · 2027",
         title: "iPSC Cellular Reprogramming & Heavy-Ion Oncology",
         theme: "Longevity Frontiers, Quantum MRI & Tokyo Bay Cruise",
         rooms: "Sakura Imperial Hall & Room 2",
@@ -102,7 +102,7 @@ const JAPAN_DAYS_AGENDA = [
     {
         day: 4,
         kanjiSeal: "第四日 · 和",
-        date: "Thursday, October 21, 2027",
+        date: "Day 4 · 2027",
         title: "Asia-Pacific Clinical Whitepaper & Kyoto Concierge",
         theme: "Global Publication, Credentialing & Heritage Extensions",
         rooms: "Sakura Imperial Hall",
@@ -241,7 +241,7 @@ export default function JapanSeriesPage({ onAdminClick }) {
                             <div className="sc-meta-row" style={{ marginTop: "18px" }}>
                                 <div className="sc-meta-chip">
                                     <Calendar size={17} style={{ color: "#fb7185" }} />
-                                    <span><b>Dates:</b> {JAPAN_EVENT.dates}</span>
+                                    <span><b>Year:</b> {JAPAN_EVENT.dates}</span>
                                 </div>
                                 <div className="sc-meta-chip">
                                     <MapPin size={17} style={{ color: "#fda4af" }} />
@@ -265,7 +265,7 @@ export default function JapanSeriesPage({ onAdminClick }) {
                                             className="sc-paris-timer-beacon"
                                             style={{ background: "#fb7185", boxShadow: "0 0 12px #fb7185" }}
                                         />
-                                        <span>Tokyo Forum Countdown · Live</span>
+                                        <span>Tokyo Forum Countdown · 2027</span>
                                     </div>
                                     <div className="sc-paris-timer-target">{JAPAN_EVENT.dates}</div>
                                 </div>
@@ -283,7 +283,7 @@ export default function JapanSeriesPage({ onAdminClick }) {
                                         <MapPin size={13} style={{ color: "#fb7185" }} />
                                         <span>Marunouchi, Chiyoda-ku · Tokyo</span>
                                     </span>
-                                    <span>4-Day Autumn Summit 🇯🇵</span>
+                                    <span>Tokyo Summit 2027 🇯🇵</span>
                                 </div>
                             </div>
                         </div>

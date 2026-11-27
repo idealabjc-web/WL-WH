@@ -45,7 +45,7 @@ const CANADA_DAYS_AGENDA = [
     {
         day: 1,
         expeditionTag: "HARBOURFRONT",
-        date: "Wednesday, July 14, 2027",
+        date: "Day 1 · 2027",
         title: "Opening Maple Convocation & Genomic Discovery Keynotes",
         theme: "Bridging Academic Biotech & Clinical Impact Across North America",
         rooms: "Maple Plenary Hall & Room 1",
@@ -61,7 +61,7 @@ const CANADA_DAYS_AGENDA = [
     {
         day: 2,
         expeditionTag: "DISCOVERY DISTRICT",
-        date: "Thursday, July 15, 2027",
+        date: "Day 2 · 2027",
         title: "Clinical AI, Health Data Privacy & Neuro-Engineering",
         theme: "Trustworthy Machine Learning & Cortical Interfaces",
         rooms: "Room 1 (Health AI) & Room 2 (Neuro-Tech)",
@@ -77,7 +77,7 @@ const CANADA_DAYS_AGENDA = [
     {
         day: 3,
         expeditionTag: "NIAGARA FALLS GALA",
-        date: "Friday, July 16, 2027",
+        date: "Day 3 · 2027",
         title: "Cardiovascular Innovation, Cell Therapy & Niagara Gala",
         theme: "Regenerative Organoids & Structural Cardiology",
         rooms: "Maple Plenary Hall & Room 2",
@@ -93,7 +93,7 @@ const CANADA_DAYS_AGENDA = [
     {
         day: 4,
         expeditionTag: "TORONTO ACCORD",
-        date: "Saturday, July 17, 2027",
+        date: "Day 4 · 2027",
         title: "North American Whitepaper & CME Conferment",
         theme: "Cross-Border Consortia & Closing Awards",
         rooms: "Maple Plenary Hall",
@@ -225,7 +225,7 @@ export default function CanadaSeriesPage({ onAdminClick }) {
                             <div className="sc-meta-row" style={{ marginTop: "18px" }}>
                                 <div className="sc-meta-chip">
                                     <Calendar size={17} style={{ color: "#f87171" }} />
-                                    <span><b>Dates:</b> {CANADA_EVENT.dates}</span>
+                                    <span><b>Year:</b> {CANADA_EVENT.dates}</span>
                                 </div>
                                 <div className="sc-meta-chip">
                                     <MapPin size={17} style={{ color: "#34d399" }} />
@@ -249,7 +249,7 @@ export default function CanadaSeriesPage({ onAdminClick }) {
                                             className="sc-paris-timer-beacon"
                                             style={{ background: "#34d399", boxShadow: "0 0 10px #34d399" }}
                                         />
-                                        <span>Toronto Summit Countdown · Live</span>
+                                        <span>Toronto Summit Countdown · 2027</span>
                                     </div>
                                     <div className="sc-paris-timer-target">{CANADA_EVENT.dates}</div>
                                 </div>
@@ -267,7 +267,7 @@ export default function CanadaSeriesPage({ onAdminClick }) {
                                         <Train size={13} style={{ color: "#34d399" }} />
                                         <span>Downtown Toronto · MTCC Plenaries</span>
                                     </span>
-                                    <span>4-Day Summer Summit 🇨🇦</span>
+                                    <span>Toronto Summit 2027 🇨🇦</span>
                                 </div>
                             </div>
                         </div>

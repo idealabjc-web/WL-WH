@@ -42,8 +42,8 @@ export const SERIES = [
         country: "Canada",
         flag: "🇨🇦",
         status: "upcoming",
-        badgeLabel: "July 2027",
-        dates: "July 14 – 17, 2027",
+        badgeLabel: "2027",
+        dates: "2027",
         cover: "/images/site/canada_series_cover.jpg",
         accent: "#E5484D",
     },
@@ -53,8 +53,8 @@ export const SERIES = [
         country: "Japan",
         flag: "🇯🇵",
         status: "upcoming",
-        badgeLabel: "Oct 2027",
-        dates: "October 18 – 21, 2027",
+        badgeLabel: "2027",
+        dates: "2027",
         cover: "/images/site/japan_hero_fuji_tokyo.jpg",
         accent: "#E11D48",
     },
@@ -250,12 +250,12 @@ export const PARIS_KEYNOTE_FACULTY = [];
 export const CANADA_EVENT = {
     title: "Speaker Chapters · Canada Series",
     headline: "Where North American biotech pioneers & clinical leaders converge under Toronto's skyline.",
-    dates: "July 14 – 17, 2027",
+    dates: "2027",
     venue: "Metro Toronto Convention Centre (MTCC)",
     venueAddress: "255 Front St W, Downtown Toronto, ON, Canada",
     mapsUrl: "https://www.google.com/maps/search/Metro+Toronto+Convention+Centre",
     about: [
-        "The Canada Series (July 14 – 17, 2027) convenes pioneering clinicians, genomic researchers, hospital executives, and biomedical entrepreneurs in the heart of Downtown Toronto.",
+        "The Canada Series (2027) convenes pioneering clinicians, genomic researchers, hospital executives, and biomedical entrepreneurs in the heart of Downtown Toronto.",
         "Across four intensive summer days of keynote plenaries, Maple Leaf clinical roundtables, and an evening excursion to Niagara Falls & Lake Ontario, speakers accelerate translational science across North America.",
     ],
     stats: [
@@ -335,12 +335,12 @@ export const CANADA_EVENT = {
 export const JAPAN_EVENT = {
     title: "Speaker Chapters · Japan Series",
     headline: "Where centuries of precision craftsmanship unite with autonomous robotics & longevity science.",
-    dates: "October 18 – 21, 2027",
+    dates: "2027",
     venue: "Tokyo International Forum · Marunouchi",
     venueAddress: "3-5-1 Marunouchi, Chiyoda City, Tokyo, Japan",
     mapsUrl: "https://www.google.com/maps/search/Tokyo+International+Forum",
     about: [
-        "The Japan Series (October 18 – 21, 2027) brings the world's foremost surgical roboticists, cellular longevity researchers, and Asia-Pacific hospital directors to Marunouchi, central Tokyo.",
+        "The Japan Series (2027) brings the world's foremost surgical roboticists, cellular longevity researchers, and Asia-Pacific hospital directors to Marunouchi, central Tokyo.",
         "Held inside the iconic glass atrium of the Tokyo International Forum during autumn foliage season, four days of precision symposias culminate in executive Omotenashi hospitality and Kyoto cultural extensions.",
     ],
     stats: [

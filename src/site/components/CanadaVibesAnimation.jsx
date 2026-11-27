@@ -295,7 +295,7 @@ export function CanadaEntryIntro({ onComplete }) {
                 >
                     <span>TORONTO · CANADA SERIES</span>
                     <span style={{ color: "#f87171" }}>🍁</span>
-                    <span>JULY 14 – 17, 2027</span>
+                    <span>2027</span>
                 </div>
 
                 <h1
