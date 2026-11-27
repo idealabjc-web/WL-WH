@@ -919,12 +919,18 @@ export default function SpeakerPortalPage({ speaker, onLogout, currentEvent }) {
                                                 
                                                 <label className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-[#4457F5] to-indigo-600 hover:from-[#3B6CF6] hover:to-indigo-500 text-white font-bold rounded-xl cursor-pointer shadow-lg shadow-blue-900/40 transition-all active:scale-95 group/btn">
                                                     <input type="file" className="hidden" accept="image/*" multiple onChange={(e) => {
-                                                        if (e.target.files.length > 0) {
-                                                            alert(`Successfully queued ${e.target.files.length} photo(s) for upload!`);
+                                                        const files = Array.from(e.target.files || []);
+                                                        e.target.value = "";
+                                                        if (files.length > 3) {
+                                                            alert("You can upload a maximum of 3 images at once. Please select up to 3 photos.");
+                                                            return;
+                                                        }
+                                                        if (files.length > 0) {
+                                                            alert(`Successfully queued ${files.length} photo(s) for upload!`);
                                                         }
                                                     }} />
                                                     <Upload size={18} className="group-hover/btn:-translate-y-0.5 transition-transform" />
-                                                    <span>Upload Event Photos</span>
+                                                    <span>Upload Event Photos (Max 3)</span>
                                                 </label>
                                             </div>
                                             

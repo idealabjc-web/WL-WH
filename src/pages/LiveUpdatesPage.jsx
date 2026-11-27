@@ -980,18 +980,18 @@ export default function LiveUpdatesPage({
                         </div>
 
                         {/* Live Status Banner */}
-                        <div className={`p-3.5 rounded-2xl flex items-center gap-3 mb-4 ${activeSpeaker.isCurrentlyOnsite
+                        <div className={`p-3.5 rounded-2xl flex items-center gap-3 mb-4 ${currentActiveSpeaker?.isCurrentlyOnsite
                                 ? "bg-emerald-50 border border-emerald-200 text-emerald-800"
-                                : activeSpeaker.isCheckedOut
+                                : currentActiveSpeaker?.isCheckedOut
                                     ? "bg-purple-50 border border-purple-200 text-purple-800"
                                     : "bg-rose-50 border border-rose-200 text-rose-800"
                             }`}>
-                            <div className={`w-3.5 h-3.5 rounded-full shrink-0 ${activeSpeaker.isCurrentlyOnsite ? "bg-emerald-500 animate-pulse" : activeSpeaker.isCheckedOut ? "bg-purple-500" : "bg-rose-500"
+                            <div className={`w-3.5 h-3.5 rounded-full shrink-0 ${currentActiveSpeaker?.isCurrentlyOnsite ? "bg-emerald-500 animate-pulse" : currentActiveSpeaker?.isCheckedOut ? "bg-purple-500" : "bg-rose-500"
                                 }`} />
                             <div className="text-xs font-bold leading-tight">
-                                {activeSpeaker.isCurrentlyOnsite ? (
+                                {currentActiveSpeaker?.isCurrentlyOnsite ? (
                                     <>Checked In and currently ON-SITE inside venue</>
-                                ) : activeSpeaker.isCheckedOut ? (
+                                ) : currentActiveSpeaker?.isCheckedOut ? (
                                     <>Checked out from the venue</>
                                 ) : (
                                     <>Awaiting arrival &middot; Has NOT checked in at registration desk</>

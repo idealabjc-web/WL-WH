@@ -52,6 +52,7 @@ const getCategoryObj = (catId) => {
 };
 
 const UPLOAD_CATEGORIES = CATEGORIES.filter((c) => c.id !== "all");
+const MAX_UPLOAD_FILES = 3;
 
 export default function GalleryPage({ currentEvent = { slug: "dubai", name: "Dubai" }, userEmail = "", toast }) {
   const [items, setItems] = useState([]);
@@ -71,6 +72,7 @@ export default function GalleryPage({ currentEvent = { slug: "dubai", name: "Dub
   const [uploadCategory, setUploadCategory] = useState("day1");
   const [uploadMediaType, setUploadMediaType] = useState("photo"); // 'photo' | 'video'
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploadLimitError, setUploadLimitError] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0, currentFilename: "" });
   const fileInputRef = useRef(null);
@@ -111,10 +113,14 @@ export default function GalleryPage({ currentEvent = { slug: "dubai", name: "Dub
     return matchesCategory && matchesType;
   });
 
-  // Handle Multi-File Selection
+  // Handle File Selection (strictly limited to MAX_UPLOAD_FILES at once)
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files || []);
+    // Reset input value so the same file(s) can be re-selected cleanly
+    e.target.value = "";
     if (!files.length) return;
+
+    setUploadLimitError("");
 
     // Filter by selected media type
     const validFiles = files.filter((file) => {
@@ -131,6 +137,23 @@ export default function GalleryPage({ currentEvent = { slug: "dubai", name: "Dub
       );
     }
 
+    if (!validFiles.length) return;
+
+    const remainingSlots = MAX_UPLOAD_FILES - selectedFiles.length;
+    if (remainingSlots <= 0) {
+      const msg = `Maximum ${MAX_UPLOAD_FILES} ${uploadMediaType === "photo" ? "images" : "videos"} allowed at once. Bulk/multiple uploads beyond ${MAX_UPLOAD_FILES} are not allowed.`;
+      setUploadLimitError(msg);
+      showToast(msg);
+      return;
+    }
+
+    if (validFiles.length > remainingSlots) {
+      const msg = `You can only upload up to ${MAX_UPLOAD_FILES} ${uploadMediaType === "photo" ? "images" : "videos"} at once. You selected ${validFiles.length}, but only ${remainingSlots} slot(s) remaining.`;
+      setUploadLimitError(msg);
+      showToast(msg);
+      return;
+    }
+
     // Attach local preview object URLs for UI display
     const newFilesWithPreview = validFiles.map((file) => ({
       file,
@@ -143,6 +166,7 @@ export default function GalleryPage({ currentEvent = { slug: "dubai", name: "Dub
   };
 
   const removeSelectedFile = (id) => {
+    setUploadLimitError("");
     setSelectedFiles((prev) => {
       const target = prev.find((f) => f.id === id);
       if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
@@ -155,13 +179,21 @@ export default function GalleryPage({ currentEvent = { slug: "dubai", name: "Dub
       if (f.previewUrl) URL.revokeObjectURL(f.previewUrl);
     });
     setSelectedFiles([]);
+    setUploadLimitError("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // Perform Batch Upload
+  // Perform Upload (max 3 files per batch, no concurrent multiple uploads)
   const handleBatchUpload = async () => {
+    if (isUploading) return;
     if (!selectedFiles.length) {
       showToast("Please select at least one file to upload.");
+      return;
+    }
+    if (selectedFiles.length > MAX_UPLOAD_FILES) {
+      const msg = `Maximum ${MAX_UPLOAD_FILES} files allowed at once.`;
+      setUploadLimitError(msg);
+      showToast(msg);
       return;
     }
 
@@ -618,19 +650,38 @@ export default function GalleryPage({ currentEvent = { slug: "dubai", name: "Dub
                 </div>
               </div>
 
-              {/* Step 3: Multi-File Selector Dropzone */}
+              {/* Step 3: File Selector Dropzone (Max 3 files at once) */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Step 3: Select Multiple Files to Upload
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Step 3: Select Files to Upload
+                  </label>
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                    Max {MAX_UPLOAD_FILES} at once ({selectedFiles.length}/{MAX_UPLOAD_FILES})
+                  </span>
+                </div>
                 <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-amber-300 hover:border-amber-500 bg-amber-50/20 hover:bg-amber-50/40 rounded-2xl p-6 text-center cursor-pointer transition-all"
+                  onClick={() => {
+                    if (isUploading) return;
+                    if (selectedFiles.length >= MAX_UPLOAD_FILES) {
+                      const msg = `Limit reached: maximum ${MAX_UPLOAD_FILES} ${uploadMediaType === "photo" ? "images" : "videos"} allowed at once.`;
+                      setUploadLimitError(msg);
+                      showToast(msg);
+                      return;
+                    }
+                    fileInputRef.current?.click();
+                  }}
+                  className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all ${
+                    selectedFiles.length >= MAX_UPLOAD_FILES || isUploading
+                      ? "border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed"
+                      : "border-amber-300 hover:border-amber-500 bg-amber-50/20 hover:bg-amber-50/40 cursor-pointer"
+                  }`}
                 >
                   <input
                     ref={fileInputRef}
                     type="file"
                     multiple
+                    disabled={selectedFiles.length >= MAX_UPLOAD_FILES || isUploading}
                     accept={
                       uploadMediaType === "photo"
                         ? "image/*,.heic,.webp"
@@ -643,12 +694,23 @@ export default function GalleryPage({ currentEvent = { slug: "dubai", name: "Dub
                     <FolderPlus className="w-6 h-6" />
                   </div>
                   <p className="text-sm font-semibold text-slate-800">
-                    Click to browse or drag and drop multiple {uploadMediaType === "photo" ? "photos" : "videos"}
+                    {selectedFiles.length >= MAX_UPLOAD_FILES
+                      ? `Maximum ${MAX_UPLOAD_FILES} ${uploadMediaType === "photo" ? "photos" : "videos"} selected`
+                      : `Click to select up to ${MAX_UPLOAD_FILES} ${uploadMediaType === "photo" ? "photos" : "videos"} at once`}
                   </p>
                   <p className="text-xs text-slate-400 mt-1">
-                    Hold Ctrl/Shift to choose multiple files at the same time
+                    {selectedFiles.length >= MAX_UPLOAD_FILES
+                      ? "Remove a file below or click Upload to continue"
+                      : `Limit: ${MAX_UPLOAD_FILES} files per upload · ${MAX_UPLOAD_FILES - selectedFiles.length} slot(s) remaining`}
                   </p>
                 </div>
+
+                {uploadLimitError && (
+                  <div className="mt-2.5 flex items-center gap-2 px-3 py-2 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+                    <span>{uploadLimitError}</span>
+                  </div>
+                )}
               </div>
 
               {/* Selected Files List & Preview */}
@@ -656,7 +718,7 @@ export default function GalleryPage({ currentEvent = { slug: "dubai", name: "Dub
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-bold text-slate-700">
-                      Selected Files ({selectedFiles.length})
+                      Selected Files ({selectedFiles.length} / {MAX_UPLOAD_FILES})
                     </span>
                     <button
                       type="button"
